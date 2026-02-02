@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # ====================================
+  # Frontend Widget - Desarrollo
+  # ====================================
+  frontend-dev:
+    build:
+      context: .
+      target: development
+    container_name: eod-web-rag-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    profiles:
+      - dev
+
+  # ====================================
+  # Frontend Widget - Producción
+  # ====================================
+  frontend:
+    build:
+      context: .
+      target: production
+    container_name: eod-web-rag
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - prod
+
+networks:
+  default:
+    name: eod-network
+    external: true
