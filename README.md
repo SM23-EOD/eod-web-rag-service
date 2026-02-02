@@ -43,7 +43,7 @@ Abre http://localhost:3000 para ver la demo.
 
 ## 🔗 Requisitos
 
-Requiere el backend [eod-api-rag-service](https://github.com/envios23/eod-api-rag-service) con el endpoint MCP habilitado.
+Requiere el backend [eod-api-rag-service](https://github.com/SM23-EOD/eod-api-rag-service) con el endpoint MCP habilitado.
 
 ## 📄 Licencia
 
