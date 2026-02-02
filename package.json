@@ -1,0 +1,25 @@
+{
+  "name": "eod-web-rag-service",
+  "version": "1.0.0",
+  "description": "Web Component embebible para el asistente RAG de Envios23",
+  "main": "src/assistant-widget.js",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "build": "mkdir -p dist && cp src/assistant-widget.js dist/",
+    "minify": "npx terser src/assistant-widget.js -o dist/assistant-widget.min.js -c -m"
+  },
+  "keywords": [
+    "rag",
+    "chatbot",
+    "web-component",
+    "envios23",
+    "assistant"
+  ],
+  "author": "Envios23",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0",
+    "terser": "^5.27.0"
+  }
+}
