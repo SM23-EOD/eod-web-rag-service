@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Widget V2 - Asistente RAG</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+  
+  <!-- Marked.js para renderizado de Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .demo-container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .hero {
+      text-align: center;
+      color: white;
+      margin-bottom: 60px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      margin: 0 0 16px 0;
+      font-weight: 700;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero p {
+      font-size: 20px;
+      margin: 0;
+      opacity: 0.95;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 12px 0;
+      color: #1e293b;
+      font-size: 22px;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .info-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      margin-top: 40px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .info-section h2 {
+      margin: 0 0 24px 0;
+      color: #1e293b;
+      font-size: 28px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .config-item {
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .config-item strong {
+      display: block;
+      color: #1e293b;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .config-item code {
+      background: #e2e8f0;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #7c3aed;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .config-item small {
+      display: block;
+      color: #64748b;
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    code.code-block {
+      display: block;
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 16px 0;
+    }
+
+    .keyboard-shortcuts {
+      margin-top: 32px;
+      padding: 20px;
+      background: #fef3c7;
+      border-radius: 12px;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .keyboard-shortcuts h3 {
+      margin: 0 0 12px 0;
+      color: #92400e;
+      font-size: 18px;
+    }
+
+    .shortcut {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0;
+      color: #78350f;
+      font-size: 14px;
+    }
+
+    .shortcut kbd {
+      background: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #d97706;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .hero p {
+        font-size: 18px;
+      }
+
+      .demo-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Botón de cambio de tema */
+    .theme-switcher {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .theme-btn {
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 2px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .theme-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .theme-btn.active {
+      border-color: #3b82f6;
+      background: #dbeafe;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="hero">
+      <h1>🎨 Widget Asistente V2</h1>
+      <p>Nueva versión moderna con diseño mejorado y más funcionalidades</p>
+    </div>
+
+    <div class="demo-grid">
+      <div class="feature-card">
+        <div class="feature-icon">✨</div>
+        <h3>Diseño Moderno</h3>
+        <p>Interfaz limpia y elegante con animaciones suaves y componentes bien diseñados</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Personalizable</h3>
+        <p>Cambia colores, posición y comportamiento del widget según tus necesidades</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Responsive</h3>
+        <p>Se adapta perfectamente a cualquier tamaño de pantalla, desde móvil hasta desktop</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⌨️</div>
+        <h3>Atajos de Teclado</h3>
+        <p>Ctrl+K para abrir/cerrar, Esc para cerrar. Navegación rápida y eficiente</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Feedback Integrado</h3>
+        <p>Sistema de valoración de respuestas para mejorar continuamente la calidad</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h3>Notificaciones</h3>
+        <p>Contador de mensajes no leídos cuando el chat está minimizado</p>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h2>📋 Configuración del Widget</h2>
+      
+      <code class="code-block">&lt;!-- Importar el script del widget --&gt;
+&lt;script src="/src/assistant-widget-v2.js"&gt;&lt;/script&gt;
+
+&lt;!-- Incluir en tu página --&gt;
+&lt;rag-assistant-v2
+  endpoint="http://localhost:8000/api/v1/mcp/tools/call"
+  title="Asistente Virtual"
+  tool-name="generate_rag_answer"
+  session-id="demo-v2"
+  include-sources="true"
+  placeholder="Escribe tu mensaje..."
+  position="bottom-right"
+  theme-color="#2563eb"
+&gt;&lt;/rag-assistant-v2&gt;</code>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <strong>endpoint</strong>
+          <code>string</code>
+          <small>URL del API endpoint para las consultas</small>
+        </div>
+
+        <div class="config-item">
+          <strong>title</strong>
+          <code>string</code>
+          <small>Título que aparece en el header del chat</small>
+        </div>
+
+        <div class="config-item">
+          <strong>tool-name</strong>
+          <code>string</code>
+          <small>Nombre de la herramienta RAG a utilizar</small>
+        </div>
+
+        <div class="config-item">
+          <strong>session-id</strong>
+          <code>string</code>
+          <small>Identificador de sesión para tracking</small>
+        </div>
+
+        <div class="config-item">
+          <strong>include-sources</strong>
+          <code>boolean</code>
+          <small>Mostrar fuentes consultadas en las respuestas</small>
+        </div>
+
+        <div class="config-item">
+          <strong>placeholder</strong>
+          <code>string</code>
+          <small>Texto placeholder del campo de entrada</small>
+        </div>
+
+        <div class="config-item">
+          <strong>position</strong>
+          <code>bottom-right | bottom-left</code>
+          <small>Posición del widget en la pantalla</small>
+        </div>
+
+        <div class="config-item">
+          <strong>theme-color</strong>
+          <code>hex color</code>
+          <small>Color principal del tema (formato hexadecimal)</small>
+        </div>
+      </div>
+
+      <div class="keyboard-shortcuts">
+        <h3>⌨️ Atajos de Teclado</h3>
+        <div class="shortcut">
+          <kbd>Ctrl</kbd> + <kbd>K</kbd>
+          <span>Abrir/Cerrar el chat</span>
+        </div>
+        <div class="shortcut">
+          <kbd>Esc</kbd>
+          <span>Cerrar el chat</span>
+        </div>
+        <div class="shortcut">
+          <kbd>Enter</kbd>
+          <span>Enviar mensaje</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theme Switcher -->
+  <div class="theme-switcher">
+    <button class="theme-btn active" data-color="#2563eb" data-position="bottom-right">
+      Azul Derecha
+    </button>
+    <button class="theme-btn" data-color="#16a34a" data-position="bottom-right">
+      Verde Derecha
+    </button>
+    <button class="theme-btn" data-color="#dc2626" data-position="bottom-left">
+      Rojo Izquierda
+    </button>
+    <button class="theme-btn" data-color="#9333ea" data-position="bottom-left">
+      Morado Izquierda
+    </button>
+  </div>
+
+  <!-- Widget V2 -->
+  <script src="/src/assistant-widget-v2.js"></script>
+  <rag-assistant-v2
+    endpoint="http://localhost:8000/api/v1/mcp/tools/call"
+    title="Asistente Envios23"
+    tool-name="generate_rag_answer"
+    session-id="demo-v2"
+    include-sources="true"
+    placeholder="Escribe tu pregunta..."
+    position="bottom-right"
+    theme-color="#2563eb"
+  ></rag-assistant-v2>
+
+  <script>
+    // Theme switcher
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const widget = document.querySelector('rag-assistant-v2');
+
+    themeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Update active state
+        themeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update widget attributes
+        const color = btn.dataset.color;
+        const position = btn.dataset.position;
+        
+        widget.setAttribute('theme-color', color);
+        widget.setAttribute('position', position);
+      });
+    });
+  </script>
+</body>
+</html>
