@@ -1,0 +1,219 @@
+# eod-web-rag-service
+
+Cliente web y herramientas para interactuar con el asistente RAG de Envios23.
+
+## 🚀 Quick Start
+
+```bash
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm run dev
+```
+
+Abre http://localhost:3000 para ver la demo.
+
+---
+
+## 💬 Formas de Usar el API RAG
+
+Este proyecto ofrece **5 formas diferentes** de interactuar con el API RAG:
+
+### 1️⃣ Widget Embebible
+Widget pequeño tipo chat flotante para integrar en cualquier web.
+
+### 2️⃣ Interfaz Web Completa
+Página completa estilo ChatGPT con historial y sesiones.
+
+### 3️⃣ Open WebUI
+Interfaz tipo ChatGPT auto-hospedada con múltiples características.
+
+### 4️⃣ LibreChat
+Cliente de chat multi-modelo avanzado.
+
+### 5️⃣ CLI (Línea de Comandos)
+Scripts para usar desde terminal (Bash y Python).
+
+---
+
+## 📦 Opción 1: Widget Embebible
+
+Integra un chat flotante en tu sitio web:
+
+```html
+<!-- Opcional: Marked.js para renderizar markdown -->
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+
+<!-- Widget -->
+<script src="path/to/assistant-widget.js"></script>
+
+<!-- Componente -->
+<rag-assistant
+  endpoint="https://api.envios23.com/api/v1/mcp/tools/call"
+  title="Asistente Envios23"
+></rag-assistant>
+```
+
+### ⚙️ Atributos del Widget
+
+| Atributo | Descripción | Default |
+|----------|-------------|---------|
+| `endpoint` | URL del endpoint MCP | `/api/v1/mcp/tools/call` |
+| `title` | Título del widget | `Asistente` |
+| `tool-name` | Herramienta MCP | `generate_rag_answer` |
+| `session-id` | ID de sesión | `web` |
+| `include-sources` | Incluir fuentes | `true` |
+| `placeholder` | Placeholder del input | `Escribe tu pregunta...` |
+
+---
+
+## 💬 Opción 2: Interfaz Web Completa (ChatGPT-like)
+
+Interfaz de página completa con historial de conversaciones:
+
+```bash
+# Acceder a la interfaz completa
+open http://localhost:3000/chat-interface.html
+```
+
+**Características:**
+- ✅ Diseño similar a ChatGPT
+- ✅ Historial de conversaciones
+- ✅ Persistencia en localStorage
+- ✅ Soporte para Markdown
+- ✅ Fuentes de información
+
+---
+
+## 🌐 Opción 3: Open WebUI
+
+Interfaz web tipo ChatGPT con características avanzadas:
+
+```bash
+# Iniciar Open WebUI con docker-compose
+docker-compose --profile chat up open-webui
+
+# Acceder
+open http://localhost:3001
+```
+
+**Configuración:**
+- Usuario por defecto se crea en el primer acceso
+- Configurar API endpoint en Settings > Connections
+- URL: `http://host.docker.internal:8000`
+
+---
+
+## 💼 Opción 4: LibreChat
+
+Cliente de chat multi-modelo más completo:
+
+```bash
+# Iniciar LibreChat con docker-compose
+docker-compose --profile chat up librechat mongodb
+
+# Acceder
+open http://localhost:3002
+```
+
+**Configuración:**
+- Registrar cuenta en el primer acceso
+- Seleccionar "Envios23 RAG" en el menú de modelos
+- Configuración definida en `librechat-config.yaml`
+
+---
+
+## 🖥️ Opción 5: CLI (Línea de Comandos)
+
+### Script Bash
+
+```bash
+# Hacer ejecutable
+chmod +x cli/rag-chat.sh
+
+# Uso simple
+./cli/rag-chat.sh "¿Cómo rastrear un envío?"
+
+# Modo interactivo
+./cli/rag-chat.sh --interactive
+
+# Con API personalizada
+RAG_API_URL=https://api.envios23.com ./cli/rag-chat.sh "tu pregunta"
+```
+
+### Script Python
+
+```bash
+# Instalar dependencias
+pip install requests
+
+# Uso simple
+python cli/rag-chat.py "¿Cómo rastrear un envío?"
+
+# Modo interactivo
+python cli/rag-chat.py --interactive
+
+# Ver ayuda
+python cli/rag-chat.py --help
+
+# Con API personalizada
+RAG_API_URL=https://api.envios23.com python cli/rag-chat.py "tu pregunta"
+```
+
+### Variables de Entorno para CLI
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `RAG_API_URL` | URL del API RAG | `http://localhost:8000` |
+| `TOOL_NAME` | Nombre del tool MCP | `generate_rag_answer` |
+| `SESSION_ID` | ID de sesión | `cli-$USER` |
+| `INCLUDE_SOURCES` | Incluir fuentes | `true` |
+
+---
+
+## 🐳 Docker Compose
+
+El proyecto incluye múltiples servicios en `docker-compose.yml`:
+
+```bash
+# Widget - Desarrollo
+docker-compose --profile dev up
+
+# Widget - Producción
+docker-compose --profile prod up
+
+# Interfaces de Chat (Open WebUI + LibreChat)
+docker-compose --profile chat up
+```
+
+### Puertos
+
+| Servicio | Puerto | URL |
+|----------|--------|-----|
+| Widget (dev) | 3000 | http://localhost:3000 |
+| Widget (prod) | 8080 | http://localhost:8080 |
+| Open WebUI | 3001 | http://localhost:3001 |
+| LibreChat | 3002 | http://localhost:3002 |
+
+---
+
+## 📋 Comparación de Opciones
+
+| Característica | Widget | Chat Interface | Open WebUI | LibreChat | CLI |
+|----------------|--------|----------------|------------|-----------|-----|
+| Embebible | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Historial | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Multi-sesión | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Auto-hospedado | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Sin instalación | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Modo CLI | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Complejidad | Baja | Baja | Media | Alta | Baja |
+
+## 🔗 Requisitos
+
+Requiere el backend [eod-api-rag-service](https://github.com/SM23-EOD/eod-api-rag-service) con el endpoint MCP habilitado.
+
+## 📄 Licencia
+
+MIT

@@ -196,6 +196,25 @@ class RagAssistant extends HTMLElement {
       // Extraer solo el texto de la respuesta, sin metadata ni fuentes
       let responseText = data.result || "Sin respuesta.";
 
+      // Extraer fuentes antes de limpiarlas
+      let extractedSources = [];
+      const sourcesMatch = responseText.match(/###\s*📚?\s*Fuentes[\s\S]*?(?=###|$)/);
+      if (sourcesMatch) {
+        const sourcesSection = sourcesMatch[0];
+        // Extraer nombres de fuentes (buscar patrones como "- nombre.pdf" o "• documento.txt")
+        const sourceLines = sourcesSection.match(/[-•*]\s*(.+?)(?:\n|$)/g);
+        if (sourceLines) {
+          extractedSources = sourceLines.map(line => 
+            line.replace(/^[-•*]\s*/, '').trim()
+          ).filter(s => s.length > 0);
+        }
+      }
+
+      // También extraer de data.sources si viene del backend
+      if (data.sources && Array.isArray(data.sources)) {
+        extractedSources = [...extractedSources, ...data.sources];
+      }
+
       // Limpiar metadata y fuentes - eliminar todo después de ### 📚 Fuentes o ### 📊 Metadata
       const cleanPatterns = [
         /\n\n###\s*📚\s*Fuentes[\s\S]*$/,     // ### 📚 Fuentes y todo lo que sigue
@@ -214,8 +233,8 @@ class RagAssistant extends HTMLElement {
       // Extraer confidence si está disponible
       const confidence = data.confidence || null;
 
-      // Agregar mensaje con metadata para feedback
-      const msgId = this.addMessage("assistant", responseText, { confidence });
+      // Agregar mensaje con metadata para feedback y fuentes
+      const msgId = this.addMessage("assistant", responseText, { confidence, sources: extractedSources });
 
       // Guardar conversación para feedback
       this._conversations.push({
@@ -410,6 +429,38 @@ class RagAssistant extends HTMLElement {
 
         .bubble strong {
           font-weight: 600;
+        }
+
+        .sources-section {
+          margin-top: 12px;
+          padding: 10px 12px;
+          background: rgba(37, 99, 235, 0.08);
+          border-radius: 8px;
+          border-left: 3px solid #2563eb;
+        }
+
+        .sources-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #2563eb;
+          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .source-item {
+          font-size: 12px;
+          color: #475569;
+          padding: 3px 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .source-item::before {
+          content: '📄';
+          font-size: 10px;
         }
 
         .bubble h1, .bubble h2, .bubble h3,
@@ -667,8 +718,17 @@ class RagAssistant extends HTMLElement {
               ? this.escapeHtml(message.content)
               : this.renderMarkdown(message.content);
 
-            // Para mensajes del asistente, agregar botones de feedback
+            // Para mensajes del asistente, agregar fuentes y botones de feedback
             if (message.role === 'assistant') {
+              // Renderizar fuentes si existen
+              const sources = message.metadata?.sources || [];
+              const sourcesHtml = sources.length > 0
+                ? `<div class="sources-section">
+                    <div class="sources-title">📚 Fuentes consultadas</div>
+                    ${sources.map(s => `<div class="source-item">${this.escapeHtml(s)}</div>`).join('')}
+                  </div>`
+                : '';
+
               const feedbackHtml = message.feedbackSent
                 ? `<div class="feedback-thanks">✓ Gracias por tu feedback</div>`
                 : `
@@ -684,7 +744,7 @@ class RagAssistant extends HTMLElement {
 
               return `
                 <div class="message-container assistant">
-                  <div class="bubble assistant">${content}</div>
+                  <div class="bubble assistant">${content}${sourcesHtml}</div>
                   ${feedbackHtml}
                 </div>
               `;

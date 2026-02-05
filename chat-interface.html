@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente Envios23 - Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #343541;
+            --bg-secondary: #444654;
+            --bg-tertiary: #565869;
+            --bg-input: #40414f;
+            --text-primary: #ececf1;
+            --text-secondary: #c5c5d2;
+            --accent: #10a37f;
+            --accent-hover: #0d8a6a;
+            --border: #565869;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: var(--bg-primary);
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .conversation-item {
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.2s;
+        }
+
+        .conversation-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .conversation-item.active {
+            background: var(--bg-tertiary);
+        }
+
+        .sidebar-footer {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Chat Area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .config-btn {
+            padding: 8px 16px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .config-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .message {
+            display: flex;
+            gap: 16px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: var(--accent);
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .message-content p {
+            margin-bottom: 12px;
+        }
+
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .message-content code {
+            background: var(--bg-input);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .message-content pre {
+            background: var(--bg-input);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .sources {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .sources-title {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .source-item {
+            padding: 4px 0;
+            color: var(--text-secondary);
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .input-container {
+            display: flex;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 12px;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--accent);
+        }
+
+        #messageInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            resize: none;
+            max-height: 200px;
+            font-family: inherit;
+        }
+
+        #messageInput::placeholder {
+            color: var(--text-secondary);
+        }
+
+        #sendButton {
+            padding: 8px 20px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+            align-self: flex-end;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        #sendButton:disabled {
+            background: var(--bg-tertiary);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            text-align: center;
+            padding: 48px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+        }
+
+        .empty-state-title {
+            font-size: 32px;
+            font-weight: 600;
+        }
+
+        .empty-state-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 500px;
+        }
+
+        .example-prompts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .example-prompt {
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .example-prompt:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent);
+        }
+
+        /* Config Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid var(--border);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: -260px;
+                height: 100%;
+                z-index: 100;
+                transition: left 0.3s;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="app.newChat()">
+                    <span>✨</span>
+                    <span>Nueva conversación</span>
+                </button>
+            </div>
+            <div class="conversations-list" id="conversationsList">
+                <!-- Conversations will be added here dynamically -->
+            </div>
+            <div class="sidebar-footer">
+                <div>Sesión: <span id="sessionIdDisplay">-</span></div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-area">
+            <header class="chat-header">
+                <h1 class="chat-title">Asistente Envios23</h1>
+                <button class="config-btn" onclick="app.openConfig()">⚙️ Configuración</button>
+            </header>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon">💬</div>
+                    <h2 class="empty-state-title">¿En qué puedo ayudarte?</h2>
+                    <p class="empty-state-subtitle">
+                        Soy tu asistente para consultas sobre Envios23. Pregúntame lo que necesites.
+                    </p>
+                    <div class="example-prompts">
+                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                            ¿Cómo puedo rastrear mi envío?
+                        </div>
+                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                            ¿Cuáles son los tiempos de entrega?
+                        </div>
+                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                            ¿Qué documentos necesito para enviar?
+                        </div>
+                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                            ¿Cómo funciona el tracking?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <div class="input-container">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Escribe tu pregunta aquí..."
+                            rows="1"
+                            onkeydown="app.handleKeyDown(event)"
+                        ></textarea>
+                        <button id="sendButton" onclick="app.sendMessage()">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Config Modal -->
+    <div class="modal" id="configModal">
+        <div class="modal-content">
+            <h2 class="modal-header">Configuración</h2>
+            <div class="form-group">
+                <label for="endpointInput">Endpoint API</label>
+                <input type="text" id="endpointInput" placeholder="https://api.envios23.com/api/v1/mcp/tools/call">
+            </div>
+            <div class="form-group">
+                <label for="sessionIdInput">Session ID</label>
+                <input type="text" id="sessionIdInput" placeholder="web-user">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="app.closeConfig()">Cancelar</button>
+                <button class="btn btn-primary" onclick="app.saveConfig()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script>
+        const app = {
+            config: {
+                endpoint: '/api/v1/mcp/tools/call',
+                toolName: 'generate_rag_answer',
+                sessionId: 'web-' + Math.random().toString(36).substr(2, 9),
+                includeSources: true
+            },
+            conversations: [],
+            currentConversationId: null,
+            isLoading: false,
+
+            init() {
+                // Load config from localStorage
+                const savedConfig = localStorage.getItem('ragChatConfig');
+                if (savedConfig) {
+                    this.config = { ...this.config, ...JSON.parse(savedConfig) };
+                }
+
+                // Load conversations from localStorage
+                const savedConversations = localStorage.getItem('ragChatConversations');
+                if (savedConversations) {
+                    this.conversations = JSON.parse(savedConversations);
+                    this.renderConversationsList();
+                }
+
+                // Update session ID display
+                document.getElementById('sessionIdDisplay').textContent = this.config.sessionId;
+
+                // Configure marked for markdown rendering
+                if (typeof marked !== 'undefined') {
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true
+                    });
+                }
+
+                // Auto-resize textarea
+                const textarea = document.getElementById('messageInput');
+                textarea.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+            },
+
+            newChat() {
+                const id = Date.now().toString();
+                const conversation = {
+                    id,
+                    title: 'Nueva conversación',
+                    messages: [],
+                    createdAt: new Date().toISOString()
+                };
+                this.conversations.unshift(conversation);
+                this.currentConversationId = id;
+                this.saveConversations();
+                this.renderConversationsList();
+                this.renderMessages();
+                document.getElementById('messageInput').focus();
+            },
+
+            getCurrentConversation() {
+                if (!this.currentConversationId) {
+                    this.newChat();
+                }
+                return this.conversations.find(c => c.id === this.currentConversationId);
+            },
+
+            async sendMessage() {
+                const input = document.getElementById('messageInput');
+                const message = input.value.trim();
+                
+                if (!message || this.isLoading) return;
+
+                const conversation = this.getCurrentConversation();
+                
+                // Add user message
+                conversation.messages.push({
+                    role: 'user',
+                    content: message,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Update title if first message
+                if (conversation.messages.length === 1) {
+                    conversation.title = message.substring(0, 50) + (message.length > 50 ? '...' : '');
+                    this.renderConversationsList();
+                }
+
+                input.value = '';
+                input.style.height = 'auto';
+                this.renderMessages();
+                this.setLoading(true);
+
+                try {
+                    const response = await fetch(this.config.endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: this.config.toolName,
+                            arguments: {
+                                query: message,
+                                session_id: this.config.sessionId,
+                                include_sources: this.config.includeSources
+                            }
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Error en la respuesta del servidor');
+
+                    const data = await response.json();
+                    
+                    // Extraer contenido de la respuesta
+                    let responseContent = data.content?.[0]?.text || data.result || 'No se recibió respuesta';
+                    
+                    // Extraer fuentes del texto antes de limpiarlo
+                    let extractedSources = data.content?.[0]?.sources || data.sources || [];
+                    const sourcesMatch = responseContent.match(/###\s*📚?\s*Fuentes[\s\S]*?(?=###|$)/);
+                    if (sourcesMatch) {
+                        const sourcesSection = sourcesMatch[0];
+                        const sourceLines = sourcesSection.match(/[-•*]\s*(.+?)(?:\n|$)/g);
+                        if (sourceLines) {
+                            const textSources = sourceLines.map(line => 
+                                line.replace(/^[-•*]\s*/, '').trim()
+                            ).filter(s => s.length > 0);
+                            extractedSources = [...extractedSources, ...textSources];
+                        }
+                    }
+                    
+                    // Limpiar fuentes y metadata del contenido
+                    responseContent = responseContent
+                        .replace(/\n\n###\s*📚?\s*Fuentes[\s\S]*$/i, '')
+                        .replace(/\n\n###\s*📊?\s*Metadata[\s\S]*$/i, '')
+                        .replace(/^##\s*Respuesta\s*\n+/, '')
+                        .trim();
+                    
+                    const assistantMessage = {
+                        role: 'assistant',
+                        content: responseContent,
+                        sources: extractedSources,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    conversation.messages.push(assistantMessage);
+                    this.saveConversations();
+                    this.renderMessages();
+                } catch (error) {
+                    console.error('Error:', error);
+                    conversation.messages.push({
+                        role: 'assistant',
+                        content: `❌ Error: ${error.message}`,
+                        timestamp: new Date().toISOString()
+                    });
+                    this.renderMessages();
+                } finally {
+                    this.setLoading(false);
+                }
+            },
+
+            sendExamplePrompt(element) {
+                const input = document.getElementById('messageInput');
+                input.value = element.textContent.trim();
+                this.sendMessage();
+            },
+
+            handleKeyDown(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    this.sendMessage();
+                }
+            },
+
+            renderMessages() {
+                const container = document.getElementById('messagesContainer');
+                const emptyState = document.getElementById('emptyState');
+                const conversation = this.getCurrentConversation();
+
+                if (!conversation || conversation.messages.length === 0) {
+                    emptyState.style.display = 'flex';
+                    return;
+                }
+
+                emptyState.style.display = 'none';
+                container.innerHTML = '';
+
+                conversation.messages.forEach(msg => {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = `message ${msg.role}`;
+                    
+                    const avatar = document.createElement('div');
+                    avatar.className = 'message-avatar';
+                    avatar.textContent = msg.role === 'user' ? 'U' : 'A';
+                    
+                    const content = document.createElement('div');
+                    content.className = 'message-content';
+                    
+                    // Render markdown if marked is available
+                    if (typeof marked !== 'undefined') {
+                        content.innerHTML = marked.parse(msg.content);
+                    } else {
+                        content.textContent = msg.content;
+                    }
+
+                    // Add sources if available
+                    if (msg.sources && msg.sources.length > 0) {
+                        const sourcesEl = document.createElement('div');
+                        sourcesEl.className = 'sources';
+                        sourcesEl.innerHTML = `
+                            <div class="sources-title">📚 Fuentes:</div>
+                            ${msg.sources.map(s => `<div class="source-item">• ${s}</div>`).join('')}
+                        `;
+                        content.appendChild(sourcesEl);
+                    }
+
+                    messageEl.appendChild(avatar);
+                    messageEl.appendChild(content);
+                    container.appendChild(messageEl);
+                });
+
+                // Scroll to bottom
+                container.scrollTop = container.scrollHeight;
+            },
+
+            renderConversationsList() {
+                const list = document.getElementById('conversationsList');
+                list.innerHTML = this.conversations.map(conv => `
+                    <div class="conversation-item ${conv.id === this.currentConversationId ? 'active' : ''}"
+                         onclick="app.loadConversation('${conv.id}')">
+                        ${conv.title}
+                    </div>
+                `).join('');
+            },
+
+            loadConversation(id) {
+                this.currentConversationId = id;
+                this.renderConversationsList();
+                this.renderMessages();
+            },
+
+            saveConversations() {
+                localStorage.setItem('ragChatConversations', JSON.stringify(this.conversations));
+            },
+
+            setLoading(loading) {
+                this.isLoading = loading;
+                const sendButton = document.getElementById('sendButton');
+                sendButton.disabled = loading;
+                sendButton.textContent = loading ? 'Enviando...' : 'Enviar';
+            },
+
+            openConfig() {
+                document.getElementById('endpointInput').value = this.config.endpoint;
+                document.getElementById('sessionIdInput').value = this.config.sessionId;
+                document.getElementById('configModal').classList.add('active');
+            },
+
+            closeConfig() {
+                document.getElementById('configModal').classList.remove('active');
+            },
+
+            saveConfig() {
+                this.config.endpoint = document.getElementById('endpointInput').value;
+                this.config.sessionId = document.getElementById('sessionIdInput').value;
+                document.getElementById('sessionIdDisplay').textContent = this.config.sessionId;
+                localStorage.setItem('ragChatConfig', JSON.stringify(this.config));
+                this.closeConfig();
+            }
+        };
+
+        // Initialize app on page load
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>

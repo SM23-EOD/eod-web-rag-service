@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,7 @@
     * {
       box-sizing: border-box;
     }
-    
+
     body {
       margin: 0;
       font-family: "Inter", system-ui, -apple-system, sans-serif;
@@ -132,6 +133,7 @@
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1>🚀 Asistente RAG - Envios23</h1>
@@ -216,8 +218,8 @@
     <div class="card">
       <h2>🔗 API Requerida</h2>
       <p>
-        Este widget requiere el backend 
-        <a href="https://github.com/SM23-EOD/eod-api-rag-service" target="_blank">eod-api-rag-service</a>
+        Este widget requiere el backend
+        <a href="https://github.com/envios23/eod-api-rag-service" target="_blank">eod-api-rag-service</a>
         funcionando con el endpoint MCP habilitado.
       </p>
     </div>
@@ -225,8 +227,8 @@
 
   <footer>
     <p>
-      © 2026 Envios23 · 
-      <a href="https://github.com/SM23-EOD/eod-web-rag-service">GitHub</a> · 
+      © 2026 Envios23 ·
+      <a href="https://github.com/envios23/eod-web-rag-service">GitHub</a> ·
       <a href="https://envios23.com">envios23.com</a>
     </p>
   </footer>
@@ -234,11 +236,8 @@
   <!-- Demo widget conectado a localhost -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
   <script src="./src/assistant-widget.js"></script>
-  <rag-assistant
-    endpoint="http://localhost:9999/api/v1/mcp/tools/call"
-    title="Asistente Envios23"
-    session-id="demo-web"
-    placeholder="¿En qué puedo ayudarte hoy?"
-  ></rag-assistant>
+  <rag-assistant endpoint="http://localhost:9999/api/v1/mcp/tools/call" title="Asistente Envios23" session-id="demo-web"
+    placeholder="¿En qué puedo ayudarte hoy?"></rag-assistant>
 </body>
+
 </html>

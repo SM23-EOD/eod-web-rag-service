@@ -28,7 +28,7 @@ services:
       target: production
     container_name: eod-web-rag
     ports:
-      - "8080:80"
+      - "8081:80"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
@@ -37,6 +37,69 @@ services:
       retries: 3
     profiles:
       - prod
+
+  # ====================================
+  # Open WebUI - Interfaz ChatGPT-like
+  # ====================================
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: eod-open-webui
+    ports:
+      - "3001:8080"
+    environment:
+      - WEBUI_NAME=Asistente Envios23
+      - ENABLE_SIGNUP=false
+      - DEFAULT_USER_ROLE=user
+      # Configurar para usar API RAG personalizada
+      - OPENAI_API_BASE_URL=${RAG_API_URL:-http://host.docker.internal:8000}
+      - OPENAI_API_KEY=${RAG_API_KEY:-dummy}
+    volumes:
+      - open-webui-data:/app/backend/data
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles:
+      - chat
+
+  # ====================================
+  # LibreChat - Interfaz multi-modelo
+  # ====================================
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: eod-librechat
+    ports:
+      - "3002:3080"
+    environment:
+      - HOST=0.0.0.0
+      - MONGO_URI=mongodb://mongodb:27017/LibreChat
+      - RAG_API_URL=${RAG_API_URL:-http://host.docker.internal:8000}
+    volumes:
+      - librechat-data:/app/client/public/images
+      - ./librechat-config.yaml:/app/librechat.yaml
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles:
+      - chat
+
+  # ====================================
+  # MongoDB para LibreChat
+  # ====================================
+  mongodb:
+    image: mongo:7
+    container_name: eod-mongodb
+    volumes:
+      - mongodb-data:/data/db
+    restart: unless-stopped
+    profiles:
+      - chat
+
+volumes:
+  open-webui-data:
+  librechat-data:
+  mongodb-data:
 
 networks:
   default:
