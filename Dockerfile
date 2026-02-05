@@ -34,7 +34,7 @@ FROM nginx:alpine AS production
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiar archivos estáticos
-COPY index.html /usr/share/nginx/html/
+COPY *.html /usr/share/nginx/html/
 COPY src/ /usr/share/nginx/html/src/
 
 # Exponer puerto 80
