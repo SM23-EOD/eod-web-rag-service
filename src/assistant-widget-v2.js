@@ -1075,14 +1075,14 @@ class RagAssistantV2 extends HTMLElement {
           Estoy aquí para ayudarte con tus preguntas. Puedes preguntarme lo que necesites.
         </div>
         <div class="empty-state-suggestions">
-          <button class="suggestion-button" data-suggestion="¿Qué puedes hacer?">
-            💡 ¿Qué puedes hacer?
+          <button class="suggestion-button" data-suggestion="¿Cómo puedo rastrear mi envío?">
+            📦 ¿Cómo puedo rastrear mi envío?
           </button>
-          <button class="suggestion-button" data-suggestion="Ayúdame a empezar">
-            🚀 Ayúdame a empezar
+          <button class="suggestion-button" data-suggestion="¿Qué opciones de envío tienen y cuánto tardan?">
+            🚚 ¿Qué opciones de envío tienen y cuánto tardan?
           </button>
-          <button class="suggestion-button" data-suggestion="¿Cómo funciona esto?">
-            ❓ ¿Cómo funciona esto?
+          <button class="suggestion-button" data-suggestion="¿Qué hago si mi paquete no llegó?">
+            🔍 ¿Qué hago si mi paquete no llegó?
           </button>
         </div>
       </div>
