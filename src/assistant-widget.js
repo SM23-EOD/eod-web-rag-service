@@ -144,6 +144,47 @@ class RagAssistant extends HTMLElement {
     return div.innerHTML;
   }
 
+  /**
+   * Extrae el nombre legible de una fuente, independientemente del formato.
+   * Soporta strings, objetos con campos como source_name, name, title, etc.
+   */
+  getSourceDisplayName(source) {
+    if (typeof source === 'string') return source;
+    if (source && typeof source === 'object') {
+      // Prioridad: source_name > name > title > document_name > source > filename > file
+      const nameFields = ['source_name', 'name', 'title', 'document_name'];
+      for (const field of nameFields) {
+        if (source[field] && typeof source[field] === 'string') {
+          return source[field];
+        }
+      }
+      // Buscar en metadata anidada
+      if (source.metadata && typeof source.metadata === 'object') {
+        for (const field of nameFields) {
+          if (source.metadata[field] && typeof source.metadata[field] === 'string') {
+            return source.metadata[field];
+          }
+        }
+      }
+      // Fallback a campos de fichero
+      const fileFields = ['source', 'filename', 'file', 'path'];
+      for (const field of fileFields) {
+        if (source[field] && typeof source[field] === 'string') {
+          return source[field];
+        }
+      }
+      if (source.metadata && typeof source.metadata === 'object') {
+        for (const field of fileFields) {
+          if (source.metadata[field] && typeof source.metadata[field] === 'string') {
+            return source.metadata[field];
+          }
+        }
+      }
+      return JSON.stringify(source);
+    }
+    return String(source);
+  }
+
   toggleOpen() {
     this.setState({ isOpen: !this.state.isOpen });
   }
@@ -212,8 +253,12 @@ class RagAssistant extends HTMLElement {
 
       // También extraer de data.sources si viene del backend
       if (data.sources && Array.isArray(data.sources)) {
-        extractedSources = [...extractedSources, ...data.sources];
+        const namedSources = data.sources.map(s => this.getSourceDisplayName(s));
+        extractedSources = [...extractedSources, ...namedSources];
       }
+
+      // Deduplicar fuentes
+      extractedSources = [...new Set(extractedSources)];
 
       // Limpiar metadata y fuentes - eliminar todo después de ### 📚 Fuentes o ### 📊 Metadata
       const cleanPatterns = [
