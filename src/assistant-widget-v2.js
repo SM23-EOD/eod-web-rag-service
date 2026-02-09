@@ -39,7 +39,7 @@ class RagAssistantV2 extends HTMLElement {
   }
 
   get endpoint() {
-    return this.getAttribute("endpoint") || "/api/v1/mcp/tools/call";
+    return this.getAttribute("endpoint") || "/api/v2/mcp/tools/call";
   }
 
   get title() {
@@ -123,7 +123,10 @@ class RagAssistantV2 extends HTMLElement {
       return;
     }
 
-    const feedbackEndpoint = this.endpoint.replace(/\/mcp\/tools\/call$/, '/feedback');
+    // Feedback stays on /api/v1 (not an MCP route)
+    const feedbackEndpoint = this.endpoint
+      .replace(/\/api\/v2\/mcp\/tools\/call$/, '/api/v1/feedback')
+      .replace(/\/api\/v1\/mcp\/tools\/call$/, '/api/v1/feedback');
 
     try {
       const response = await fetch(feedbackEndpoint, {
