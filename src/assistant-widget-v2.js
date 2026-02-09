@@ -123,10 +123,9 @@ class RagAssistantV2 extends HTMLElement {
       return;
     }
 
-    // Feedback stays on /api/v1 (not an MCP route)
+    // Feedback also on /api/v2
     const feedbackEndpoint = this.endpoint
-      .replace(/\/api\/v2\/mcp\/tools\/call$/, '/api/v1/feedback')
-      .replace(/\/api\/v1\/mcp\/tools\/call$/, '/api/v1/feedback');
+      .replace(/\/mcp\/tools\/call$/, '/feedback');
 
     try {
       const response = await fetch(feedbackEndpoint, {
