@@ -45,6 +45,19 @@ Abre http://localhost:3000 para ver la demo.
 
 Requiere el backend [eod-api-rag-service](https://github.com/envios23/eod-api-rag-service) con el endpoint MCP habilitado.
 
+## 📐 Arquitectura
+
+Este proyecto documenta sus decisiones arquitectónicas usando ADRs (Architecture Decision Records). Para entender el "por qué" detrás de las tecnologías y patrones utilizados, consulta:
+
+- **[/adr](/adr/README.md)** - Índice completo de decisiones arquitectónicas
+- **[ADR-0001](/adr/0001-web-components-ui-framework.md)** - Web Components como Framework UI
+- **[ADR-0003](/adr/0003-mcp-protocol-integration.md)** - Protocolo MCP para Integración RAG
+- **[ADR-0005](/adr/0005-docker-compose-orchestration.md)** - Docker Compose para Orquestación
+
+### Contribuir con Documentación de Arquitectura
+
+¿Identificaste una decisión arquitectónica no documentada? Crea un [Issue con la etiqueta `architecture-backlog`](.github/ISSUE_TEMPLATE/architecture-backlog.md) y luego un ADR correspondiente.
+
 ## 📄 Licencia
 
 MIT
