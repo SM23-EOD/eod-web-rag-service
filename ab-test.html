@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A/B Test - Asistente Widget</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+  
+  <!-- Google Tag Manager (placeholder - reemplazar con tu GTM ID) -->
+  <script>
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-XXXXXXX'); // Reemplazar GTM-XXXXXXX
+  </script>
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    .ab-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    main {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      margin: 0 0 16px 0;
+      color: #7c3aed;
+      font-size: 20px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .info-item {
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border-left: 3px solid #7c3aed;
+    }
+
+    .info-item label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .info-item value {
+      display: block;
+      font-size: 16px;
+      color: #1e293b;
+      font-weight: 500;
+      font-family: monospace;
+    }
+
+    .variant-a {
+      border-left-color: #3b82f6;
+    }
+
+    .variant-b {
+      border-left-color: #a855f7;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: #7c3aed;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #6d28d9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+
+    .event-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .event-log .event {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .event-log .event:last-child {
+      border-bottom: none;
+    }
+
+    .event-log .timestamp {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .event-log .event-name {
+      color: #a78bfa;
+      font-weight: 600;
+    }
+
+    .event-log .variant-a-text {
+      color: #60a5fa;
+    }
+
+    .event-log .variant-b-text {
+      color: #c084fc;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      color: #64748b;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <header>
+    <h1>🧪 A/B Test - Asistente Widget <span class="ab-badge" id="variantBadge">Cargando...</span></h1>
+    <p>Test A/B automático 50/50 entre las dos interfaces</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>📊 Información del Test</h2>
+      <div class="info-grid">
+        <div class="info-item" id="variantInfo">
+          <label>Variante Asignada</label>
+          <value id="variantValue">-</value>
+        </div>
+        <div class="info-item">
+          <label>Session ID</label>
+          <value id="sessionValue">-</value>
+        </div>
+        <div class="info-item">
+          <label>Widget Cargado</label>
+          <value id="widgetValue">-</value>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn-primary" onclick="testInteraction('button_click')">
+          Simular Interacción
+        </button>
+        <button class="btn btn-secondary" onclick="clearTest()">
+          Limpiar Sesión
+        </button>
+        <button class="btn btn-secondary" onclick="forceVariant('A')">
+          Forzar Variante A
+        </button>
+        <button class="btn btn-secondary" onclick="forceVariant('B')">
+          Forzar Variante B
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📝 Event Log (últimos eventos)</h2>
+      <div class="event-log" id="eventLog">
+        <div class="event">
+          <span class="timestamp">Esperando eventos...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ℹ️ Cómo funciona</h2>
+      <ul style="line-height: 1.8;">
+        <li><strong>Distribución 50/50:</strong> Basada en hash del Session ID</li>
+        <li><strong>Persistencia:</strong> La variante se guarda en sessionStorage durante la sesión</li>
+        <li><strong>Tracking:</strong> Todos los eventos se envían a Google Analytics/GTM</li>
+        <li><strong>Variante A:</strong> assistant-widget.js (interfaz original)</li>
+        <li><strong>Variante B:</strong> assistant-widget-v2.js (interfaz nueva)</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer>
+    <p>🚀 EOD Web RAG Service - A/B Testing Framework</p>
+  </footer>
+
+  <!-- Cargar el A/B Test Loader -->
+  <script src="./src/ab-test-loader.js"></script>
+
+  <script>
+    let abTest;
+    const eventLogEl = document.getElementById('eventLog');
+    const events = [];
+    const MAX_EVENTS = 10;
+
+    // Escuchar eventos del A/B test
+    window.addEventListener('ab_test_event', (e) => {
+      logEvent(e.detail);
+    });
+
+    // Inicializar A/B Test
+    async function initABTest(forceVariant = null) {
+      try {
+        abTest = new ABTestLoader({
+          variantA: './src/assistant-widget.js',
+          variantB: './src/assistant-widget-v2.js',
+          experimentName: 'assistant_widget_ab_test_v1',
+          forceVariant: forceVariant
+        });
+
+        const variant = await abTest.init();
+        
+        // Actualizar UI con info de variante
+        updateVariantUI(variant, abTest.getVariantInfo());
+
+      } catch (error) {
+        console.error('Error al inicializar A/B test:', error);
+        alert('Error al cargar el widget. Ver consola para detalles.');
+      }
+    }
+
+    function updateVariantUI(variant, info) {
+      const badge = document.getElementById('variantBadge');
+      const variantValue = document.getElementById('variantValue');
+      const sessionValue = document.getElementById('sessionValue');
+      const widgetValue = document.getElementById('widgetValue');
+      const variantInfo = document.getElementById('variantInfo');
+
+      badge.textContent = `Variante ${variant}`;
+      badge.style.background = variant === 'A' 
+        ? 'rgba(59, 130, 246, 0.3)' 
+        : 'rgba(168, 85, 247, 0.3)';
+
+      variantValue.textContent = variant;
+      sessionValue.textContent = info.sessionId.substring(0, 13) + '...';
+      widgetValue.textContent = variant === 'A' ? 'widget.js' : 'widget-v2.js';
+
+      variantInfo.classList.add(variant === 'A' ? 'variant-a' : 'variant-b');
+    }
+
+    function logEvent(eventDetail) {
+      const timestamp = new Date().toLocaleTimeString();
+      const { eventName, variant } = eventDetail;
+      
+      events.unshift({ timestamp, eventName, variant, detail: eventDetail });
+      if (events.length > MAX_EVENTS) {
+        events.pop();
+      }
+
+      renderEventLog();
+    }
+
+    function renderEventLog() {
+      eventLogEl.innerHTML = events.map(e => {
+        const variantClass = e.variant === 'A' ? 'variant-a-text' : 'variant-b-text';
+        return `
+          <div class="event">
+            <span class="timestamp">[${e.timestamp}]</span>
+            <span class="event-name">${e.eventName}</span>
+            <span class="${variantClass}">Variante ${e.variant}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function testInteraction(action) {
+      if (abTest) {
+        abTest.trackInteraction(action, {
+          test_source: 'demo_page'
+        });
+      }
+    }
+
+    function clearTest() {
+      if (confirm('¿Limpiar sesión y recargar?')) {
+        sessionStorage.clear();
+        location.reload();
+      }
+    }
+
+    function forceVariant(variant) {
+      if (confirm(`¿Forzar variante ${variant} y recargar?`)) {
+        sessionStorage.clear();
+        sessionStorage.setItem('force_variant', variant);
+        location.reload();
+      }
+    }
+
+    // Iniciar al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      const forceVariant = sessionStorage.getItem('force_variant');
+      sessionStorage.removeItem('force_variant');
+      initABTest(forceVariant);
+    });
+  </script>
+</body>
+</html>

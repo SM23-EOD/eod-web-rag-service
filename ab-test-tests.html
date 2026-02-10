@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A/B Test - Unit Tests</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    .test-suite {
+      margin-bottom: 30px;
+    }
+    .test-suite h2 {
+      color: #555;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 8px;
+    }
+    .test-case {
+      padding: 12px;
+      margin: 8px 0;
+      border-left: 4px solid #ccc;
+      background: #fafafa;
+    }
+    .test-case.pass {
+      border-left-color: #4caf50;
+      background: #f1f8f4;
+    }
+    .test-case.fail {
+      border-left-color: #f44336;
+      background: #fef5f5;
+    }
+    .test-case.running {
+      border-left-color: #ff9800;
+      background: #fff8f0;
+    }
+    .test-name {
+      font-weight: 600;
+      color: #333;
+    }
+    .test-result {
+      margin-top: 4px;
+      font-size: 14px;
+      color: #666;
+    }
+    .test-error {
+      color: #f44336;
+      font-family: monospace;
+      font-size: 13px;
+      margin-top: 8px;
+      padding: 8px;
+      background: #ffebee;
+      border-radius: 4px;
+    }
+    .summary {
+      margin-top: 30px;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+    }
+    .summary h3 {
+      margin: 0 0 12px 0;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .run-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .run-btn:hover {
+      background: #5568d3;
+    }
+    .run-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 A/B Test - Unit Tests</h1>
+    <button class="run-btn" id="runBtn" onclick="runAllTests()">▶️ Ejecutar Tests</button>
+    
+    <div id="testResults"></div>
+    
+    <div class="summary" id="summary" style="display: none;">
+      <h3>📊 Resumen</h3>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="totalTests">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="passedTests" style="color: #4caf50;">0</div>
+          <div class="stat-label">✓ Pasados</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="failedTests" style="color: #f44336;">0</div>
+          <div class="stat-label">✗ Fallados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./src/ab-test-loader.js"></script>
+  <script>
+    const testResults = [];
+    let totalTests = 0;
+    let passedTests = 0;
+    let failedTests = 0;
+
+    // Test Framework
+    class TestRunner {
+      constructor(suiteName) {
+        this.suiteName = suiteName;
+        this.tests = [];
+      }
+
+      test(name, fn) {
+        this.tests.push({ name, fn });
+      }
+
+      async run() {
+        const suiteEl = document.createElement('div');
+        suiteEl.className = 'test-suite';
+        suiteEl.innerHTML = `<h2>${this.suiteName}</h2>`;
+        document.getElementById('testResults').appendChild(suiteEl);
+
+        for (const test of this.tests) {
+          const testEl = document.createElement('div');
+          testEl.className = 'test-case running';
+          testEl.innerHTML = `<div class="test-name">• ${test.name}</div><div class="test-result">Ejecutando...</div>`;
+          suiteEl.appendChild(testEl);
+
+          totalTests++;
+          
+          try {
+            await test.fn();
+            testEl.className = 'test-case pass';
+            testEl.innerHTML = `<div class="test-name">✓ ${test.name}</div><div class="test-result">Pasó correctamente</div>`;
+            passedTests++;
+          } catch (error) {
+            testEl.className = 'test-case fail';
+            testEl.innerHTML = `
+              <div class="test-name">✗ ${test.name}</div>
+              <div class="test-result">Falló</div>
+              <div class="test-error">${error.message}</div>
+            `;
+            failedTests++;
+          }
+
+          // Pequeño delay para visualización
+          await new Promise(r => setTimeout(r, 100));
+        }
+      }
+    }
+
+    // Helpers
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(message || `Expected ${expected}, got ${actual}`);
+      }
+    }
+
+    function assertNotNull(value, message) {
+      if (value === null || value === undefined) {
+        throw new Error(message || 'Value is null or undefined');
+      }
+    }
+
+    // Tests Suite 1: Inicialización
+    const initTests = new TestRunner('Inicialización del A/B Test');
+
+    initTests.test('ABTestLoader se carga correctamente', () => {
+      assert(typeof ABTestLoader === 'function', 'ABTestLoader no está definido');
+    });
+
+    initTests.test('Se puede crear instancia de ABTestLoader', () => {
+      const abTest = new ABTestLoader();
+      assertNotNull(abTest, 'No se pudo crear instancia');
+    });
+
+    initTests.test('Configuración por defecto se aplica correctamente', () => {
+      const abTest = new ABTestLoader();
+      assertEqual(abTest.config.variantA, './src/assistant-widget.js');
+      assertEqual(abTest.config.variantB, './src/assistant-widget-v2.js');
+      assertEqual(abTest.config.experimentName, 'assistant_widget_ab_test');
+    });
+
+    initTests.test('Configuración custom se aplica correctamente', () => {
+      const abTest = new ABTestLoader({
+        variantA: '/custom/path-a.js',
+        variantB: '/custom/path-b.js',
+        experimentName: 'custom_experiment'
+      });
+      assertEqual(abTest.config.variantA, '/custom/path-a.js');
+      assertEqual(abTest.config.variantB, '/custom/path-b.js');
+      assertEqual(abTest.config.experimentName, 'custom_experiment');
+    });
+
+    // Tests Suite 2: Session ID
+    const sessionTests = new TestRunner('Gestión de Session ID');
+
+    sessionTests.test('generateUUID genera UUID válido', () => {
+      const abTest = new ABTestLoader();
+      const uuid = abTest.generateUUID();
+      
+      assertNotNull(uuid, 'UUID es null');
+      assert(uuid.length === 36, 'UUID no tiene longitud correcta');
+      assert(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid),
+        'UUID no tiene formato válido');
+    });
+
+    sessionTests.test('getSessionId genera session ID', () => {
+      sessionStorage.clear();
+      const abTest = new ABTestLoader();
+      const sessionId = abTest.getSessionId();
+      
+      assertNotNull(sessionId, 'Session ID es null');
+      assert(sessionId.length > 0, 'Session ID está vacío');
+    });
+
+    sessionTests.test('getSessionId persiste en sessionStorage', () => {
+      sessionStorage.clear();
+      const abTest = new ABTestLoader();
+      const sessionId1 = abTest.getSessionId();
+      const sessionId2 = abTest.getSessionId();
+      
+      assertEqual(sessionId1, sessionId2, 'Session IDs no coinciden');
+    });
+
+    // Tests Suite 3: Hash y Asignación
+    const hashTests = new TestRunner('Hash y Asignación de Variantes');
+
+    hashTests.test('hashCode genera hash consistente', () => {
+      const abTest = new ABTestLoader();
+      const hash1 = abTest.hashCode('test-string');
+      const hash2 = abTest.hashCode('test-string');
+      
+      assertEqual(hash1, hash2, 'Hash no es consistente');
+    });
+
+    hashTests.test('hashCode genera diferentes hashes para diferentes strings', () => {
+      const abTest = new ABTestLoader();
+      const hash1 = abTest.hashCode('string-1');
+      const hash2 = abTest.hashCode('string-2');
+      
+      assert(hash1 !== hash2, 'Hashes son iguales para strings diferentes');
+    });
+
+    hashTests.test('assignVariant retorna A o B', () => {
+      sessionStorage.clear();
+      const abTest = new ABTestLoader();
+      const variant = abTest.assignVariant();
+      
+      assert(variant === 'A' || variant === 'B', `Variante inválida: ${variant}`);
+    });
+
+    hashTests.test('assignVariant es consistente para misma sesión', () => {
+      sessionStorage.clear();
+      const abTest1 = new ABTestLoader();
+      const variant1 = abTest1.assignVariant();
+      
+      const abTest2 = new ABTestLoader();
+      const variant2 = abTest2.assignVariant();
+      
+      assertEqual(variant1, variant2, 'Variantes no son consistentes');
+    });
+
+    hashTests.test('forceVariant funciona correctamente para A', () => {
+      sessionStorage.clear();
+      const abTest = new ABTestLoader({ forceVariant: 'A' });
+      const variant = abTest.assignVariant();
+      
+      assertEqual(variant, 'A', 'Variante forzada no es A');
+    });
+
+    hashTests.test('forceVariant funciona correctamente para B', () => {
+      sessionStorage.clear();
+      const abTest = new ABTestLoader({ forceVariant: 'B' });
+      const variant = abTest.assignVariant();
+      
+      assertEqual(variant, 'B', 'Variante forzada no es B');
+    });
+
+    // Tests Suite 4: Distribución
+    const distributionTests = new TestRunner('Distribución de Variantes');
+
+    distributionTests.test('Distribución aproximadamente 50/50 en 1000 asignaciones', () => {
+      const abTest = new ABTestLoader();
+      let countA = 0;
+      let countB = 0;
+
+      // Simular 1000 asignaciones con diferentes session IDs
+      for (let i = 0; i < 1000; i++) {
+        const hash = abTest.hashCode(`session-${i}`);
+        if (hash % 2 === 0) {
+          countA++;
+        } else {
+          countB++;
+        }
+      }
+
+      // Verificar que está entre 45-55% (margen razonable)
+      const percentA = (countA / 1000) * 100;
+      const percentB = (countB / 1000) * 100;
+      
+      assert(percentA >= 45 && percentA <= 55, `Distribución A fuera de rango: ${percentA}%`);
+      assert(percentB >= 45 && percentB <= 55, `Distribución B fuera de rango: ${percentB}%`);
+    });
+
+    // Tests Suite 5: Tracking
+    const trackingTests = new TestRunner('Sistema de Tracking');
+
+    trackingTests.test('trackEvent no lanza error sin analytics', () => {
+      const originalGtag = window.gtag;
+      const originalDataLayer = window.dataLayer;
+      
+      delete window.gtag;
+      delete window.dataLayer;
+      
+      try {
+        const abTest = new ABTestLoader();
+        abTest.sessionId = 'test-session';
+        abTest.variant = 'A';
+        
+        // No debería lanzar error
+        abTest.trackEvent('test_event', { test_param: 'value' });
+        assert(true, 'trackEvent completado sin error');
+      } finally {
+        window.gtag = originalGtag;
+        window.dataLayer = originalDataLayer;
+      }
+    });
+
+    trackingTests.test('trackInteraction llama a trackEvent', () => {
+      const abTest = new ABTestLoader();
+      abTest.sessionId = 'test-session';
+      abTest.variant = 'A';
+      
+      let eventCalled = false;
+      const originalTrackEvent = abTest.trackEvent;
+      abTest.trackEvent = function() {
+        eventCalled = true;
+      };
+      
+      abTest.trackInteraction('test_action');
+      assert(eventCalled, 'trackEvent no fue llamado');
+      
+      abTest.trackEvent = originalTrackEvent;
+    });
+
+    trackingTests.test('getVariantInfo retorna info correcta', () => {
+      const abTest = new ABTestLoader({ experimentName: 'test_exp' });
+      abTest.sessionId = 'test-session-123';
+      abTest.variant = 'B';
+      
+      const info = abTest.getVariantInfo();
+      
+      assertEqual(info.variant, 'B');
+      assertEqual(info.sessionId, 'test-session-123');
+      assertEqual(info.experimentName, 'test_exp');
+    });
+
+    // Ejecutar todos los tests
+    async function runAllTests() {
+      document.getElementById('runBtn').disabled = true;
+      document.getElementById('testResults').innerHTML = '';
+      document.getElementById('summary').style.display = 'none';
+      
+      totalTests = 0;
+      passedTests = 0;
+      failedTests = 0;
+
+      await initTests.run();
+      await sessionTests.run();
+      await hashTests.run();
+      await distributionTests.run();
+      await trackingTests.run();
+
+      // Mostrar resumen
+      document.getElementById('totalTests').textContent = totalTests;
+      document.getElementById('passedTests').textContent = passedTests;
+      document.getElementById('failedTests').textContent = failedTests;
+      document.getElementById('summary').style.display = 'block';
+      
+      document.getElementById('runBtn').disabled = false;
+
+      // Scroll al resumen
+      document.getElementById('summary').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-02-10 12:00:00",
+  "containerVersion": {
+    "name": "A/B Test Assistant Widget",
+    "description": "Configuración GTM para test A/B del widget asistente",
+    "container": {
+      "name": "EOD RAG Service",
+      "notes": "Import this configuration to your Google Tag Manager"
+    },
+    "tag": [
+      {
+        "name": "GA4 - A/B Test Variant Assigned",
+        "type": "gaawe",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "ab_test_variant_assigned"
+          },
+          {
+            "type": "LIST",
+            "key": "eventParameters",
+            "list": [
+              {
+                "map": [
+                  {"key": "name", "value": "experiment_name"},
+                  {"key": "value", "value": "{{DLV - experiment_name}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "variant"},
+                  {"key": "value", "value": "{{DLV - variant}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "session_id"},
+                  {"key": "value", "value": "{{DLV - session_id}}"}
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger": ["Trigger - AB Test Variant Assigned"]
+      },
+      {
+        "name": "GA4 - A/B Test Widget Loaded",
+        "type": "gaawe",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "ab_test_widget_loaded"
+          },
+          {
+            "type": "LIST",
+            "key": "eventParameters",
+            "list": [
+              {
+                "map": [
+                  {"key": "name", "value": "experiment_name"},
+                  {"key": "value", "value": "{{DLV - experiment_name}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "variant"},
+                  {"key": "value", "value": "{{DLV - variant}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "widget_src"},
+                  {"key": "value", "value": "{{DLV - widget_src}}"}
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger": ["Trigger - AB Test Widget Loaded"]
+      },
+      {
+        "name": "GA4 - A/B Test User Interaction",
+        "type": "gaawe",
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "ab_test_user_interaction"
+          },
+          {
+            "type": "LIST",
+            "key": "eventParameters",
+            "list": [
+              {
+                "map": [
+                  {"key": "name", "value": "experiment_name"},
+                  {"key": "value", "value": "{{DLV - experiment_name}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "variant"},
+                  {"key": "value", "value": "{{DLV - variant}}"}
+                ]
+              },
+              {
+                "map": [
+                  {"key": "name", "value": "action"},
+                  {"key": "value", "value": "{{DLV - action}}"}
+                ]
+              }
+            ]
+          }
+        ],
+        "trigger": ["Trigger - AB Test User Interaction"]
+      }
+    ],
+    "trigger": [
+      {
+        "name": "Trigger - AB Test Variant Assigned",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+              {"type": "TEMPLATE", "key": "arg1", "value": "ab_test_variant_assigned"}
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Trigger - AB Test Widget Loaded",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+              {"type": "TEMPLATE", "key": "arg1", "value": "ab_test_widget_loaded"}
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Trigger - AB Test User Interaction",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+              {"type": "TEMPLATE", "key": "arg1", "value": "ab_test_user_interaction"}
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Trigger - AB Test Load Error",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {"type": "TEMPLATE", "key": "arg0", "value": "{{_event}}"},
+              {"type": "TEMPLATE", "key": "arg1", "value": "ab_test_load_error"}
+            ]
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "name": "DLV - experiment_name",
+        "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "experiment_name"}
+        ]
+      },
+      {
+        "name": "DLV - variant",
+        "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "variant"}
+        ]
+      },
+      {
+        "name": "DLV - session_id",
+        "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "session_id"}
+        ]
+      },
+      {
+        "name": "DLV - widget_src",
+        "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "widget_src"}
+        ]
+      },
+      {
+        "name": "DLV - action",
+        "type": "v",
+        "parameter": [
+          {"type": "INTEGER", "key": "dataLayerVersion", "value": "2"},
+          {"type": "BOOLEAN", "key": "setDefaultValue", "value": "false"},
+          {"type": "TEMPLATE", "key": "name", "value": "action"}
+        ]
+      }
+    ]
+  }
+}
