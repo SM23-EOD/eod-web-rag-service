@@ -744,11 +744,11 @@
                 const conversation = this.getCurrentConversation();
 
                 if (!conversation || conversation.messages.length === 0) {
-                    emptyState.style.display = 'flex';
+                    if (emptyState) emptyState.style.display = 'flex';
                     return;
                 }
 
-                emptyState.style.display = 'none';
+                if (emptyState) emptyState.style.display = 'none';
                 container.innerHTML = '';
 
                 conversation.messages.forEach(msg => {
