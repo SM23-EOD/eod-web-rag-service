@@ -25,7 +25,6 @@ rsync -avz --progress \
   --exclude '.git' \
   --exclude 'cli' \
   --exclude '.env' \
-  --exclude 'chat-interface.html' \
   ./ $DROPLET_USER@$DROPLET_IP:$REMOTE_PATH/
 
 # 3. Desplegar con Docker Compose
