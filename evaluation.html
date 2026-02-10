@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Evaluación IA - Envios23</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧪</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --primary-light: #dbeafe;
+            --secondary: #7c3aed;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-main: #1e293b;
+            --bg-card: #334155;
+            --bg-input: #475569;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #475569;
+            --gradient-primary: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            --gradient-header: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ===== Layout ===== */
+        .app-layout {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ===== Top Bar ===== */
+        .top-bar {
+            background: var(--gradient-header);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        .training-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+            color: white;
+        }
+
+        .training-badge:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .training-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+
+        .training-badge.inactive .dot {
+            background: #94a3b8;
+            animation: none;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .top-bar-center {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
+        }
+
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .top-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .top-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .top-btn.danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        /* ===== Main Content ===== */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ===== Interface Views ===== */
+        .interface-view {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .interface-view.active {
+            display: flex;
+        }
+
+        .iframe-view {
+            display: none;
+            flex: 1;
+        }
+
+        .iframe-view.active {
+            display: block;
+        }
+
+        .iframe-view iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-main);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-mini {
+            background: var(--bg-card);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-mini-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-mini-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .quick-replies {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .quick-reply-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-reply-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .session-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .session-item:hover {
+            background: var(--bg-card);
+        }
+
+        .session-item.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* ===== Chat Area ===== */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-header-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chat-header-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .chat-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .header-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--primary);
+        }
+
+        /* Messages */
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: var(--bg-input);
+            border-radius: 3px;
+        }
+
+        /* Welcome state */
+        .welcome-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            text-align: center;
+            padding: 48px;
+        }
+
+        .welcome-icon {
+            font-size: 72px;
+            line-height: 1;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+
+        .welcome-prompts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-width: 600px;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .welcome-prompt {
+            padding: 16px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .welcome-prompt:hover {
+            border-color: var(--primary);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+
+        .welcome-prompt-icon {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        /* Message */
+        .message {
+            display: flex;
+            gap: 14px;
+            max-width: 85%;
+            animation: msgIn 0.3s ease-out;
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: var(--primary);
+        }
+
+        .message.assistant .message-avatar {
+            background: var(--secondary);
+        }
+
+        .message.error .message-avatar {
+            background: var(--danger);
+        }
+
+        .message-body {
+            flex: 1;
+        }
+
+        .message-bubble {
+            padding: 14px 18px;
+            border-radius: 16px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .message.user .message-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-bubble {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.error .message-bubble {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-bubble p { margin-bottom: 10px; }
+        .message-bubble p:last-child { margin-bottom: 0; }
+        .message-bubble ul, .message-bubble ol { margin-left: 18px; margin-bottom: 10px; }
+        .message-bubble code {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+        }
+        .message-bubble pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+        .message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
+        .message-bubble strong { color: var(--primary-light); }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            padding: 0 4px;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        /* Sources */
+        .message-sources {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .sources-header {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .source-tag {
+            display: inline-block;
+            background: rgba(37, 99, 235, 0.15);
+            color: var(--primary-light);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px 4px 2px 0;
+        }
+
+        /* Confidence */
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .confidence-badge.high {
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+        }
+
+        .confidence-badge.medium {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fcd34d;
+        }
+
+        .confidence-badge.low {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* Feedback buttons */
+        .feedback-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .feedback-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .feedback-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .feedback-btn.correct:hover, .feedback-btn.correct.active {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .feedback-btn.incorrect:hover, .feedback-btn.incorrect.active {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .feedback-btn.active {
+            pointer-events: none;
+        }
+
+        .feedback-sent {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Loading indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 14px;
+            max-width: 85%;
+            animation: msgIn 0.3s ease-out;
+        }
+
+        .typing-indicator .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            background: var(--secondary);
+        }
+
+        .typing-dots {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 14px 20px;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ===== Input Area ===== */
+        .input-area {
+            padding: 20px 24px;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 12px 16px;
+            transition: border-color 0.2s;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .input-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+            resize: none;
+            max-height: 150px;
+            font-family: inherit;
+        }
+
+        .input-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ===== Status Bar ===== */
+        .status-bar {
+            padding: 8px 24px;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .powered-by {
+            font-size: 11px;
+            opacity: 0.6;
+        }
+
+        /* ===== Modals ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalIn 0.2s ease-out;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary);
+        }
+
+        .form-group .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-input);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--primary);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-input);
+        }
+
+        /* ===== Stats Panel ===== */
+        .stats-panel {
+            display: none;
+            position: fixed;
+            right: 0;
+            top: 60px;
+            bottom: 0;
+            width: 360px;
+            background: var(--bg-main);
+            border-left: 1px solid var(--border);
+            z-index: 50;
+            overflow-y: auto;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .stats-panel.active {
+            display: block;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .stats-panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stats-panel-header h3 {
+            font-size: 18px;
+        }
+
+        .stats-panel-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-card-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .stat-card.success .stat-card-value { color: var(--success); }
+        .stat-card.danger .stat-card-value { color: var(--danger); }
+        .stat-card.primary .stat-card-value { color: var(--primary); }
+        .stat-card.warning .stat-card-value { color: var(--warning); }
+
+        .accuracy-bar {
+            margin: 0 20px 20px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .accuracy-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--gradient-primary);
+            transition: width 0.5s ease;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: 0;
+                top: 60px;
+                bottom: 0;
+                z-index: 50;
+                width: 280px;
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .welcome-prompts {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-panel {
+                width: 100%;
+            }
+
+            .top-bar {
+                padding: 0 12px;
+            }
+
+            .logo span:not(.logo-icon) {
+                display: none;
+            }
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="logo">
+                    <span class="logo-icon">📦</span>
+                    <span>Envios23</span>
+                </div>
+                <button class="training-badge" id="trainingBadge" onclick="evalApp.toggleTrainingMode()">
+                    <span class="dot"></span>
+                    <span id="trainingBadgeText">Modo evaluación activo</span>
+                </button>
+            </div>
+            <div class="top-bar-center">
+                <button class="tab-btn active" data-view="evaluation" onclick="evalApp.switchView('evaluation')">🧪 Evaluación</button>
+                <button class="tab-btn" data-view="chat" onclick="evalApp.switchView('chat')">💬 Chat GPT</button>
+                <button class="tab-btn" data-view="widget" onclick="evalApp.switchView('widget')">🎨 Widget V2</button>
+            </div>
+            <div class="top-bar-right">
+                <button class="top-btn eval-only danger" onclick="evalApp.clearChat()" title="Limpiar chat">🗑️</button>
+                <button class="top-btn eval-only" onclick="evalApp.saveSession()" title="Guardar sesión">💾</button>
+                <a class="top-btn" href="evaluation-dashboard.html" title="Dashboard">📊 Dashboard</a>
+                <button class="top-btn eval-only" onclick="evalApp.toggleStats()" title="Estadísticas">📈 Estadísticas</button>
+                <button class="top-btn" onclick="evalApp.openConfig()" title="Configuración">🔧 Configuración</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- ===== View: Evaluation (native) ===== -->
+            <div class="interface-view active" id="viewEvaluation">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">Resumen Rápido</div>
+                    <div class="quick-stats">
+                        <div class="stat-mini">
+                            <div class="stat-mini-value" id="statMessages">0</div>
+                            <div class="stat-mini-label">Mensajes</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value" id="statAccuracy">--%</div>
+                            <div class="stat-mini-label">Precisión</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value" id="statCorrect">0</div>
+                            <div class="stat-mini-label">Correctas</div>
+                        </div>
+                        <div class="stat-mini">
+                            <div class="stat-mini-value" id="statIncorrect">0</div>
+                            <div class="stat-mini-label">Incorrectas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Preguntas rápidas</div>
+                    <div class="quick-replies">
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>💰</span> ¿Cuánto cuesta un envío?
+                        </button>
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>📦</span> ¿Cómo rastreo mi paquete?
+                        </button>
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>🚀</span> ¿Cómo hago un nuevo envío?
+                        </button>
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>🕐</span> ¿Cuáles son los horarios?
+                        </button>
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>📋</span> ¿Qué documentos necesito?
+                        </button>
+                        <button class="quick-reply-btn" onclick="evalApp.sendQuick(this)">
+                            <span>🏠</span> ¿Tienen recogida a domicilio?
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <div>Sesión: <span id="sidebarSessionId">-</span></div>
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <div class="chat-header-left">
+                        <button class="header-btn" onclick="evalApp.toggleSidebar()" title="Toggle sidebar">☰</button>
+                        <div>
+                            <div class="chat-header-title">Centro de evaluación del asistente</div>
+                            <div class="chat-header-subtitle">Realiza preguntas reales para evaluar y mejorar el modelo de IA</div>
+                        </div>
+                    </div>
+                    <div class="chat-header-right">
+                        <button class="header-btn" onclick="evalApp.exportData()" title="Exportar datos">📥 Exportar</button>
+                    </div>
+                </div>
+
+                <div class="messages-area" id="messagesArea">
+                    <!-- Welcome State -->
+                    <div class="welcome-state" id="welcomeState">
+                        <div class="welcome-icon">🧪</div>
+                        <h2 class="welcome-title">Centro de Evaluación IA</h2>
+                        <p class="welcome-subtitle">
+                            Realiza preguntas reales para evaluar la calidad de las respuestas del asistente.
+                            Usa los botones de feedback para marcar las respuestas como correctas o incorrectas.
+                        </p>
+                        <div class="welcome-prompts">
+                            <div class="welcome-prompt" onclick="evalApp.sendWelcomePrompt(this)">
+                                <div class="welcome-prompt-icon">💰</div>
+                                ¿Cuánto cuesta enviar un paquete de 5 libras a La Habana?
+                            </div>
+                            <div class="welcome-prompt" onclick="evalApp.sendWelcomePrompt(this)">
+                                <div class="welcome-prompt-icon">📦</div>
+                                ¿Cómo puedo hacer seguimiento de mi envío?
+                            </div>
+                            <div class="welcome-prompt" onclick="evalApp.sendWelcomePrompt(this)">
+                                <div class="welcome-prompt-icon">📋</div>
+                                ¿Qué artículos están prohibidos para enviar?
+                            </div>
+                            <div class="welcome-prompt" onclick="evalApp.sendWelcomePrompt(this)">
+                                <div class="welcome-prompt-icon">⏱️</div>
+                                ¿Cuánto tarda un envío en llegar a Cuba?
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-container">
+                        <textarea
+                            class="input-textarea"
+                            id="messageInput"
+                            placeholder="Escribe una pregunta para evaluar al asistente..."
+                            rows="1"
+                            onkeydown="evalApp.handleKeyDown(event)"
+                            oninput="evalApp.autoResize(this)"
+                        ></textarea>
+                        <button class="send-btn" id="sendBtn" onclick="evalApp.send()" title="Enviar">
+                            ➤
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Bar -->
+                <div class="status-bar">
+                    <div class="status-left">
+                        <span>Sesión: <strong id="statusSession">-</strong></span>
+                        <span>|</span>
+                        <span>Mensajes: <strong id="statusMsgCount">0</strong></span>
+                    </div>
+                    <div class="status-right">
+                        <span class="powered-by">Powered by Envios23 IA</span>
+                    </div>
+                </div>
+            </div>
+            </div><!-- /viewEvaluation -->
+
+            <!-- ===== View: Chat GPT-like (iframe) ===== -->
+            <div class="iframe-view" id="viewChat">
+                <iframe id="iframeChat" data-src="chat-interface.html" title="Chat Interface"></iframe>
+            </div>
+
+            <!-- ===== View: Widget V2 (iframe) ===== -->
+            <div class="iframe-view" id="viewWidget">
+                <iframe id="iframeWidget" data-src="demo-widget-v2.html" title="Widget V2 Demo"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-panel-header">
+            <h3>📈 Estadísticas</h3>
+            <button class="stats-panel-close" onclick="evalApp.toggleStats()">✕</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-card-value" id="panelTotalConv">0</div>
+                <div class="stat-card-label">Total Conversaciones</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-card-value" id="panelTotalMsg">0</div>
+                <div class="stat-card-label">Total Mensajes</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-card-value" id="panelCorrect">0</div>
+                <div class="stat-card-label">Respuestas Correctas</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-card-value" id="panelIncorrect">0</div>
+                <div class="stat-card-label">Respuestas Incorrectas</div>
+            </div>
+        </div>
+        <div class="accuracy-bar">
+            <div class="accuracy-label">
+                <span>Tasa de Precisión</span>
+                <span id="panelAccuracy">--%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="panelAccuracyBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div style="padding: 0 20px 20px;">
+            <button class="btn btn-secondary" style="width: 100%;" onclick="evalApp.resetStats()">
+                🔄 Reiniciar Estadísticas
+            </button>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div class="modal-overlay" id="configModal">
+        <div class="modal">
+            <h2>🔧 Configuración</h2>
+            <div class="form-group">
+                <label>Endpoint API</label>
+                <input type="text" id="cfgEndpoint" placeholder="http://167.172.225.44/api/v2/mcp/tools/call">
+            </div>
+            <div class="form-group">
+                <label>Endpoint Feedback</label>
+                <input type="text" id="cfgFeedbackEndpoint" placeholder="http://167.172.225.44/api/v2/feedback">
+            </div>
+            <div class="form-group">
+                <label>Tool Name</label>
+                <input type="text" id="cfgToolName" placeholder="generate_rag_answer">
+            </div>
+            <div class="form-group">
+                <label>Session ID</label>
+                <input type="text" id="cfgSessionId">
+            </div>
+            <div class="form-group">
+                <div class="toggle-row">
+                    <label style="margin: 0;">Incluir fuentes</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="cfgIncludeSources" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="toggle-row">
+                    <label style="margin: 0;">Modo evaluación</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="cfgTrainingMode" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="evalApp.closeConfig()">Cancelar</button>
+                <button class="btn btn-primary" onclick="evalApp.saveConfig()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script src="./src/evaluation-chat.js"></script>
+    <script>
+        const evalApp = {
+            chat: null,
+            statsOpen: false,
+            sidebarOpen: true,
+            currentView: 'evaluation',
+            iframesLoaded: { chat: false, widget: false },
+
+            init() {
+                // Load saved config
+                let savedCfg = {};
+                try {
+                    savedCfg = JSON.parse(localStorage.getItem('evalChatConfig') || '{}');
+                } catch (e) { /* ignore */ }
+
+                this.chat = new EvaluationChat({
+                    endpoint: savedCfg.endpoint || 'http://167.172.225.44/api/v2/mcp/tools/call',
+                    feedbackEndpoint: savedCfg.feedbackEndpoint || 'http://167.172.225.44/api/v2/feedback',
+                    toolName: savedCfg.toolName || 'generate_rag_answer',
+                    sessionId: savedCfg.sessionId || undefined,
+                    includeSources: savedCfg.includeSources !== undefined ? savedCfg.includeSources : true,
+                    trainingMode: savedCfg.trainingMode !== undefined ? savedCfg.trainingMode : true,
+                    onMessage: (msg) => this.renderNewMessage(msg),
+                    onLoading: (loading) => this.setLoading(loading),
+                    onError: (err) => console.error('Chat error:', err),
+                    onStatsUpdate: (stats) => this.updateStatsDisplay(stats),
+                });
+
+                // Display session
+                const sid = this.chat.getSessionId();
+                document.getElementById('statusSession').textContent = sid;
+                document.getElementById('sidebarSessionId').textContent = sid.substring(0, 16);
+
+                // Configure marked
+                if (typeof marked !== 'undefined') {
+                    marked.setOptions({ breaks: true, gfm: true });
+                }
+
+                // Auto-resize textarea
+                const ta = document.getElementById('messageInput');
+                ta.addEventListener('input', () => this.autoResize(ta));
+
+                // Update stats display
+                this.updateStatsDisplay(this.chat.getStats());
+
+                // Focus input
+                ta.focus();
+
+                // Check if we should open a specific view (from hash or localStorage)
+                const hash = window.location.hash.replace('#', '');
+                const savedView = localStorage.getItem('evalStartView');
+                if (hash && ['chat', 'widget', 'evaluation'].includes(hash)) {
+                    this.switchView(hash);
+                } else if (savedView && ['chat', 'widget'].includes(savedView)) {
+                    this.switchView(savedView);
+                    localStorage.removeItem('evalStartView');
+                }
+            },
+
+            autoResize(el) {
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+            },
+
+            handleKeyDown(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.send();
+                }
+            },
+
+            async send() {
+                const input = document.getElementById('messageInput');
+                const text = input.value.trim();
+                if (!text) return;
+
+                // Hide welcome state
+                const welcome = document.getElementById('welcomeState');
+                if (welcome) welcome.style.display = 'none';
+
+                input.value = '';
+                input.style.height = 'auto';
+
+                await this.chat.sendMessage(text);
+
+                // Update message count
+                document.getElementById('statusMsgCount').textContent = this.chat.getMessageCount();
+                document.getElementById('statMessages').textContent = this.chat.getMessageCount();
+
+                input.focus();
+            },
+
+            sendQuick(el) {
+                const text = el.textContent.trim().replace(/^[^\s]+\s/, ''); // Remove emoji prefix
+                document.getElementById('messageInput').value = text;
+                this.send();
+            },
+
+            sendWelcomePrompt(el) {
+                // Get just the text, exclude the icon div
+                const text = el.textContent.trim().replace(/^[^\n]+\n\s*/, '');
+                document.getElementById('messageInput').value = text;
+                this.send();
+            },
+
+            renderNewMessage(msg) {
+                const area = document.getElementById('messagesArea');
+
+                // Remove typing indicator if present
+                const typingEl = document.getElementById('typingIndicator');
+                if (typingEl) typingEl.remove();
+
+                const msgEl = document.createElement('div');
+                msgEl.className = `message ${msg.role}`;
+                msgEl.id = `message-${msg.id}`;
+
+                const avatar = msg.role === 'user' ? '👤' : msg.role === 'error' ? '⚠️' : '🤖';
+
+                let contentHtml = '';
+                if (typeof marked !== 'undefined' && msg.role !== 'error') {
+                    try {
+                        contentHtml = marked.parse(msg.content);
+                    } catch (e) {
+                        contentHtml = this.escapeHtml(msg.content);
+                    }
+                } else {
+                    contentHtml = this.escapeHtml(msg.content);
+                }
+
+                const time = new Date(msg.timestamp).toLocaleTimeString('es', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+
+                let sourcesHtml = '';
+                if (msg.sources && msg.sources.length > 0) {
+                    sourcesHtml = `
+                        <div class="message-sources">
+                            <div class="sources-header">📚 Fuentes</div>
+                            ${msg.sources.map(s => `<span class="source-tag">${this.escapeHtml(s)}</span>`).join('')}
+                        </div>
+                    `;
+                }
+
+                let confidenceHtml = '';
+                if (msg.confidence !== null && msg.confidence !== undefined) {
+                    const level = msg.confidence >= 0.7 ? 'high' : msg.confidence >= 0.4 ? 'medium' : 'low';
+                    const pct = (msg.confidence * 100).toFixed(0);
+                    confidenceHtml = `<span class="confidence-badge ${level}">🎯 ${pct}% confianza</span>`;
+                }
+
+                let feedbackHtml = '';
+                if (msg.role === 'assistant' && this.chat.config.trainingMode) {
+                    feedbackHtml = `
+                        <div class="feedback-bar" id="feedback-${msg.id}">
+                            <button class="feedback-btn correct" onclick="evalApp.feedback('${msg.id}', 'correct')">
+                                👍 Correcta
+                            </button>
+                            <button class="feedback-btn incorrect" onclick="evalApp.feedback('${msg.id}', 'incorrect')">
+                                👎 Incorrecta
+                            </button>
+                        </div>
+                    `;
+                }
+
+                msgEl.innerHTML = `
+                    <div class="message-avatar">${avatar}</div>
+                    <div class="message-body">
+                        <div class="message-bubble">${contentHtml}</div>
+                        ${sourcesHtml}
+                        ${confidenceHtml}
+                        ${feedbackHtml}
+                        <div class="message-time">${time}</div>
+                    </div>
+                `;
+
+                area.appendChild(msgEl);
+                area.scrollTop = area.scrollHeight;
+            },
+
+            setLoading(loading) {
+                const sendBtn = document.getElementById('sendBtn');
+                const area = document.getElementById('messagesArea');
+                sendBtn.disabled = loading;
+
+                if (loading) {
+                    const typing = document.createElement('div');
+                    typing.className = 'typing-indicator';
+                    typing.id = 'typingIndicator';
+                    typing.innerHTML = `
+                        <div class="message-avatar">🤖</div>
+                        <div class="typing-dots">
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                        </div>
+                    `;
+                    area.appendChild(typing);
+                    area.scrollTop = area.scrollHeight;
+                }
+            },
+
+            async feedback(messageId, type) {
+                const success = await this.chat.sendFeedback(messageId, type);
+                if (success) {
+                    const bar = document.getElementById(`feedback-${messageId}`);
+                    if (bar) {
+                        const emoji = type === 'correct' ? '👍' : '👎';
+                        const label = type === 'correct' ? 'Marcada como correcta' : 'Marcada como incorrecta';
+                        bar.innerHTML = `<span class="feedback-sent">${emoji} ${label}</span>`;
+                    }
+                    this.updateStatsDisplay(this.chat.getStats());
+                    this.showToast(`Feedback enviado: ${type === 'correct' ? 'Correcta ✓' : 'Incorrecta ✗'}`);
+                }
+            },
+
+            updateStatsDisplay(stats) {
+                const total = stats.correctResponses + stats.incorrectResponses;
+                const accuracy = total > 0 ? ((stats.correctResponses / total) * 100).toFixed(1) : '--';
+
+                document.getElementById('statMessages').textContent = this.chat.getMessageCount();
+                document.getElementById('statAccuracy').textContent = accuracy + '%';
+                document.getElementById('statCorrect').textContent = stats.correctResponses;
+                document.getElementById('statIncorrect').textContent = stats.incorrectResponses;
+
+                // Stats panel
+                document.getElementById('panelTotalConv').textContent = stats.totalConversations;
+                document.getElementById('panelTotalMsg').textContent = stats.totalMessages;
+                document.getElementById('panelCorrect').textContent = stats.correctResponses;
+                document.getElementById('panelIncorrect').textContent = stats.incorrectResponses;
+                document.getElementById('panelAccuracy').textContent = accuracy + '%';
+                document.getElementById('panelAccuracyBar').style.width = (accuracy !== '--' ? accuracy : 0) + '%';
+            },
+
+            toggleStats() {
+                this.statsOpen = !this.statsOpen;
+                document.getElementById('statsPanel').classList.toggle('active', this.statsOpen);
+            },
+
+            toggleSidebar() {
+                this.sidebarOpen = !this.sidebarOpen;
+                const sidebar = document.getElementById('sidebar');
+                // For mobile
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('mobile-open', this.sidebarOpen);
+                } else {
+                    sidebar.classList.toggle('collapsed', !this.sidebarOpen);
+                }
+            },
+
+            toggleTrainingMode() {
+                const badge = document.getElementById('trainingBadge');
+                const text = document.getElementById('trainingBadgeText');
+                const isActive = badge.classList.toggle('inactive');
+                this.chat.setTrainingMode(!isActive);
+
+                if (isActive) {
+                    text.textContent = 'Modo evaluación inactivo';
+                } else {
+                    text.textContent = 'Modo evaluación activo';
+                }
+            },
+
+            clearChat() {
+                if (confirm('¿Limpiar todos los mensajes de esta sesión?')) {
+                    this.chat.clearMessages();
+                    const area = document.getElementById('messagesArea');
+                    area.innerHTML = '';
+                    // Restore welcome state
+                    area.innerHTML = `
+                        <div class="welcome-state" id="welcomeState">
+                            <div class="welcome-icon">🧪</div>
+                            <h2 class="welcome-title">Centro de Evaluación IA</h2>
+                            <p class="welcome-subtitle">
+                                Realiza preguntas reales para evaluar la calidad de las respuestas del asistente.
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('statusMsgCount').textContent = '0';
+                    document.getElementById('statMessages').textContent = '0';
+                    this.showToast('Chat limpiado');
+                }
+            },
+
+            saveSession() {
+                this.chat.saveCurrentSession();
+                this.showToast('Sesión guardada correctamente 💾');
+            },
+
+            exportData() {
+                const data = this.chat.exportData();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `eval-session-${this.chat.getSessionId()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Datos exportados');
+            },
+
+            resetStats() {
+                if (confirm('¿Reiniciar todas las estadísticas? Esta acción no se puede deshacer.')) {
+                    this.chat.resetStats();
+                    this.updateStatsDisplay(this.chat.getStats());
+                    this.showToast('Estadísticas reiniciadas');
+                }
+            },
+
+            openConfig() {
+                document.getElementById('cfgEndpoint').value = this.chat.config.endpoint;
+                document.getElementById('cfgFeedbackEndpoint').value = this.chat.config.feedbackEndpoint;
+                document.getElementById('cfgToolName').value = this.chat.config.toolName;
+                document.getElementById('cfgSessionId').value = this.chat.config.sessionId;
+                document.getElementById('cfgIncludeSources').checked = this.chat.config.includeSources;
+                document.getElementById('cfgTrainingMode').checked = this.chat.config.trainingMode;
+                document.getElementById('configModal').classList.add('active');
+            },
+
+            closeConfig() {
+                document.getElementById('configModal').classList.remove('active');
+            },
+
+            saveConfig() {
+                this.chat.config.endpoint = document.getElementById('cfgEndpoint').value;
+                this.chat.config.feedbackEndpoint = document.getElementById('cfgFeedbackEndpoint').value;
+                this.chat.config.toolName = document.getElementById('cfgToolName').value;
+                this.chat.config.sessionId = document.getElementById('cfgSessionId').value;
+                this.chat.config.includeSources = document.getElementById('cfgIncludeSources').checked;
+                this.chat.config.trainingMode = document.getElementById('cfgTrainingMode').checked;
+
+                // Update displays
+                document.getElementById('statusSession').textContent = this.chat.config.sessionId;
+                document.getElementById('sidebarSessionId').textContent = this.chat.config.sessionId.substring(0, 16);
+
+                // Save to localStorage
+                localStorage.setItem('evalChatConfig', JSON.stringify(this.chat.config));
+
+                this.closeConfig();
+                this.showToast('Configuración guardada');
+            },
+
+            showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            },
+
+            switchView(viewName) {
+                this.currentView = viewName;
+
+                // Update tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.view === viewName);
+                });
+
+                // Hide all views
+                document.getElementById('viewEvaluation').classList.remove('active');
+                document.getElementById('viewChat').classList.remove('active');
+                document.getElementById('viewWidget').classList.remove('active');
+
+                // Show selected view
+                if (viewName === 'evaluation') {
+                    document.getElementById('viewEvaluation').classList.add('active');
+                } else if (viewName === 'chat') {
+                    const container = document.getElementById('viewChat');
+                    container.classList.add('active');
+                    // Lazy load iframe (with cache bust)
+                    if (!this.iframesLoaded.chat) {
+                        const iframe = document.getElementById('iframeChat');
+                        iframe.src = iframe.dataset.src + '?v=' + Date.now();
+                        this.iframesLoaded.chat = true;
+                    }
+                } else if (viewName === 'widget') {
+                    const container = document.getElementById('viewWidget');
+                    container.classList.add('active');
+                    // Lazy load iframe (with cache bust)
+                    if (!this.iframesLoaded.widget) {
+                        const iframe = document.getElementById('iframeWidget');
+                        iframe.src = iframe.dataset.src + '?v=' + Date.now();
+                        this.iframesLoaded.widget = true;
+                    }
+                }
+
+                // Show/hide evaluation-only toolbar buttons
+                const evalOnlyBtns = document.querySelectorAll('.top-btn.eval-only');
+                evalOnlyBtns.forEach(btn => {
+                    btn.style.display = viewName === 'evaluation' ? 'flex' : 'none';
+                });
+            },
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
+        };
+
+        window.addEventListener('DOMContentLoaded', () => evalApp.init());
+    </script>
+</body>
+</html>
