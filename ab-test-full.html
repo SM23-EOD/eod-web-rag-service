@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A/B Test - Integración Completa (GA4 + Backend)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+  
+  <!-- Google Tag Manager -->
+  <script>
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-XXXXXXX'); // Reemplazar con tu GTM ID
+  </script>
+  
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 32px;
+    }
+    header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 4px;
+      backdrop-filter: blur(10px);
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      margin: 0 0 16px 0;
+      color: #667eea;
+      font-size: 18px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .info-item {
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border-left: 3px solid #667eea;
+    }
+    .info-item label {
+      display: block;
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .info-item value {
+      display: block;
+      font-size: 14px;
+      color: #1e293b;
+      font-weight: 500;
+      font-family: monospace;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status.success { background: #d1fae5; color: #065f46; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    .status.pending { background: #fef3c7; color: #92400e; }
+    .event-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .event {
+      padding: 6px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    .event:last-child { border-bottom: none; }
+    .timestamp { color: #94a3b8; font-size: 11px; }
+    .event-name { color: #a78bfa; font-weight: 600; }
+    .event-target { color: #60a5fa; }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 4px;
+    }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5568d3; }
+  </style>
+</head>
+<body>
+  <!-- GTM noscript -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+  <div class="container">
+    <header>
+      <h1>🔬 A/B Test - Integración Completa</h1>
+      <p>
+        <span class="badge" id="variantBadge">Cargando...</span>
+        <span class="badge" id="ga4Status">GA4: ⏳</span>
+        <span class="badge" id="backendStatus">Backend: ⏳</span>
+      </p>
+    </header>
+
+    <div class="card">
+      <h2>📊 Información del Test</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Variante</label>
+          <value id="variantValue">-</value>
+        </div>
+        <div class="info-item">
+          <label>Session ID</label>
+          <value id="sessionValue">-</value>
+        </div>
+        <div class="info-item">
+          <label>Widget</label>
+          <value id="widgetValue">-</value>
+        </div>
+        <div class="info-item">
+          <label>Tiempo de Carga</label>
+          <value id="loadTimeValue">-</value>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📡 Estado de Tracking</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Google Analytics 4</label>
+          <value><span class="status" id="ga4StatusDetail">Checking...</span></value>
+        </div>
+        <div class="info-item">
+          <label>Backend Analytics</label>
+          <value><span class="status" id="backendStatusDetail">Checking...</span></value>
+        </div>
+        <div class="info-item">
+          <label>Eventos Enviados (GA4)</label>
+          <value id="ga4EventCount">0</value>
+        </div>
+        <div class="info-item">
+          <label>Eventos Enviados (Backend)</label>
+          <value id="backendEventCount">0</value>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎮 Simular Interacciones</h2>
+      <button class="btn btn-primary" onclick="simulateMessageSent()">📨 Enviar Mensaje</button>
+      <button class="btn btn-primary" onclick="simulateFeedback('positive')">👍 Feedback Positivo</button>
+      <button class="btn btn-primary" onclick="simulateFeedback('negative')">👎 Feedback Negativo</button>
+      <button class="btn btn-primary" onclick="simulateWidgetOpen()">📂 Abrir Widget</button>
+    </div>
+
+    <div class="card">
+      <h2>📝 Event Log</h2>
+      <div class="event-log" id="eventLog">
+        <div class="event"><span class="timestamp">Esperando eventos...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cargar módulos A/B -->
+  <script src="./src/ab-test-loader.js"></script>
+  <script src="./src/ab-test-analytics.js"></script>
+
+  <script>
+    let abTest;
+    let analytics;
+    const events = [];
+    let ga4EventCount = 0;
+    let backendEventCount = 0;
+
+    // Detectar si GA4/GTM están disponibles
+    function checkGA4() {
+      const hasGtag = typeof window.gtag === 'function';
+      const hasDataLayer = Array.isArray(window.dataLayer);
+      const available = hasGtag || hasDataLayer;
+      
+      const statusEl = document.getElementById('ga4StatusDetail');
+      const badgeEl = document.getElementById('ga4Status');
+      
+      if (available) {
+        statusEl.className = 'status success';
+        statusEl.textContent = hasGtag ? 'Conectado (gtag)' : 'Conectado (GTM)';
+        badgeEl.textContent = 'GA4: ✅';
+      } else {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'No configurado';
+        badgeEl.textContent = 'GA4: ❌';
+      }
+      
+      return available;
+    }
+
+    // Escuchar eventos
+    window.addEventListener('ab_test_event', (e) => {
+      logEvent(e.detail);
+      
+      // Contar evento GA4
+      if (window.gtag || window.dataLayer) {
+        ga4EventCount++;
+        document.getElementById('ga4EventCount').textContent = ga4EventCount;
+      }
+    });
+
+    // Inicializar A/B Test
+    async function initABTest() {
+      const startTime = Date.now();
+      
+      try {
+        // 1. Inicializar ABTestLoader
+        abTest = new ABTestLoader({
+          variantA: './src/assistant-widget.js',
+          variantB: './src/assistant-widget-v2.js',
+          experimentName: 'assistant_widget_ab_test_v1'
+        });
+
+        // 2. Inicializar Analytics (tracking híbrido)
+        analytics = new ABTestAnalytics(abTest, {
+          analyticsEndpoint: 'https://api.envios23.com/api/v2/analytics/ab-test',
+          feedbackEndpoint: 'https://api.envios23.com/api/v2/feedback',
+          enabled: true  // Cambiar a false para deshabilitar backend tracking
+        });
+
+        // 3. Cargar widget
+        const variant = await abTest.init();
+        const loadTime = Date.now() - startTime;
+
+        // 4. Update UI
+        updateUI(variant, abTest.getVariantInfo(), loadTime);
+
+        // 5. Track events
+        try {
+          await analytics.trackVariantAssignment();
+          backendEventCount++;
+          updateBackendStatus('success', 'Conectado');
+        } catch (err) {
+          updateBackendStatus('error', 'No disponible');
+          console.warn('Backend analytics no disponible:', err);
+        }
+
+        try {
+          await analytics.trackWidgetLoaded(loadTime);
+          backendEventCount++;
+        } catch (err) {
+          console.warn('Error tracking widget load:', err);
+        }
+
+        updateBackendEventCount();
+
+      } catch (error) {
+        console.error('Error al inicializar A/B test:', error);
+        
+        if (analytics) {
+          try {
+            await analytics.trackLoadError(error);
+            backendEventCount++;
+            updateBackendEventCount();
+          } catch (err) {
+            console.warn('Error tracking error:', err);
+          }
+        }
+      }
+    }
+
+    function updateUI(variant, info, loadTime) {
+      document.getElementById('variantBadge').textContent = `Variante ${variant}`;
+      document.getElementById('variantValue').textContent = variant;
+      document.getElementById('sessionValue').textContent = info.sessionId.substring(0, 13) + '...';
+      document.getElementById('widgetValue').textContent = variant === 'A' ? 'widget.js' : 'widget-v2.js';
+      document.getElementById('loadTimeValue').textContent = `${loadTime}ms`;
+    }
+
+    function updateBackendStatus(status, text) {
+      const statusEl = document.getElementById('backendStatusDetail');
+      const badgeEl = document.getElementById('backendStatus');
+      
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = text;
+      badgeEl.textContent = status === 'success' ? 'Backend: ✅' : 'Backend: ❌';
+    }
+
+    function updateBackendEventCount() {
+      document.getElementById('backendEventCount').textContent = backendEventCount;
+    }
+
+    function logEvent(detail) {
+      const timestamp = new Date().toLocaleTimeString();
+      const { eventName, variant } = detail;
+      
+      const target = window.gtag ? 'GA4' : window.dataLayer ? 'GTM' : 'Console';
+      
+      events.unshift({ timestamp, eventName, variant, target });
+      if (events.length > 20) events.pop();
+
+      renderEventLog();
+    }
+
+    function renderEventLog() {
+      const logEl = document.getElementById('eventLog');
+      logEl.innerHTML = events.map(e => `
+        <div class="event">
+          <span class="timestamp">[${e.timestamp}]</span>
+          <span class="event-name">${e.eventName}</span>
+          <span class="event-target">→ ${e.target}</span>
+        </div>
+      `).join('');
+    }
+
+    // Simular interacciones
+    async function simulateMessageSent() {
+      if (!analytics) return;
+      try {
+        await analytics.trackInteraction('message_sent', {
+          message_length: 42,
+          simulated: true
+        });
+        backendEventCount++;
+        updateBackendEventCount();
+      } catch (err) {
+        console.warn('Error tracking interaction:', err);
+      }
+    }
+
+    async function simulateFeedback(type) {
+      if (!analytics) return;
+      try {
+        await analytics.sendFeedback(
+          'msg-' + Date.now(),
+          type === 'positive' ? 1 : 0,
+          '¿Cómo funciona el tracking?',
+          'El tracking funciona mediante eventos enviados a GA4 y backend...'
+        );
+        backendEventCount++;
+        updateBackendEventCount();
+      } catch (err) {
+        console.warn('Error sending feedback:', err);
+      }
+    }
+
+    async function simulateWidgetOpen() {
+      if (!analytics) return;
+      try {
+        await analytics.trackInteraction('widget_opened', {
+          simulated: true
+        });
+        backendEventCount++;
+        updateBackendEventCount();
+      } catch (err) {
+        console.warn('Error tracking widget open:', err);
+      }
+    }
+
+    // Inicializar al cargar
+    window.addEventListener('DOMContentLoaded', () => {
+      checkGA4();
+      initABTest();
+    });
+  </script>
+</body>
+</html>
