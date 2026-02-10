@@ -45,6 +45,31 @@ Abre http://localhost:3000 para ver la demo.
 
 Requiere el backend [eod-api-rag-service](https://github.com/envios23/eod-api-rag-service) con el endpoint MCP habilitado.
 
+## 🧪 A/B Testing
+
+Este proyecto incluye un framework completo de test A/B para comparar las dos interfaces del widget:
+
+- **Variante A**: `assistant-widget.js` (interfaz original)
+- **Variante B**: `assistant-widget-v2.js` (interfaz nueva v2)
+
+### Quick Start A/B Test
+
+```bash
+# Iniciar servidor
+npm run dev
+
+# Abrir página de demo del A/B test
+# http://localhost:3000/ab-test.html
+```
+
+**Características:**
+- ✅ Distribución automática 50/50 basada en Session ID
+- ✅ Tracking con Google Analytics / GTM
+- ✅ Persistencia durante la sesión
+- ✅ Control manual para testing
+
+**Documentación completa**: [AB-TEST-README.md](AB-TEST-README.md)
+
 ## 📐 Arquitectura
 
 Este proyecto documenta sus decisiones arquitectónicas usando ADRs (Architecture Decision Records). Para entender el "por qué" detrás de las tecnologías y patrones utilizados, consulta:

@@ -45,6 +45,7 @@ Los ADRs marcados como **Arqueología** documentan decisiones ya implementadas e
 | [0004](./0004-multi-interface-support.md) | Soporte Multi-Interfaz (Open-WebUI, LibreChat) | Aceptado | 2026-02-09 |
 | [0005](./0005-docker-compose-orchestration.md) | Docker Compose para Orquestación de Servicios | Aceptado | 2026-02-09 |
 | [0006](./0006-nginx-production-serving.md) | Nginx para Servicio en Producción | Aceptado | 2026-02-09 |
+| [0007](./0007-ab-testing-framework.md) | A/B Testing Framework para Comparación de Interfaces | Aceptado | 2026-02-10 |
 
 ## Proceso de Gestión
 
