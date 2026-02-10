@@ -115,6 +115,42 @@
             50% { opacity: 0.4; }
         }
 
+        .top-bar-center {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 600;
+        }
+
         .top-bar-right {
             display: flex;
             align-items: center;
@@ -151,6 +187,32 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+        }
+
+        /* ===== Interface Views ===== */
+        .interface-view {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .interface-view.active {
+            display: flex;
+        }
+
+        .iframe-view {
+            display: none;
+            flex: 1;
+        }
+
+        .iframe-view.active {
+            display: block;
+        }
+
+        .iframe-view iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
 
         /* ===== Sidebar ===== */
@@ -1110,17 +1172,24 @@
                     <span id="trainingBadgeText">Modo evaluación activo</span>
                 </button>
             </div>
+            <div class="top-bar-center">
+                <button class="tab-btn active" data-view="evaluation" onclick="evalApp.switchView('evaluation')">🧪 Evaluación</button>
+                <button class="tab-btn" data-view="chat" onclick="evalApp.switchView('chat')">💬 Chat GPT</button>
+                <button class="tab-btn" data-view="widget" onclick="evalApp.switchView('widget')">🎨 Widget V2</button>
+            </div>
             <div class="top-bar-right">
-                <button class="top-btn danger" onclick="evalApp.clearChat()" title="Limpiar chat">🗑️</button>
-                <button class="top-btn" onclick="evalApp.saveSession()" title="Guardar sesión">💾</button>
+                <button class="top-btn eval-only danger" onclick="evalApp.clearChat()" title="Limpiar chat">🗑️</button>
+                <button class="top-btn eval-only" onclick="evalApp.saveSession()" title="Guardar sesión">💾</button>
                 <a class="top-btn" href="evaluation-dashboard.html" title="Dashboard">📊 Dashboard</a>
-                <button class="top-btn" onclick="evalApp.toggleStats()" title="Estadísticas">📈 Estadísticas</button>
+                <button class="top-btn eval-only" onclick="evalApp.toggleStats()" title="Estadísticas">📈 Estadísticas</button>
                 <button class="top-btn" onclick="evalApp.openConfig()" title="Configuración">🔧 Configuración</button>
             </div>
         </header>
 
         <!-- Main Content -->
         <div class="main-content">
+            <!-- ===== View: Evaluation (native) ===== -->
+            <div class="interface-view active" id="viewEvaluation">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
@@ -1248,6 +1317,17 @@
                     </div>
                 </div>
             </div>
+            </div><!-- /viewEvaluation -->
+
+            <!-- ===== View: Chat GPT-like (iframe) ===== -->
+            <div class="iframe-view" id="viewChat">
+                <iframe id="iframeChat" data-src="chat-interface.html" title="Chat Interface"></iframe>
+            </div>
+
+            <!-- ===== View: Widget V2 (iframe) ===== -->
+            <div class="iframe-view" id="viewWidget">
+                <iframe id="iframeWidget" data-src="demo-widget-v2.html" title="Widget V2 Demo"></iframe>
+            </div>
         </div>
     </div>
 
@@ -1346,6 +1426,8 @@
             chat: null,
             statsOpen: false,
             sidebarOpen: true,
+            currentView: 'evaluation',
+            iframesLoaded: { chat: false, widget: false },
 
             init() {
                 // Load saved config
@@ -1386,6 +1468,16 @@
 
                 // Focus input
                 ta.focus();
+
+                // Check if we should open a specific view (from hash or localStorage)
+                const hash = window.location.hash.replace('#', '');
+                const savedView = localStorage.getItem('evalStartView');
+                if (hash && ['chat', 'widget', 'evaluation'].includes(hash)) {
+                    this.switchView(hash);
+                } else if (savedView && ['chat', 'widget'].includes(savedView)) {
+                    this.switchView(savedView);
+                    localStorage.removeItem('evalStartView');
+                }
             },
 
             autoResize(el) {
@@ -1676,6 +1768,49 @@
                 toast.textContent = message;
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3000);
+            },
+
+            switchView(viewName) {
+                this.currentView = viewName;
+
+                // Update tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.view === viewName);
+                });
+
+                // Hide all views
+                document.getElementById('viewEvaluation').classList.remove('active');
+                document.getElementById('viewChat').classList.remove('active');
+                document.getElementById('viewWidget').classList.remove('active');
+
+                // Show selected view
+                if (viewName === 'evaluation') {
+                    document.getElementById('viewEvaluation').classList.add('active');
+                } else if (viewName === 'chat') {
+                    const container = document.getElementById('viewChat');
+                    container.classList.add('active');
+                    // Lazy load iframe
+                    if (!this.iframesLoaded.chat) {
+                        const iframe = document.getElementById('iframeChat');
+                        iframe.src = iframe.dataset.src;
+                        this.iframesLoaded.chat = true;
+                    }
+                } else if (viewName === 'widget') {
+                    const container = document.getElementById('viewWidget');
+                    container.classList.add('active');
+                    // Lazy load iframe
+                    if (!this.iframesLoaded.widget) {
+                        const iframe = document.getElementById('iframeWidget');
+                        iframe.src = iframe.dataset.src;
+                        this.iframesLoaded.widget = true;
+                    }
+                }
+
+                // Show/hide evaluation-only toolbar buttons
+                const evalOnlyBtns = document.querySelectorAll('.top-btn.eval-only');
+                evalOnlyBtns.forEach(btn => {
+                    btn.style.display = viewName === 'evaluation' ? 'flex' : 'none';
+                });
             },
 
             escapeHtml(text) {
