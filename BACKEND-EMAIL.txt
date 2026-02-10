@@ -1,0 +1,118 @@
+Subject: [ACTION] Backend Support Needed - A/B Test Analytics Implementation
+
+---
+
+Hola @backend-team,
+
+Necesitamos que implementen **un nuevo endpoint de analytics** para soportar el A/B testing del widget asistente que ya está listo en frontend.
+
+## 🎯 En Resumen
+
+- **Endpoint**: `POST /api/v2/analytics/ab-test`
+- **Tabla**: Nueva tabla `ab_test_events` en PostgreSQL
+- **Scope**: Recibir y almacenar eventos del A/B test
+- **Prioridad**: Media (optional para GA4/GTM, pero preferred para análisis interno)
+- **Estimación**: 5-8 story points (2-3 días)
+- **Start**: ASAP
+- **End**: Target 2026-02-20
+
+## 📋 Documentación Completa
+
+He preparado **3 documentos** en el frontend repo (rama `feature/ab-test-interfaces`):
+
+1. **BACKEND-ISSUE-SHORT.md** ← **EMPIEZA AQUÍ** (~5 min lectura)
+   - Descripción clara del endpoint
+   - Ejemplos de request/response
+   - SQL schema
+   - Tests mínimos
+   
+2. **BACKEND-ISSUE.md** (~15 min lectura)
+   - Especificación completa con todas las validaciones
+   - Queries de análisis detalladas
+   - Security & CORS
+   - Ejemplos curl
+   
+3. **BACKEND-CHECKLIST.sh** (~referencia)
+   - Checklist de trabajo en 12 fases
+   - Copy-paste ready
+
+## ⚡ Versión Express (2 minutos)
+
+### El endpoint debe:
+- Recibir JSON con: `event_type`, `experiment_name`, `variant` (A/B), `session_id` (UUID), `timestamp` (ISO-8601)
+- Validar que `variant` ∈ {A, B}
+- Guardar en tabla `ab_test_events` con 11 campos
+- Retornar 200 OK o 400 con error
+- Rate limit: 1000 req/min
+- CORS configurado
+
+### Test rápido:
+```bash
+curl -X POST http://backend:8000/api/v2/analytics/ab-test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_type": "ab_test_widget_loaded",
+    "experiment_name": "assistant_widget_ab_test_v1",
+    "variant": "A",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "timestamp": "2026-02-10T12:34:56.000Z",
+    "load_time_ms": 1234
+  }'
+```
+
+### SQL schema:
+```sql
+CREATE TABLE ab_test_events (
+  id SERIAL PRIMARY KEY,
+  event_type VARCHAR(100) NOT NULL,
+  experiment_name VARCHAR(100) NOT NULL,
+  variant CHAR(1) NOT NULL CHECK (variant IN ('A', 'B')),
+  session_id UUID NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL,
+  action VARCHAR(100),
+  metadata JSONB,
+  load_time_ms INTEGER,
+  error TEXT,
+  user_agent TEXT,
+  screen_resolution VARCHAR(20),
+  viewport_size VARCHAR(20),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_ab_test_exp_variant ON ab_test_events (experiment_name, variant);
+```
+
+## 🔗 Links
+
+- Frontend repo: https://github.com/SM23-EOD/eod-web-rag-service
+- Frontend branch: `feature/ab-test-interfaces`
+- Docs frontend: [`AB-TEST-DATA-COLLECTION.md`](https://github.com/SM23-EOD/eod-web-rag-service/blob/feature/ab-test-interfaces/AB-TEST-DATA-COLLECTION.md)
+- Test página: [`ab-test-full.html`](http://localhost:8000/ab-test-full.html) (demo interactiva)
+
+## ✅ Que hacer ahora
+
+1. Lee BACKEND-ISSUE-SHORT.md (5 min)
+2. Planifica en sprint backlog (2-3 hrs)
+3. Crea GitHub issue en `eod-api-rag-service` repo
+4. Asigna a backend team
+
+## ❓ Preguntas?
+
+Si algo no está claro:
+- Revisa la sección "Validaciones" en BACKEND-ISSUE.md
+- Mira el código frontend: `src/ab-test-analytics.js`
+- Abre un GitHub discussion o contacta a frontend team
+
+---
+
+**Gracias,**  
+Frontend Team
+
+P.S.: **IMPORTANTE** - Este endpoint es *optional* para que el test A/B funcione. El frontend ya tiene tracking con GA4/GTM. Pero con backend analytics tenemos más control y datos propios.
+
+---
+
+## 📞 TL;DR (30 segundos)
+
+New endpoint `/api/v2/analytics/ab-test` (POST) → save to `ab_test_events` table → validations on variant (A|B), UUID session_id, ISO-8601 timestamp → index for fast queries → queries for analysis → 5-8 points → 2-3 days.
+
+Docs: BACKEND-ISSUE-SHORT.md in frontend repo.
