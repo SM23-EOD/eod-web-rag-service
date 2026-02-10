@@ -661,12 +661,12 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            name: this.config.toolName,
+                            tool_name: this.config.toolName,
                             arguments: {
                                 query: message,
-                                session_id: this.config.sessionId,
                                 include_sources: this.config.includeSources
-                            }
+                            },
+                            session_id: this.config.sessionId
                         })
                     });
 
@@ -674,11 +674,15 @@
 
                     const data = await response.json();
                     
+                    if (!data.success) {
+                        throw new Error(data.error || 'Error desconocido del servidor');
+                    }
+
                     // Extraer contenido de la respuesta
-                    let responseContent = data.content?.[0]?.text || data.result || 'No se recibió respuesta';
+                    let responseContent = data.result || data.content?.[0]?.text || 'No se recibió respuesta';
                     
                     // Extraer fuentes del texto antes de limpiarlo
-                    let extractedSources = data.content?.[0]?.sources || data.sources || [];
+                    let extractedSources = data.sources || data.content?.[0]?.sources || [];
                     const sourcesMatch = responseContent.match(/###\s*📚?\s*Fuentes[\s\S]*?(?=###|$)/);
                     if (sourcesMatch) {
                         const sourcesSection = sourcesMatch[0];
