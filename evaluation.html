@@ -14,23 +14,23 @@
         }
 
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --primary-light: #dbeafe;
-            --secondary: #7c3aed;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --bg-dark: #0f172a;
-            --bg-main: #1e293b;
-            --bg-card: #334155;
-            --bg-input: #475569;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border: #475569;
-            --gradient-primary: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            --gradient-header: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #7c3aed 100%);
+            --primary: #673ab7;
+            --primary-dark: #5e35b1;
+            --primary-light: #d1c4e9;
+            --secondary: #ffd54c;
+            --success: #46a35e;
+            --danger: #f44336;
+            --warning: #ffd740;
+            --bg-dark: #fafafa;
+            --bg-main: #ffffff;
+            --bg-card: #f5f5f5;
+            --bg-input: #eeeeee;
+            --text-primary: #212121;
+            --text-secondary: #616161;
+            --text-muted: #757575;
+            --border: #e0e0e0;
+            --gradient-primary: linear-gradient(135deg, #673ab7 0%, #5e35b1 100%);
+            --gradient-header: linear-gradient(135deg, #311b92 0%, #673ab7 50%, #5e35b1 100%);
         }
 
         body {
@@ -101,12 +101,12 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #10b981;
+            background: #46a35e;
             animation: pulse-dot 2s infinite;
         }
 
         .training-badge.inactive .dot {
-            background: #94a3b8;
+            background: #b0b0b0;
             animation: none;
         }
 
@@ -548,15 +548,16 @@
         }
 
         .message.assistant .message-bubble {
-            background: var(--bg-main);
-            border: 1px solid var(--border);
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
             border-bottom-left-radius: 4px;
+            color: #212121;
         }
 
         .message.error .message-bubble {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
+            background: rgba(244, 67, 54, 0.08);
+            border: 1px solid rgba(244, 67, 54, 0.25);
+            color: #d32f2f;
             border-bottom-left-radius: 4px;
         }
 
@@ -564,24 +565,25 @@
         .message-bubble p:last-child { margin-bottom: 0; }
         .message-bubble ul, .message-bubble ol { margin-left: 18px; margin-bottom: 10px; }
         .message-bubble code {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(103, 58, 183, 0.08);
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Fira Code', 'Consolas', monospace;
             font-size: 13px;
         }
         .message-bubble pre {
-            background: rgba(0, 0, 0, 0.3);
+            background: #f5f5f5;
             padding: 12px;
             border-radius: 8px;
             overflow-x: auto;
             margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
         }
         .message-bubble pre code {
             background: none;
             padding: 0;
         }
-        .message-bubble strong { color: var(--primary-light); }
+        .message-bubble strong { color: #5e35b1; }
 
         .message-time {
             font-size: 11px;
@@ -598,8 +600,8 @@
         .message-sources {
             margin-top: 10px;
             padding: 10px 14px;
-            background: rgba(37, 99, 235, 0.1);
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            background: rgba(103, 58, 183, 0.08);
+            border: 1px solid rgba(103, 58, 183, 0.2);
             border-radius: 10px;
             font-size: 12px;
         }
@@ -613,8 +615,8 @@
 
         .source-tag {
             display: inline-block;
-            background: rgba(37, 99, 235, 0.15);
-            color: var(--primary-light);
+            background: rgba(103, 58, 183, 0.12);
+            color: #5e35b1;
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 11px;
@@ -634,18 +636,18 @@
         }
 
         .confidence-badge.high {
-            background: rgba(16, 185, 129, 0.15);
-            color: #6ee7b7;
+            background: rgba(70, 163, 94, 0.12);
+            color: #2e7d32;
         }
 
         .confidence-badge.medium {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fcd34d;
+            background: rgba(255, 215, 64, 0.2);
+            color: #f57f17;
         }
 
         .confidence-badge.low {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
+            background: rgba(244, 67, 54, 0.1);
+            color: #d32f2f;
         }
 
         /* Feedback buttons */
@@ -675,13 +677,13 @@
         }
 
         .feedback-btn.correct:hover, .feedback-btn.correct.active {
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(70, 163, 94, 0.15);
             border-color: var(--success);
             color: var(--success);
         }
 
         .feedback-btn.incorrect:hover, .feedback-btn.incorrect.active {
-            background: rgba(239, 68, 68, 0.2);
+            background: rgba(244, 67, 54, 0.15);
             border-color: var(--danger);
             color: var(--danger);
         }
@@ -765,7 +767,7 @@
 
         .input-container:focus-within {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            box-shadow: 0 0 0 3px rgba(103, 58, 183, 0.15);
         }
 
         .input-textarea {
@@ -803,7 +805,7 @@
 
         .send-btn:hover:not(:disabled) {
             transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 4px 12px rgba(103, 58, 183, 0.4);
         }
 
         .send-btn:disabled {
@@ -985,7 +987,7 @@
         }
 
         .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 4px 12px rgba(103, 58, 183, 0.4);
         }
 
         .btn-secondary {
