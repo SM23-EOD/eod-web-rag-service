@@ -1176,6 +1176,7 @@
                 <button class="tab-btn active" data-view="evaluation" onclick="evalApp.switchView('evaluation')">🧪 Evaluación</button>
                 <button class="tab-btn" data-view="chat" onclick="evalApp.switchView('chat')">💬 Chat GPT</button>
                 <button class="tab-btn" data-view="widget" onclick="evalApp.switchView('widget')">🎨 Widget V2</button>
+                <button class="tab-btn" data-view="widgetv1" onclick="evalApp.switchView('widgetv1')">📦 Widget V1</button>
             </div>
             <div class="top-bar-right">
                 <button class="top-btn eval-only danger" onclick="evalApp.clearChat()" title="Limpiar chat">🗑️</button>
@@ -1328,6 +1329,11 @@
             <div class="iframe-view" id="viewWidget">
                 <iframe id="iframeWidget" data-src="demo-widget-v2.html" title="Widget V2 Demo"></iframe>
             </div>
+
+            <!-- ===== View: Widget V1 (iframe) ===== -->
+            <div class="iframe-view" id="viewWidgetV1">
+                <iframe id="iframeWidgetV1" data-src="index.html" title="Widget V1 Demo"></iframe>
+            </div>
         </div>
     </div>
 
@@ -1427,7 +1433,7 @@
             statsOpen: false,
             sidebarOpen: true,
             currentView: 'evaluation',
-            iframesLoaded: { chat: false, widget: false },
+            iframesLoaded: { chat: false, widget: false, widgetv1: false },
 
             init() {
                 // Load saved config
@@ -1472,9 +1478,9 @@
                 // Check if we should open a specific view (from hash or localStorage)
                 const hash = window.location.hash.replace('#', '');
                 const savedView = localStorage.getItem('evalStartView');
-                if (hash && ['chat', 'widget', 'evaluation'].includes(hash)) {
+                if (hash && ['chat', 'widget', 'widgetv1', 'evaluation'].includes(hash)) {
                     this.switchView(hash);
-                } else if (savedView && ['chat', 'widget'].includes(savedView)) {
+                } else if (savedView && ['chat', 'widget', 'widgetv1'].includes(savedView)) {
                     this.switchView(savedView);
                     localStorage.removeItem('evalStartView');
                 }
@@ -1782,6 +1788,7 @@
                 document.getElementById('viewEvaluation').classList.remove('active');
                 document.getElementById('viewChat').classList.remove('active');
                 document.getElementById('viewWidget').classList.remove('active');
+                document.getElementById('viewWidgetV1').classList.remove('active');
 
                 // Show selected view
                 if (viewName === 'evaluation') {
@@ -1803,6 +1810,14 @@
                         const iframe = document.getElementById('iframeWidget');
                         iframe.src = iframe.dataset.src + '?v=' + Date.now();
                         this.iframesLoaded.widget = true;
+                    }
+                } else if (viewName === 'widgetv1') {
+                    const container = document.getElementById('viewWidgetV1');
+                    container.classList.add('active');
+                    if (!this.iframesLoaded.widgetv1) {
+                        const iframe = document.getElementById('iframeWidgetV1');
+                        iframe.src = iframe.dataset.src + '?v=' + Date.now();
+                        this.iframesLoaded.widgetv1 = true;
                     }
                 }
 
