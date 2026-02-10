@@ -502,28 +502,28 @@
                 <button class="config-btn" onclick="app.openConfig()">⚙️ Configuración</button>
             </header>
 
-            <div class="messages-container" id="messagesContainer">
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-state-icon">💬</div>
-                    <h2 class="empty-state-title">¿En qué puedo ayudarte?</h2>
-                    <p class="empty-state-subtitle">
-                        Soy tu asistente para consultas sobre Envios23. Pregúntame lo que necesites.
-                    </p>
-                    <div class="example-prompts">
-                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
-                            ¿Cómo puedo rastrear mi envío?
-                        </div>
-                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
-                            ¿Cuáles son los tiempos de entrega?
-                        </div>
-                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
-                            ¿Qué documentos necesito para enviar?
-                        </div>
-                        <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
-                            ¿Cómo funciona el tracking?
-                        </div>
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state-icon">💬</div>
+                <h2 class="empty-state-title">¿En qué puedo ayudarte?</h2>
+                <p class="empty-state-subtitle">
+                    Soy tu asistente para consultas sobre Envios23. Pregúntame lo que necesites.
+                </p>
+                <div class="example-prompts">
+                    <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                        ¿Cómo puedo rastrear mi envío?
+                    </div>
+                    <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                        ¿Cuáles son los tiempos de entrega?
+                    </div>
+                    <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                        ¿Qué documentos necesito para enviar?
+                    </div>
+                    <div class="example-prompt" onclick="app.sendExamplePrompt(this)">
+                        ¿Cómo funciona el tracking?
                     </div>
                 </div>
+            </div>
+            <div class="messages-container" id="messagesContainer">
             </div>
 
             <div class="input-area">
@@ -744,11 +744,13 @@
                 const conversation = this.getCurrentConversation();
 
                 if (!conversation || conversation.messages.length === 0) {
-                    if (emptyState) emptyState.style.display = 'flex';
+                    emptyState.style.display = 'flex';
+                    container.style.display = 'none';
                     return;
                 }
 
-                if (emptyState) emptyState.style.display = 'none';
+                emptyState.style.display = 'none';
+                container.style.display = 'flex';
                 container.innerHTML = '';
 
                 conversation.messages.forEach(msg => {

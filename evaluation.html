@@ -1789,19 +1789,19 @@
                 } else if (viewName === 'chat') {
                     const container = document.getElementById('viewChat');
                     container.classList.add('active');
-                    // Lazy load iframe
+                    // Lazy load iframe (with cache bust)
                     if (!this.iframesLoaded.chat) {
                         const iframe = document.getElementById('iframeChat');
-                        iframe.src = iframe.dataset.src;
+                        iframe.src = iframe.dataset.src + '?v=' + Date.now();
                         this.iframesLoaded.chat = true;
                     }
                 } else if (viewName === 'widget') {
                     const container = document.getElementById('viewWidget');
                     container.classList.add('active');
-                    // Lazy load iframe
+                    // Lazy load iframe (with cache bust)
                     if (!this.iframesLoaded.widget) {
                         const iframe = document.getElementById('iframeWidget');
-                        iframe.src = iframe.dataset.src;
+                        iframe.src = iframe.dataset.src + '?v=' + Date.now();
                         this.iframesLoaded.widget = true;
                     }
                 }
