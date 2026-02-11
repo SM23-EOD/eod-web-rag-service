@@ -18,7 +18,7 @@ except ImportError:
 
 # Configuración desde variables de entorno
 RAG_API_URL = os.getenv("RAG_API_URL", "http://localhost:8000")
-ENDPOINT = f"{RAG_API_URL}/api/v1/mcp/tools/call"
+ENDPOINT = f"{RAG_API_URL}/api/v2/mcp/tools/call"
 TOOL_NAME = os.getenv("TOOL_NAME", "generate_rag_answer")
 SESSION_ID = os.getenv("SESSION_ID", f"cli-{os.getenv('USER', 'user')}")
 INCLUDE_SOURCES = os.getenv("INCLUDE_SOURCES", "true").lower() == "true"

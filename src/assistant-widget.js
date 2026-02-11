@@ -32,7 +32,7 @@ class RagAssistant extends HTMLElement {
   }
 
   get endpoint() {
-    return this.getAttribute("endpoint") || "/api/v1/mcp/tools/call";
+    return this.getAttribute("endpoint") || "/api/v2/mcp/tools/call";
   }
 
   get title() {

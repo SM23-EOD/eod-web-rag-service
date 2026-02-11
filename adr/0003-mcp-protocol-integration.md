@@ -21,10 +21,10 @@ El proyecto necesitaba comunicarse con un backend que provee capacidades de Retr
 Adoptar el **protocolo MCP (Model Context Protocol)** como interfaz estándar para comunicación con el backend RAG.
 
 **Endpoint principal:**
-- `POST /api/v1/mcp/tools/call` - Ejecuta herramientas MCP
+- `POST /api/v2/mcp/tools/call` - Ejecuta herramientas MCP
 
 **Endpoint de feedback:**
-- `POST /api/v1/feedback` - Envía feedback sobre respuestas
+- `POST /api/v2/feedback` - Envía feedback sobre respuestas
 
 **Estructura de request:**
 ```json

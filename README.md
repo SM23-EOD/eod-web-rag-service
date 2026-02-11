@@ -25,7 +25,7 @@ Abre http://localhost:3000 para ver la demo.
 
 <!-- Componente -->
 <rag-assistant
-  endpoint="https://api.envios23.com/api/v1/mcp/tools/call"
+  endpoint="https://api.envios23.com/api/v2/mcp/tools/call"
   title="Asistente Envios23"
 ></rag-assistant>
 ```
@@ -34,7 +34,7 @@ Abre http://localhost:3000 para ver la demo.
 
 | Atributo | Descripción | Default |
 |----------|-------------|---------|
-| `endpoint` | URL del endpoint MCP | `/api/v1/mcp/tools/call` |
+| `endpoint` | URL del endpoint MCP | `/api/v2/mcp/tools/call` |
 | `title` | Título del widget | `Asistente` |
 | `tool-name` | Herramienta MCP | `generate_rag_answer` |
 | `session-id` | ID de sesión | `web` |

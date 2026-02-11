@@ -7,7 +7,7 @@ set -e
 
 # Configuración
 RAG_API_URL="${RAG_API_URL:-http://localhost:8000}"
-ENDPOINT="${RAG_API_URL}/api/v1/mcp/tools/call"
+ENDPOINT="${RAG_API_URL}/api/v2/mcp/tools/call"
 TOOL_NAME="${TOOL_NAME:-generate_rag_answer}"
 SESSION_ID="${SESSION_ID:-cli-$(whoami)}"
 INCLUDE_SOURCES="${INCLUDE_SOURCES:-true}"

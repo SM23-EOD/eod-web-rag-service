@@ -44,7 +44,7 @@ Nueva variante moderna del widget de asistente con diseño mejorado y funcionali
 
 ```html
 <rag-assistant-v2
-  endpoint="http://localhost:8000/api/v1/mcp/tools/call"
+  endpoint="http://localhost:8000/api/v2/mcp/tools/call"
   title="Asistente Virtual"
   tool-name="generate_rag_answer"
   session-id="web-v2"
@@ -61,7 +61,7 @@ Nueva variante moderna del widget de asistente con diseño mejorado y funcionali
 
 | Atributo | Tipo | Valor por Defecto | Descripción |
 |----------|------|-------------------|-------------|
-| `endpoint` | string | `/api/v1/mcp/tools/call` | URL del API endpoint |
+| `endpoint` | string | `/api/v2/mcp/tools/call` | URL del API endpoint |
 | `title` | string | `"Asistente Virtual"` | Título del chat |
 | `tool-name` | string | `"generate_rag_answer"` | Nombre de la herramienta RAG |
 | `session-id` | string | `"web"` | Identificador de sesión |

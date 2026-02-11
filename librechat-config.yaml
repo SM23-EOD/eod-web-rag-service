@@ -5,7 +5,7 @@ endpoints:
   custom:
     - name: "Envios23 RAG"
       apiKey: "dummy"
-      baseURL: "${RAG_API_URL:-http://host.docker.internal:8000}/api/v1"
+      baseURL: "${RAG_API_URL:-http://host.docker.internal:8000}/api/v2"
       models:
         default:
           - "rag-assistant"
