@@ -46,7 +46,7 @@ echo ""
 docker compose --profile prod ps
 
 echo ""
-echo "🌐 Widget disponible en: http://167.172.225.44:8080"
+echo "🌐 Widget disponible en: http://167.172.225.44:8081"
 echo ""
 EOF
 
@@ -54,8 +54,8 @@ echo ""
 echo "🎉 ¡Despliegue exitoso!"
 echo ""
 echo "🔗 URLs disponibles:"
-echo "   Widget Demo: http://167.172.225.44:8080"
-echo "   Health Check: http://167.172.225.44:8080/health"
+echo "   Widget Demo: http://167.172.225.44:8081"
+echo "   Health Check: http://167.172.225.44:8081/health"
 echo ""
 echo "📝 Para ver logs:"
 echo "   ssh $DROPLET_USER@$DROPLET_IP 'docker logs eod-web-rag'"
