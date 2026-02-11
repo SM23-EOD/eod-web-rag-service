@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Envios23 RAG Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS - Envios23 Brand
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --primary: #ec8951;
+    --primary-dark: #d97a45;
+    --primary-light: #fde8d8;
+    --primary-alpha: rgba(236,137,81,0.15);
+    --secondary: #485ff2;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --bg-dark: #131a22;
+    --bg-main: #1a2332;
+    --bg-card: #222d3a;
+    --bg-input: #2a3747;
+    --bg-hover: #2f3e50;
+    --text-primary: #f0f2f5;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #2a3747;
+    --border-light: #334155;
+    --shadow: 0 4px 24px rgba(0,0,0,0.25);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --transition: 0.2s ease;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.app {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    grid-template-rows: 52px 1fr;
+    height: 100vh;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.header {
+    grid-column: 1 / -1;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-logo {
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+}
+
+.header-logo span { font-size: 22px; }
+
+.header-title {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+    border-left: 1px solid var(--border);
+    padding-left: 12px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.health-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(34,197,94,0.12);
+    color: var(--success);
+}
+.health-badge.offline {
+    background: rgba(239,68,68,0.12);
+    color: var(--danger);
+}
+.health-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse-dot 2s infinite;
+}
+.health-badge.offline .health-dot {
+    background: var(--danger);
+    animation: none;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ── SIDEBAR ────────────────────────────────────────────────── */
+.sidebar {
+    background: var(--bg-main);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+    z-index: 90;
+}
+
+.nav-btn {
+    width: 44px; height: 44px;
+    border-radius: var(--radius);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+}
+
+.nav-btn.active {
+    background: var(--primary-alpha);
+    color: var(--primary);
+}
+
+.nav-btn .tooltip {
+    position: absolute;
+    left: 54px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+    z-index: 200;
+}
+
+.nav-btn:hover .tooltip {
+    opacity: 1;
+}
+
+.nav-sep {
+    width: 28px;
+    height: 1px;
+    background: var(--border);
+    margin: 6px 0;
+}
+
+/* ── MAIN CONTENT ───────────────────────────────────────────── */
+.main {
+    overflow-y: auto;
+    padding: 24px;
+    background: var(--bg-dark);
+}
+
+.main::-webkit-scrollbar { width: 6px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── MODULE VIEWS ───────────────────────────────────────────── */
+.module { display: none; }
+.module.active { display: block; }
+
+.module-header {
+    margin-bottom: 24px;
+}
+
+.module-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.module-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ── CARDS ───────────────────────────────────────────────────── */
+.cards-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.stat-card .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-card .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.stat-card .icon {
+    float: right;
+    font-size: 24px;
+    opacity: 0.5;
+}
+
+/* ── PANELS ──────────────────────────────────────────────────── */
+.panel {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.panel-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.panel-body {
+    padding: 20px;
+}
+
+.panel-body.no-pad { padding: 0; }
+
+/* ── TABLES ──────────────────────────────────────────────────── */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 10px 16px;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-main);
+    position: sticky;
+    top: 0;
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.data-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+
+/* ── BADGES ──────────────────────────────────────────────────── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge-success { background: rgba(34,197,94,0.12); color: var(--success); }
+.badge-danger { background: rgba(239,68,68,0.12); color: var(--danger); }
+.badge-warning { background: rgba(245,158,11,0.12); color: var(--warning); }
+.badge-info { background: rgba(59,130,246,0.12); color: var(--info); }
+.badge-muted { background: rgba(100,116,139,0.12); color: var(--text-muted); }
+
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.btn:hover { background: var(--bg-hover); border-color: var(--border-light); }
+
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.btn-primary:hover { background: var(--primary-dark); }
+
+.btn-danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.btn-danger:hover { background: rgba(239,68,68,0.12); }
+
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+.btn-icon {
+    width: 32px; height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+}
+
+/* ── FORMS ────────────────────────────────────────────────────── */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-alpha);
+}
+
+textarea.form-control { min-height: 80px; resize: vertical; }
+
+select.form-control { cursor: pointer; }
+
+/* ── MODAL ────────────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+}
+
+.modal-head {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.modal-body { padding: 24px; }
+
+.modal-foot {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ── TOAST ────────────────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toast-in 0.3s ease;
+    box-shadow: var(--shadow);
+    min-width: 280px;
+}
+
+.toast-success { background: #166534; color: #bbf7d0; }
+.toast-error { background: #991b1b; color: #fecaca; }
+.toast-info { background: #1e3a5f; color: #bfdbfe; }
+
+@keyframes toast-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* ── GRID HELPERS ─────────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+/* ── CHAT ─────────────────────────────────────────────────────── */
+.chat-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    height: calc(100vh - 100px);
+}
+
+.chat-main {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.chat-messages::-webkit-scrollbar { width: 5px; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.chat-input-bar {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input-bar input {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.chat-input-bar input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.chat-input-bar button {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.chat-input-bar button:hover { background: var(--primary-dark); }
+.chat-input-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.msg {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+}
+
+.msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.msg.user .msg-avatar { background: var(--primary-alpha); }
+.msg.assistant .msg-avatar { background: rgba(59,130,246,0.15); }
+
+.msg-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.msg-sender {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+}
+
+.msg-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.msg-content p { margin-bottom: 8px; }
+.msg-content p:last-child { margin-bottom: 0; }
+.msg-content code {
+    background: var(--bg-input);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.msg-content ul, .msg-content ol {
+    margin-left: 20px;
+    margin-bottom: 8px;
+}
+
+.msg-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.msg-sources {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.msg-sources summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.chat-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chat-config {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 16px;
+}
+
+.chat-config h3 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── UPLOAD ZONE ──────────────────────────────────────────────── */
+.upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 20px;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--primary);
+    background: var(--primary-alpha);
+    color: var(--primary);
+}
+
+.upload-zone .icon { font-size: 36px; margin-bottom: 8px; }
+.upload-zone p { font-size: 14px; }
+.upload-zone .sub { font-size: 12px; margin-top: 4px; }
+
+/* ── HEALTH GRID ──────────────────────────────────────────────── */
+.health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.health-item {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+}
+
+.health-item .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.health-item .name {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.health-item .status {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ── PROGRESS BAR ─────────────────────────────────────────────── */
+.progress-bar {
+    height: 8px;
+    background: var(--bg-input);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar .fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* ── EMPTY STATE ──────────────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; }
+
+/* ── LOADING ──────────────────────────────────────────────────── */
+.spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .chat-layout { grid-template-columns: 1fr; }
+    .chat-sidebar { display: none; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 52px 1fr 56px; }
+    .sidebar {
+        grid-row: 3;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        padding: 0 8px;
+        justify-content: space-around;
+    }
+    .nav-sep { display: none; }
+    .nav-btn .tooltip { display: none; }
+    .main { padding: 16px; }
+    .cards-row { grid-template-columns: repeat(2, 1fr); }
+}
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">
+                <span>📦</span> Envios23
+            </div>
+            <span class="header-title" id="headerTitle">RAG Dashboard</span>
+        </div>
+        <div class="header-right">
+            <div class="health-badge" id="healthBadge">
+                <div class="health-dot"></div>
+                <span id="healthText">checking...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════ SIDEBAR ═══════════ -->
+    <nav class="sidebar">
+        <button class="nav-btn active" data-module="chat" onclick="nav('chat')">
+            💬 <span class="tooltip">Chat</span>
+        </button>
+        <button class="nav-btn" data-module="documents" onclick="nav('documents')">
+            📄 <span class="tooltip">Documentos</span>
+        </button>
+        <button class="nav-btn" data-module="tenants" onclick="nav('tenants')">
+            🏢 <span class="tooltip">Tenants</span>
+        </button>
+        <button class="nav-btn" data-module="agents" onclick="nav('agents')">
+            🤖 <span class="tooltip">Agentes</span>
+        </button>
+        <div class="nav-sep"></div>
+        <button class="nav-btn" data-module="analytics" onclick="nav('analytics')">
+            📊 <span class="tooltip">Analytics</span>
+        </button>
+        <button class="nav-btn" data-module="admin" onclick="nav('admin')">
+            ⚙️ <span class="tooltip">Admin</span>
+        </button>
+    </nav>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <main class="main">
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: CHAT
+──────────────────────────────────────────────────────────────── -->
+<div class="module active" id="mod-chat">
+    <div class="chat-layout">
+        <div class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-state" id="chatEmpty">
+                    <div class="icon">💬</div>
+                    <h3>Consulta la base de conocimientos</h3>
+                    <p>Escribe una pregunta para consultar el RAG de Envios23</p>
+                </div>
+            </div>
+            <div class="chat-input-bar">
+                <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." 
+                       onkeydown="if(event.key==='Enter')sendChat()">
+                <button onclick="sendChat()" id="chatSendBtn">➤</button>
+            </div>
+        </div>
+        <div class="chat-sidebar">
+            <div class="chat-config">
+                <h3>⚙️ Configuración</h3>
+                <div class="form-group">
+                    <label>Modo</label>
+                    <select class="form-control" id="chatMode">
+                        <option value="mcp">MCP Tool (generate_rag_answer)</option>
+                        <option value="query">Query Directo (pipeline 12 pasos)</option>
+                        <option value="openai">OpenAI Compatible (streaming)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Prompt Template</label>
+                    <select class="form-control" id="chatPrompt">
+                        <option value="">— Ninguno —</option>
+                        <option value="customer_support">Soporte al Cliente</option>
+                        <option value="faq_expert">Experto FAQ</option>
+                        <option value="shipping_regulations_advisor">Regulaciones</option>
+                        <option value="debug_assistant">Debug</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Top K</label>
+                    <input type="number" class="form-control" id="chatTopK" value="5" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Session ID</label>
+                    <input type="text" class="form-control" id="chatSessionId" value="eval-dashboard">
+                </div>
+            </div>
+            <div class="chat-config">
+                <h3>📊 Última respuesta</h3>
+                <div id="chatMeta" style="font-size:12px;color:var(--text-muted)">
+                    Sin datos aún
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: DOCUMENTS
+──────────────────────────────────────────────────────────────── -->
+<div class="module" id="mod-documents">
+    <div class="module-header">
+        <h1>📄 Knowledge Base</h1>
+        <p>Gestión de documentos del sistema RAG</p>
+    </div>
+
+    <div class="cards-row" id="docStats">
+        <div class="stat-card"><div class="label">Documentos</div><div class="value" id="docTotal">—</div></div>
+        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="docChunks">—</div></div>
+        <div class="stat-card"><div class="label">Tamaño</div><div class="value" id="docSize">—</div></div>
+        <div class="stat-card"><div class="label">Categorías</div><div class="value" id="docCategories">—</div></div>
+    </div>
+
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📤</div>
+        <p>Arrastra documentos aquí o haz clic para seleccionar</p>
+        <div class="sub">PDF, TXT, MD, CSV soportados</div>
+        <input type="file" id="fileInput" hidden multiple accept=".pdf,.txt,.md,.csv,.json,.doc,.docx"
+               onchange="handleUpload(this.files)">
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <span>Documentos Registrados</span>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-sm" onclick="loadDocuments()">🔄 Refrescar</button>
+                <button class="btn btn-sm" onclick="scanInbox()">📥 Scan Inbox</button>
+            </div>
+        </div>
+        <div class="panel-body no-pad">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Archivo</th>
+                        <th>Estado</th>
+                        <th>Categoría</th>
+                        <th>Chunks</th>
+                        <th>Versión</th>
+                        <th>Tamaño</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="docTableBody">
+                    <tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> Cargando...</div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: TENANTS
+──────────────────────────────────────────────────────────────── -->
+<div class="module" id="mod-tenants">
+    <div class="module-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+            <h1>🏢 Tenants</h1>
+            <p>Gestión multi-tenant del sistema RAG</p>
+        </div>
+        <button class="btn btn-primary" onclick="showTenantModal()">+ Nuevo Tenant</button>
+    </div>
+
+    <div class="cards-row" id="tenantCards">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando tenants...</div>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: AGENTS
+──────────────────────────────────────────────────────────────── -->
+<div class="module" id="mod-agents">
+    <div class="module-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+            <h1>🤖 Agentes RAG</h1>
+            <p>Instancias independientes con su propia base de conocimientos</p>
+        </div>
+        <button class="btn btn-primary" onclick="showAgentModal()">+ Nuevo Agente</button>
+    </div>
+
+    <div class="cards-row" id="agentCards">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando agentes...</div>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: ANALYTICS
+──────────────────────────────────────────────────────────────── -->
+<div class="module" id="mod-analytics">
+    <div class="module-header">
+        <h1>📊 Analytics</h1>
+        <p>Métricas y estadísticas del sistema RAG</p>
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <span>🏥 Estado de Servicios</span>
+            <button class="btn btn-sm" onclick="loadHealthStatus()">🔄 Refrescar</button>
+        </div>
+        <div class="panel-body">
+            <div class="health-grid" id="healthGrid">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="panel">
+            <div class="panel-head"><span>👍 Feedback</span></div>
+            <div class="panel-body" id="feedbackPanel">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><span>📈 Sistema</span></div>
+            <div class="panel-body" id="systemPanel">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <span>📝 Feedback Reciente</span>
+            <button class="btn btn-sm" onclick="loadFeedbackList()">🔄</button>
+        </div>
+        <div class="panel-body no-pad">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>Rating</th>
+                        <th>Confianza</th>
+                        <th>Comentario</th>
+                        <th>Revisado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="feedbackTableBody">
+                    <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────
+     MODULE: ADMIN
+──────────────────────────────────────────────────────────────── -->
+<div class="module" id="mod-admin">
+    <div class="module-header">
+        <h1>⚙️ Administración</h1>
+        <p>Herramientas de administración y exploración MCP</p>
+    </div>
+
+    <div class="grid-2">
+        <!-- MCP Tools -->
+        <div class="panel">
+            <div class="panel-head">
+                <span>🔧 MCP Tools</span>
+                <button class="btn btn-sm" onclick="loadMcpTools()">🔄</button>
+            </div>
+            <div class="panel-body" id="mcpToolsPanel">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- MCP Prompts -->
+        <div class="panel">
+            <div class="panel-head">
+                <span>📝 MCP Prompts</span>
+                <button class="btn btn-sm" onclick="loadMcpPrompts()">🔄</button>
+            </div>
+            <div class="panel-body" id="mcpPromptsPanel">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- Models -->
+        <div class="panel">
+            <div class="panel-head"><span>🧠 Modelos Disponibles</span></div>
+            <div class="panel-body" id="modelsPanel">
+                <div class="loading-overlay"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="panel" style="border-color:var(--danger)">
+            <div class="panel-head" style="color:var(--danger)"><span>⚠️ Zona Peligrosa</span></div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label>Limpiar Caché</label>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" class="form-control" id="cacheTenantId" 
+                               value="default" placeholder="tenant_id" style="flex:1">
+                        <button class="btn btn-danger btn-sm" onclick="clearCacheAction()">🗑️ Limpiar</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Reset & Reindex (Nuclear)</label>
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+                        Elimina toda la colección ChromaDB y re-indexa desde sources
+                    </p>
+                    <button class="btn btn-danger" onclick="resetReindexAction()">
+                        ☢️ Reset Completo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-head"><span>🔗 MCP Resources</span></div>
+        <div class="panel-body" id="mcpResourcesPanel">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+    </main>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- Tenant Modal -->
+<div class="modal-overlay" id="tenantModal">
+    <div class="modal">
+        <div class="modal-head">
+            <span id="tenantModalTitle">Nuevo Tenant</span>
+            <button class="modal-close" onclick="closeModal('tenantModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Tenant ID</label>
+                <input type="text" class="form-control" id="tenantIdInput" 
+                       placeholder="mi-tenant" pattern="^[a-z0-9][a-z0-9_-]*$">
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" class="form-control" id="tenantNameInput" placeholder="Mi Tenant">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea class="form-control" id="tenantDescInput" placeholder="Descripción opcional"></textarea>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Modelo LLM</label>
+                    <input type="text" class="form-control" id="tenantModelInput" 
+                           value="anthropic/claude-3-haiku">
+                </div>
+                <div class="form-group">
+                    <label>Idioma</label>
+                    <select class="form-control" id="tenantLangInput">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>System Prompt</label>
+                <textarea class="form-control" id="tenantPromptInput" 
+                          placeholder="System prompt personalizado (mínimo 10 caracteres)"
+                          style="min-height:100px"></textarea>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn" onclick="closeModal('tenantModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveTenant()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Modal -->
+<div class="modal-overlay" id="agentModal">
+    <div class="modal">
+        <div class="modal-head">
+            <span>Nuevo Agente RAG</span>
+            <button class="modal-close" onclick="closeModal('agentModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Tenant ID (identificador único)</label>
+                <input type="text" class="form-control" id="agentIdInput" 
+                       placeholder="mi-agente" pattern="^[a-z0-9][a-z0-9_-]*$">
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" class="form-control" id="agentNameInput" placeholder="Mi Agente">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea class="form-control" id="agentDescInput" placeholder="Descripción del agente"></textarea>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn" onclick="closeModal('agentModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveAgent()">Crear Agente</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════ JAVASCRIPT ═══════════ -->
+<script>
+// ── Globals ────────────────────────────────────────────────────
+const modules = ['chat', 'documents', 'tenants', 'agents', 'analytics', 'admin'];
+const moduleLabels = {
+    chat: 'Chat & Evaluación',
+    documents: 'Knowledge Base',
+    tenants: 'Tenants',
+    agents: 'Agentes RAG',
+    analytics: 'Analytics',
+    admin: 'Administración'
+};
+
+// ── Navigation ─────────────────────────────────────────────────
+function nav(mod) {
+    modules.forEach(m => {
+        document.getElementById(`mod-${m}`).classList.toggle('active', m === mod);
+        document.querySelector(`.nav-btn[data-module="${m}"]`).classList.toggle('active', m === mod);
+    });
+    document.getElementById('headerTitle').textContent = moduleLabels[mod];
+    window.location.hash = mod;
+
+    // Lazy load module data
+    const loaders = {
+        documents: loadDocuments,
+        tenants: loadTenants,
+        agents: loadAgents,
+        analytics: loadAnalytics,
+        admin: loadAdmin
+    };
+    if (loaders[mod]) loaders[mod]();
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(message, type = 'info') {
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `${icons[type] || ''} ${message}`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
+}
+
+// ── Modal ──────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── Format Helpers ─────────────────────────────────────────────
+function formatBytes(b) {
+    if (!b || b === 0) return '0 B';
+    const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
+}
+
+function statusBadge(status) {
+    const map = { active: 'success', indexed: 'success', inactive: 'muted', processing: 'warning', error: 'danger', failed: 'danger' };
+    return `<span class="badge badge-${map[status] || 'info'}">${status}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: CHAT
+// ══════════════════════════════════════════════════════════════
+let chatLoading = false;
+
+async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const query = input.value.trim();
+    if (!query || chatLoading) return;
+
+    // Clear empty state
+    const empty = document.getElementById('chatEmpty');
+    if (empty) empty.remove();
+
+    // Add user message
+    addMessage('user', query);
+    input.value = '';
+    chatLoading = true;
+    document.getElementById('chatSendBtn').disabled = true;
+
+    const mode = document.getElementById('chatMode').value;
+    const topK = parseInt(document.getElementById('chatTopK').value) || 5;
+    const sessionId = document.getElementById('chatSessionId').value || 'default';
+
+    // Add loading message
+    const loadId = addMessage('assistant', '<div class="spinner"></div> Pensando...', true);
+
+    try {
+        let result;
+        if (mode === 'mcp') {
+            result = await api.mcpCallTool('generate_rag_answer', {
+                query, session_id: sessionId, include_sources: true
+            }, sessionId);
+            updateChatMessage(loadId, result.result || result.error || 'Sin respuesta', result);
+        } else if (mode === 'query') {
+            result = await api.query({ query, top_k: topK, use_cache: true });
+            const md = result.answer || 'Sin respuesta';
+            updateChatMessage(loadId, md, result);
+        } else if (mode === 'openai') {
+            let fullText = '';
+            const msgEl = document.getElementById(loadId);
+            const contentEl = msgEl.querySelector('.msg-content');
+
+            await api.chatCompletionsStream(
+                { model: 'eod-rag', messages: [{ role: 'user', content: query }], top_k: topK },
+                (chunk) => {
+                    const delta = chunk.choices?.[0]?.delta?.content || '';
+                    fullText += delta;
+                    contentEl.innerHTML = marked.parse(fullText);
+                },
+                () => {
+                    updateChatMeta({ mode: 'OpenAI streaming', cached: false });
+                }
+            );
+        }
+    } catch (e) {
+        updateChatMessage(loadId, `❌ Error: ${e.message}`);
+    }
+
+    chatLoading = false;
+    document.getElementById('chatSendBtn').disabled = false;
+}
+
+function addMessage(role, content, isLoading = false) {
+    const id = 'msg-' + Date.now();
+    const avatar = role === 'user' ? '👤' : '🤖';
+    const sender = role === 'user' ? 'Tú' : 'RAG Assistant';
+    const html = `
+        <div class="msg ${role}" id="${id}">
+            <div class="msg-avatar">${avatar}</div>
+            <div class="msg-body">
+                <div class="msg-sender">${sender}</div>
+                <div class="msg-content">${isLoading ? content : marked.parse(content)}</div>
+                <div class="msg-meta" id="${id}-meta"></div>
+            </div>
+        </div>`;
+    document.getElementById('chatMessages').insertAdjacentHTML('beforeend', html);
+    document.getElementById('chatMessages').scrollTop = 99999;
+    return id;
+}
+
+function updateChatMessage(id, content, meta = null) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelector('.msg-content').innerHTML = marked.parse(content);
+
+    if (meta) {
+        updateChatMeta(meta);
+
+        // Show sources if available
+        if (meta.sources && meta.sources.length) {
+            const srcHtml = `<details class="msg-sources"><summary>📎 ${meta.sources.length} fuentes</summary>
+                <ul>${meta.sources.map(s => `<li>${s}</li>`).join('')}</ul></details>`;
+            el.querySelector('.msg-content').insertAdjacentHTML('beforeend', srcHtml);
+        }
+
+        // Feedback buttons
+        const metaEl = document.getElementById(`${id}-meta`);
+        if (metaEl) {
+            metaEl.innerHTML = `
+                <button class="btn btn-sm" onclick="sendFeedback('${id}', 'positive')" title="Buena respuesta">👍</button>
+                <button class="btn btn-sm" onclick="sendFeedback('${id}', 'negative')" title="Mala respuesta">👎</button>
+                ${meta.confidence !== undefined ? `<span class="badge ${meta.confidence > 0.7 ? 'badge-success' : meta.confidence > 0.4 ? 'badge-warning' : 'badge-danger'}">
+                    Confianza: ${(meta.confidence * 100).toFixed(0)}%</span>` : ''}
+                ${meta.cached ? '<span class="badge badge-info">cached</span>' : ''}
+            `;
+        }
+    }
+    document.getElementById('chatMessages').scrollTop = 99999;
+}
+
+function updateChatMeta(meta) {
+    const el = document.getElementById('chatMeta');
+    if (!el) return;
+    const lines = [];
+    if (meta.confidence !== undefined) lines.push(`Confianza: ${(meta.confidence * 100).toFixed(0)}%`);
+    if (meta.sources) lines.push(`Fuentes: ${meta.sources.length}`);
+    if (meta.cached !== undefined) lines.push(`Caché: ${meta.cached ? 'Sí' : 'No'}`);
+    if (meta.metadata?.processing_time) lines.push(`Tiempo: ${meta.metadata.processing_time}ms`);
+    if (meta.mode) lines.push(`Modo: ${meta.mode}`);
+    if (meta.retrieved_chunks) lines.push(`Chunks: ${meta.retrieved_chunks.length}`);
+    el.innerHTML = lines.join('<br>') || 'Sin datos';
+}
+
+async function sendFeedback(msgId, rating) {
+    const msgEl = document.getElementById(msgId);
+    if (!msgEl) return;
+    const content = msgEl.querySelector('.msg-content')?.textContent || '';
+    // Find the preceding user message
+    const prev = msgEl.previousElementSibling;
+    const query = prev?.querySelector('.msg-content')?.textContent || '';
+
+    try {
+        await api.submitFeedback({ query, response: content, rating });
+        toast(`Feedback ${rating === 'positive' ? '👍' : '👎'} guardado`, 'success');
+        // Disable buttons
+        const meta = document.getElementById(`${msgId}-meta`);
+        if (meta) {
+            meta.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
+        }
+    } catch (e) {
+        toast(`Error guardando feedback: ${e.message}`, 'error');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: DOCUMENTS
+// ══════════════════════════════════════════════════════════════
+let docsLoaded = false;
+
+async function loadDocuments() {
+    try {
+        // Load stats
+        try {
+            const stats = await api.registryStats();
+            document.getElementById('docTotal').textContent = stats.total_documents ?? '—';
+            document.getElementById('docChunks').textContent = stats.total_chunks ?? '—';
+            document.getElementById('docSize').textContent = formatBytes(stats.total_size_bytes);
+            document.getElementById('docCategories').textContent = 
+                stats.by_category ? Object.keys(stats.by_category).length : '—';
+        } catch (e) {
+            console.warn('Registry stats error:', e.message);
+        }
+
+        // Load documents list
+        const data = await api.listDocuments();
+        const tbody = document.getElementById('docTableBody');
+
+        if (!data.documents || data.documents.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+                <div class="icon">📄</div><h3>Sin documentos</h3>
+                <p>Sube documentos para comenzar</p></div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.documents.map(d => `
+            <tr>
+                <td style="color:var(--text-primary);font-weight:600">📑 ${d.filename}</td>
+                <td>${statusBadge(d.status)}</td>
+                <td><span class="badge badge-info">${d.category || '—'}</span></td>
+                <td>${d.chunk_count}</td>
+                <td>v${d.version}</td>
+                <td>${formatBytes(d.file_size_bytes)}</td>
+                <td>
+                    <button class="btn btn-icon btn-sm" onclick="reindexDoc('${d.document_id}')" title="Re-indexar">🔄</button>
+                    <button class="btn btn-icon btn-sm" onclick="deleteDoc('${d.document_id}','${d.filename}')" title="Eliminar">🗑️</button>
+                </td>
+            </tr>
+        `).join('');
+        docsLoaded = true;
+    } catch (e) {
+        document.getElementById('docTableBody').innerHTML = 
+            `<tr><td colspan="7" style="color:var(--danger);padding:20px">❌ Error: ${e.message}</td></tr>`;
+    }
+}
+
+async function handleUpload(files) {
+    for (const file of files) {
+        try {
+            toast(`📤 Subiendo ${file.name}...`, 'info');
+            const result = await api.registryIngest(file);
+            if (result.is_duplicate) {
+                toast(`⏭️ ${file.name} ya existe (duplicado)`, 'info');
+            } else {
+                toast(`✅ ${file.name} ingestado (${result.chunk_count} chunks)`, 'success');
+            }
+        } catch (e) {
+            toast(`❌ Error subiendo ${file.name}: ${e.message}`, 'error');
+        }
+    }
+    loadDocuments();
+    document.getElementById('fileInput').value = '';
+}
+
+async function reindexDoc(id) {
+    try {
+        toast('🔄 Re-indexando...', 'info');
+        await api.reindexDocument(id);
+        toast('✅ Documento re-indexado', 'success');
+        loadDocuments();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function deleteDoc(id, name) {
+    if (!confirm(`¿Eliminar "${name}"?\nEsto borra source + registry + vector DB`)) return;
+    try {
+        await api.deleteDocument(id);
+        toast(`🗑️ ${name} eliminado`, 'success');
+        loadDocuments();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function scanInbox() {
+    try {
+        toast('📥 Escaneando inbox...', 'info');
+        const result = await api.scanInbox();
+        toast(`📥 Inbox: ${result.successful} nuevos, ${result.duplicates} duplicados, ${result.failed} errores`, 'success');
+        loadDocuments();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// Drag & drop
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    handleUpload(e.dataTransfer.files);
+});
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: TENANTS
+// ══════════════════════════════════════════════════════════════
+async function loadTenants() {
+    try {
+        const data = await api.listTenants(true);
+        const container = document.getElementById('tenantCards');
+
+        if (!data.tenants || data.tenants.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                <div class="icon">🏢</div><h3>Sin tenants</h3>
+                <p>Crea un tenant para comenzar</p></div>`;
+            return;
+        }
+
+        container.innerHTML = data.tenants.map(t => `
+            <div class="stat-card" style="cursor:default">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <span style="font-weight:700;font-size:15px">${t.name}</span>
+                    ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px">${t.tenant_id}</code>
+                </div>
+                ${t.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${t.description}</div>` : ''}
+                <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted);margin-bottom:12px">
+                    <span>🧠 ${t.default_model || '—'}</span>
+                    <span>🌐 ${t.response_language || '—'}</span>
+                    <span>📄 ${t.document_count ?? 0} docs</span>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-sm" onclick="editTenant('${t.tenant_id}')">✏️ Editar</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTenantAction('${t.tenant_id}','${t.name}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        document.getElementById('tenantCards').innerHTML = 
+            `<div style="color:var(--danger);padding:20px">❌ Error: ${e.message}</div>`;
+    }
+}
+
+function showTenantModal() {
+    document.getElementById('tenantModalTitle').textContent = 'Nuevo Tenant';
+    document.getElementById('tenantIdInput').value = '';
+    document.getElementById('tenantIdInput').disabled = false;
+    document.getElementById('tenantNameInput').value = '';
+    document.getElementById('tenantDescInput').value = '';
+    document.getElementById('tenantModelInput').value = 'anthropic/claude-3-haiku';
+    document.getElementById('tenantLangInput').value = 'es';
+    document.getElementById('tenantPromptInput').value = '';
+    openModal('tenantModal');
+}
+
+async function editTenant(id) {
+    try {
+        const t = await api.getTenant(id);
+        document.getElementById('tenantModalTitle').textContent = `Editar: ${t.name}`;
+        document.getElementById('tenantIdInput').value = t.tenant_id;
+        document.getElementById('tenantIdInput').disabled = true;
+        document.getElementById('tenantNameInput').value = t.name || '';
+        document.getElementById('tenantDescInput').value = t.description || '';
+        document.getElementById('tenantModelInput').value = t.default_model || '';
+        document.getElementById('tenantLangInput').value = t.response_language || 'es';
+        document.getElementById('tenantPromptInput').value = '';
+        openModal('tenantModal');
+    } catch (e) {
+        toast(`❌ Error cargando tenant: ${e.message}`, 'error');
+    }
+}
+
+async function saveTenant() {
+    const id = document.getElementById('tenantIdInput').value.trim();
+    const isEdit = document.getElementById('tenantIdInput').disabled;
+    const data = {
+        name: document.getElementById('tenantNameInput').value.trim(),
+        description: document.getElementById('tenantDescInput').value.trim() || undefined,
+        default_model: document.getElementById('tenantModelInput').value.trim() || undefined,
+        response_language: document.getElementById('tenantLangInput').value,
+    };
+    const prompt = document.getElementById('tenantPromptInput').value.trim();
+    if (prompt && prompt.length >= 10) data.system_prompt = prompt;
+
+    if (!id || !data.name) { toast('ID y Nombre son requeridos', 'error'); return; }
+
+    try {
+        if (isEdit) {
+            await api.updateTenant(id, data);
+            toast(`✅ Tenant "${data.name}" actualizado`, 'success');
+        } else {
+            data.tenant_id = id;
+            await api.createTenant(data);
+            toast(`✅ Tenant "${data.name}" creado`, 'success');
+        }
+        closeModal('tenantModal');
+        loadTenants();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function deleteTenantAction(id, name) {
+    const del = confirm(`¿Eliminar tenant "${name}" (${id})?\n\n⚠️ ¿También eliminar la colección de documentos?`);
+    if (!del) return;
+    const delCol = confirm('¿Eliminar también la colección ChromaDB? (DESTRUCTIVO)');
+    try {
+        await api.deleteTenant(id, delCol);
+        toast(`🗑️ Tenant "${name}" eliminado`, 'success');
+        loadTenants();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: AGENTS
+// ══════════════════════════════════════════════════════════════
+async function loadAgents() {
+    try {
+        const data = await api.listAgents();
+        const container = document.getElementById('agentCards');
+        const agents = Array.isArray(data) ? data : (data.agents || []);
+
+        if (agents.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                <div class="icon">🤖</div><h3>Sin agentes</h3>
+                <p>Crea un agente RAG con su propia base de conocimientos</p></div>`;
+            return;
+        }
+
+        container.innerHTML = agents.map(a => `
+            <div class="stat-card" style="cursor:default">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <span style="font-weight:700;font-size:15px">${a.name}</span>
+                    ${statusBadge(a.status)}
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">
+                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px">${a.tenant_id}</code>
+                </div>
+                ${a.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${a.description}</div>` : ''}
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+                    Creado: ${new Date(a.created_at).toLocaleDateString('es')}
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-sm btn-primary" onclick="queryAgentUI('${a.tenant_id}')">💬 Consultar</button>
+                    <button class="btn btn-sm" onclick="viewAgentStats('${a.tenant_id}')">📊 Stats</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAgentAction('${a.tenant_id}','${a.name}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        document.getElementById('agentCards').innerHTML = 
+            `<div style="color:var(--danger);padding:20px">❌ Error: ${e.message}</div>`;
+    }
+}
+
+function showAgentModal() { openModal('agentModal'); }
+
+async function saveAgent() {
+    const id = document.getElementById('agentIdInput').value.trim();
+    const name = document.getElementById('agentNameInput').value.trim();
+    const desc = document.getElementById('agentDescInput').value.trim();
+
+    if (!id || !name) { toast('ID y Nombre son requeridos', 'error'); return; }
+
+    try {
+        await api.createAgent({ tenant_id: id, name, description: desc || '' });
+        toast(`✅ Agente "${name}" creado`, 'success');
+        closeModal('agentModal');
+        loadAgents();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function deleteAgentAction(id, name) {
+    if (!confirm(`¿Eliminar agente "${name}"?\n\n⚠️ Esto elimina:\n- Colección de vectores\n- Caché\n- Configuración`)) return;
+    try {
+        await api.deleteAgent(id);
+        toast(`🗑️ Agente "${name}" eliminado`, 'success');
+        loadAgents();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+function queryAgentUI(tenantId) {
+    // Switch to chat and set session
+    document.getElementById('chatSessionId').value = `agent-${tenantId}`;
+    toast(`💬 Consulta al agente ${tenantId} — usa el chat`, 'info');
+    nav('chat');
+}
+
+async function viewAgentStats(tenantId) {
+    try {
+        const stats = await api.agentStats(tenantId);
+        alert(JSON.stringify(stats, null, 2));
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: ANALYTICS
+// ══════════════════════════════════════════════════════════════
+async function loadAnalytics() {
+    loadHealthStatus();
+    loadFeedbackStats();
+    loadSystemStats();
+    loadFeedbackList();
+}
+
+async function loadHealthStatus() {
+    const grid = document.getElementById('healthGrid');
+    const services = [
+        { name: 'RAG API', check: () => api.health() },
+        { name: 'MCP Server', check: () => api.mcpHealth() },
+    ];
+
+    let html = '';
+    for (const svc of services) {
+        try {
+            await svc.check();
+            html += `<div class="health-item"><div class="dot" style="background:var(--success)"></div>
+                <div><div class="name">${svc.name}</div><div class="status">healthy</div></div></div>`;
+        } catch {
+            html += `<div class="health-item"><div class="dot" style="background:var(--danger)"></div>
+                <div><div class="name">${svc.name}</div><div class="status">offline</div></div></div>`;
+        }
+    }
+    grid.innerHTML = html;
+}
+
+async function loadFeedbackStats() {
+    try {
+        const stats = await api.feedbackStats();
+        const panel = document.getElementById('feedbackPanel');
+
+        const total = stats.total_feedback || 0;
+        const posRate = stats.positive_rate || 0;
+        const negRate = 100 - posRate;
+
+        panel.innerHTML = `
+            <div style="margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:13px">Satisfacción</span>
+                    <span style="font-size:13px;font-weight:700;color:${posRate >= 70 ? 'var(--success)' : posRate >= 40 ? 'var(--warning)' : 'var(--danger)'}">${posRate.toFixed(0)}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="fill" style="width:${posRate}%;background:var(--success)"></div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+                <div>👍 Positivos: <strong>${stats.positive_count}</strong></div>
+                <div>👎 Negativos: <strong>${stats.negative_count}</strong></div>
+                <div>📊 Total: <strong>${total}</strong></div>
+                <div>⚠️ Baja confianza: <strong>${stats.low_confidence_count}</strong></div>
+                <div>📋 Sin revisar: <strong>${stats.unreviewed_count}</strong></div>
+            </div>
+            ${stats.common_negative_queries?.length ? `
+                <div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+                    <strong>Queries negativas frecuentes:</strong><br>
+                    ${stats.common_negative_queries.map(q => `• ${q}`).join('<br>')}
+                </div>
+            ` : ''}
+        `;
+    } catch (e) {
+        document.getElementById('feedbackPanel').innerHTML = 
+            `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadSystemStats() {
+    try {
+        const stats = await api.getStats();
+        const panel = document.getElementById('systemPanel');
+        panel.innerHTML = `
+            <div style="font-size:13px">
+                <div style="margin-bottom:8px"><strong>Tenant:</strong> ${stats.tenant_id}</div>
+                <div style="margin-bottom:8px"><strong>Vector DB:</strong></div>
+                <pre style="background:var(--bg-input);padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;color:var(--text-secondary)">${JSON.stringify(stats.vector_database, null, 2)}</pre>
+                <div style="margin:8px 0"><strong>Cache:</strong></div>
+                <pre style="background:var(--bg-input);padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;color:var(--text-secondary)">${JSON.stringify(stats.cache, null, 2)}</pre>
+            </div>
+        `;
+    } catch (e) {
+        document.getElementById('systemPanel').innerHTML = 
+            `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadFeedbackList() {
+    try {
+        const data = await api.listFeedback({ limit: 20 });
+        const tbody = document.getElementById('feedbackTableBody');
+        const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
+
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">
+                <div class="icon">📝</div><h3>Sin feedback</h3>
+                <p>Los feedback de las evaluaciones aparecerán aquí</p></div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = items.map(f => `
+            <tr>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.query || ''}">${f.query || '—'}</td>
+                <td>${f.rating === 'positive' ? '<span class="badge badge-success">👍</span>' : '<span class="badge badge-danger">👎</span>'}</td>
+                <td>${f.confidence !== null && f.confidence !== undefined ? `${(f.confidence * 100).toFixed(0)}%` : '—'}</td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.comment || '—'}</td>
+                <td>${f.reviewed ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">pendiente</span>'}</td>
+                <td>
+                    ${!f.reviewed ? `<button class="btn btn-sm" onclick="markReviewed('${f.feedback_id || f.id}')">✓ Revisar</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        document.getElementById('feedbackTableBody').innerHTML = 
+            `<tr><td colspan="6" style="color:var(--danger);padding:20px">❌ ${e.message}</td></tr>`;
+    }
+}
+
+async function markReviewed(id) {
+    try {
+        await api.markReviewed(id, 'Revisado desde dashboard');
+        toast('✅ Feedback marcado como revisado', 'success');
+        loadFeedbackList();
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: ADMIN
+// ══════════════════════════════════════════════════════════════
+async function loadAdmin() {
+    loadMcpTools();
+    loadMcpPrompts();
+    loadMcpResources();
+    loadModels();
+}
+
+async function loadMcpTools() {
+    try {
+        const data = await api.mcpTools();
+        const tools = data.tools || [];
+        document.getElementById('mcpToolsPanel').innerHTML = tools.map(t => `
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm)">
+                <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:6px">🔧 ${t.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${(t.description || '').trim().split('\n')[0].trim()}</div>
+                <div style="font-size:11px">
+                    <strong>Parámetros:</strong>
+                    ${Object.entries(t.parameters || {}).map(([k,v]) => 
+                        `<span class="badge badge-muted" style="margin:2px">${k}: ${v.type}${v.default !== undefined ? ` = ${v.default}` : ''}</span>`
+                    ).join(' ')}
+                </div>
+            </div>
+        `).join('') || '<div class="empty-state">Sin tools</div>';
+    } catch (e) {
+        document.getElementById('mcpToolsPanel').innerHTML = `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadMcpPrompts() {
+    try {
+        const data = await api.mcpPrompts();
+        const prompts = data.prompts || [];
+        document.getElementById('mcpPromptsPanel').innerHTML = prompts.map(p => `
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg-input);border-radius:var(--radius-sm)">
+                <div style="font-weight:700;font-size:14px;color:var(--secondary);margin-bottom:6px">📝 ${p.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${(p.description || '').trim().split('\n')[0].trim()}</div>
+                <div style="font-size:11px">
+                    <strong>Args:</strong>
+                    ${(p.arguments || []).map(a => `<span class="badge badge-info" style="margin:2px">${a}</span>`).join(' ')}
+                </div>
+            </div>
+        `).join('') || '<div class="empty-state">Sin prompts</div>';
+    } catch (e) {
+        document.getElementById('mcpPromptsPanel').innerHTML = `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadMcpResources() {
+    try {
+        const data = await api.mcpResources();
+        const resources = data.resources || [];
+        document.getElementById('mcpResourcesPanel').innerHTML = resources.map(r => `
+            <div style="display:inline-flex;align-items:center;gap:8px;margin:4px;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm)">
+                <span style="font-size:12px;font-weight:700;color:var(--info)">${r.uri}</span>
+                <span style="font-size:11px;color:var(--text-muted)">${(r.description || '').trim().split('\n')[0].trim()}</span>
+                <button class="btn btn-sm" onclick="fetchResource('${r.uri}')">📥</button>
+            </div>
+        `).join('') || '<div class="empty-state">Sin resources</div>';
+    } catch (e) {
+        document.getElementById('mcpResourcesPanel').innerHTML = `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function fetchResource(uri) {
+    try {
+        const path = uri.replace('rag://', '');
+        const data = await api.mcpGetResource(path);
+        alert(JSON.stringify(data, null, 2));
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function loadModels() {
+    try {
+        const data = await api.listModels();
+        const models = data.data || [];
+        document.getElementById('modelsPanel').innerHTML = models.map(m => `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:20px">🧠</span>
+                <div>
+                    <div style="font-weight:700;font-size:14px">${m.id}</div>
+                    <div style="font-size:12px;color:var(--text-muted)">${m.description || m.owned_by || '—'}</div>
+                </div>
+            </div>
+        `).join('') || '<div class="empty-state">Sin modelos</div>';
+    } catch (e) {
+        document.getElementById('modelsPanel').innerHTML = `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+    }
+}
+
+async function clearCacheAction() {
+    const tenantId = document.getElementById('cacheTenantId').value.trim() || 'default';
+    if (!confirm(`¿Limpiar caché del tenant "${tenantId}"?`)) return;
+    try {
+        await api.clearCache(tenantId);
+        toast(`✅ Caché de "${tenantId}" limpiado`, 'success');
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+async function resetReindexAction() {
+    if (!confirm('⚠️ RESET NUCLEAR\n\nEsto eliminará:\n- Toda la colección ChromaDB\n- El registro de documentos\n\nY re-indexará todo desde sources.\n\n¿Continuar?')) return;
+    if (!confirm('¿ESTÁS SEGURO? Esta operación no se puede deshacer.')) return;
+
+    try {
+        toast('☢️ Ejecutando reset completo...', 'info');
+        const result = await api.resetReindex();
+        toast(`✅ Reset completo: ${result.successful} docs re-indexados en ${result.elapsed_seconds?.toFixed(1)}s`, 'success');
+    } catch (e) {
+        toast(`❌ Error: ${e.message}`, 'error');
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HEALTH CHECK (header badge)
+// ══════════════════════════════════════════════════════════════
+async function checkHealth() {
+    const badge = document.getElementById('healthBadge');
+    const text = document.getElementById('healthText');
+    try {
+        await api.health();
+        badge.classList.remove('offline');
+        text.textContent = 'healthy';
+    } catch {
+        badge.classList.add('offline');
+        text.textContent = 'offline';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+(function init() {
+    // Route from hash
+    const hash = window.location.hash.replace('#', '') || 'chat';
+    if (modules.includes(hash)) nav(hash);
+
+    // Health check
+    checkHealth();
+    setInterval(checkHealth, 30000);
+
+    // Hash change
+    window.addEventListener('hashchange', () => {
+        const h = window.location.hash.replace('#', '');
+        if (modules.includes(h)) nav(h);
+    });
+})();
+</script>
+</body>
+</html>
