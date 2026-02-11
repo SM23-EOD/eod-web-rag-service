@@ -18,7 +18,7 @@ graph TB
             DOC_LIST[Lista de Documentos]
             DOC_UPLOAD[Upload / Drag & Drop]
             DOC_DETAIL[Detalle Documento]
-            DOC_REINDEX[Re-indexar]
+            DOC_REINDEX[Reindexar]
             INBOX[Scan Inbox]
             SYNC[Sync Directorio]
         end

@@ -3,7 +3,7 @@
 > **Branch:** `feature/rag-dashboard-analysis`  
 > **Fecha:** Febrero 2026  
 > **API Version:** 2.0.0  
-> **Base URL:** `http://167.172.225.44/api/v2/`  
+> **Base URL:** `${RAG_API_BASE_URL}` (p.ej. `https://rag-api.envios23.com/api/v2/`)  
 > **Stack:** FastAPI + Traefik + ChromaDB + Redis + TEI (HuggingFace)
 
 ---
@@ -75,15 +75,15 @@ Gestión transaccional de documentos con deduplicación, versionado y reindexado
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/registry/ingest` | Ingestar documento (multipart/file upload) | No |
-| `GET` | `/registry/documents` | Listar documentos registrados (filtros: status, category) | No |
-| `GET` | `/registry/documents/{id}` | Estado detallado de un documento | No |
-| `DELETE` | `/registry/documents/{id}` | Eliminar documento (source + registry + vector) | No |
-| `POST` | `/registry/documents/{id}/reindex` | Re-indexar documento existente | No |
-| `GET` | `/registry/stats` | Estadísticas del registro | No |
-| `POST` | `/registry/sync/directory` | Sincronizar desde directorio | No |
-| `POST` | `/registry/scan-inbox` | Escanear inbox e ingestar pendientes | No |
-| `POST` | `/registry/reset-reindex` | ⚠️ Reset nuclear: limpia todo y re-indexa | No |
+| `POST` | `/registry/ingest` | Ingestar documento (multipart/file upload) | API Key |
+| `GET` | `/registry/documents` | Listar documentos registrados (filtros: status, category) | API Key |
+| `GET` | `/registry/documents/{id}` | Estado detallado de un documento | API Key |
+| `DELETE` | `/registry/documents/{id}` | Eliminar documento (source + registry + vector) | API Key |
+| `POST` | `/registry/documents/{id}/reindex` | Re-indexar documento existente | API Key |
+| `GET` | `/registry/stats` | Estadísticas del registro | API Key |
+| `POST` | `/registry/sync/directory` | Sincronizar desde directorio | API Key |
+| `POST` | `/registry/scan-inbox` | Escanear inbox e ingestar pendientes | API Key |
+| `POST` | `/registry/reset-reindex` | ⚠️ Reset nuclear: limpia todo y re-indexa | API Key |
 
 #### Schemas Clave:
 - **DocumentListItem:** `{document_id, filename, status, category, chunk_count, version, file_size_bytes}`
@@ -98,11 +98,11 @@ Multi-tenancy completo: cada tenant tiene su colección ChromaDB, configuración
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| `GET` | `/tenants` | Listar tenants (incluir inactivos?) | No |
-| `POST` | `/tenants` | Crear tenant con configuración | No |
-| `GET` | `/tenants/{tenant_id}` | Obtener configuración de tenant | No |
-| `PUT` | `/tenants/{tenant_id}` | Actualizar tenant | No |
-| `DELETE` | `/tenants/{tenant_id}` | Eliminar tenant (opcional: borrar colección) | No |
+| `GET` | `/tenants` | Listar tenants (incluir inactivos?) | API Key |
+| `POST` | `/tenants` | Crear tenant con configuración | API Key |
+| `GET` | `/tenants/{tenant_id}` | Obtener configuración de tenant | API Key |
+| `PUT` | `/tenants/{tenant_id}` | Actualizar tenant | API Key |
+| `DELETE` | `/tenants/{tenant_id}` | Eliminar tenant (opcional: borrar colección) | API Key |
 
 #### Schemas Clave:
 - **TenantCreate:** `{tenant_id, name, description?, collection_name?, system_prompt?, allowed_models?, default_model?, embedding_model?, retrieval_config?, response_language?, metadata?}`
@@ -163,16 +163,16 @@ Sistema de feedback para mejora continua del RAG.
 
 ---
 
-### 7. OpenAI Compatible (`/api/v1/` y `/api/v2/`)
+### 7. OpenAI Compatible (rutas completas `/api/v1/...` y `/api/v2/...`)
 
 API compatible con el SDK de OpenAI para integración directa.
 
 | Método | Endpoint | Descripción | Auth |
 |--------|----------|-------------|------|
-| `POST` | `/v2/chat/completions` | Chat completions (streaming SSE) | API Key |
-| `GET` | `/v2/models` | Listar modelos disponibles | No |
-| `POST` | `/v1/chat/completions` | Chat completions v1 (alias) | API Key |
-| `GET` | `/v1/models` | Listar modelos v1 (alias) | No |
+| `POST` | `/api/v2/chat/completions` | Chat completions (streaming SSE) | API Key |
+| `GET` | `/api/v2/models` | Listar modelos disponibles | No |
+| `POST` | `/api/v1/chat/completions` | Chat completions v1 (alias) | API Key |
+| `GET` | `/api/v1/models` | Listar modelos v1 (alias) | No |
 
 #### Modelos Disponibles:
 1. **`eod-rag`** - Modelo RAG con Claude-3-Haiku vía OpenRouter
@@ -267,7 +267,7 @@ API compatible con el SDK de OpenAI para integración directa.
 - **Lista de Documentos:** Tabla con filename, status, category, chunks, versión, tamaño
 - **Upload de Documentos:** Drag & drop file upload vía `/registry/ingest`
 - **Detalle de Documento:** Vista individual con estado, chunks, historial
-- **Re-indexar:** Botón para regenerar embeddings de un documento
+- **Reindexar:** Botón para regenerar embeddings de un documento
 - **Eliminar:** Con confirmación (elimina source + registry + vector)
 - **Sync Directorio:** Trigger para sincronizar desde directorio del servidor
 - **Scan Inbox:** Escanear inbox para documentos pendientes
@@ -453,7 +453,15 @@ class RAGApiClient {
   
   // Agents
   async createAgent(data) { return this.post('/agents', data); }
-  async listAgents(status) { return this.get(`/agents?status_filter=${status}`); }
+  async listAgents(status) {
+    const params = new URLSearchParams();
+    if (status !== undefined && status !== null) {
+      params.set('status_filter', status);
+    }
+    const query = params.toString();
+    const path = query ? `/agents?${query}` : '/agents';
+    return this.get(path);
+  }
   async getAgent(id) { return this.get(`/agents/${id}`); }
   async deleteAgent(id) { return this.delete(`/agents/${id}?confirm=true`); }
   async queryAgent(id, data) { return this.post(`/agents/${id}/query`, data); }
@@ -472,7 +480,14 @@ class RAGApiClient {
   async resetReindex() { return this.post('/registry/reset-reindex'); }
   
   // Tenants
-  async listTenants(includeInactive) { return this.get(`/tenants?include_inactive=${includeInactive}`); }
+  async listTenants(includeInactive) {
+    const params = new URLSearchParams();
+    if (includeInactive !== undefined) {
+      params.set('include_inactive', includeInactive);
+    }
+    const query = params.toString();
+    return this.get(`/tenants${query ? `?${query}` : ''}`);
+  }
   async createTenant(data) { return this.post('/tenants', data); }
   async getTenant(id) { return this.get(`/tenants/${id}`); }
   async updateTenant(id, data) { return this.put(`/tenants/${id}`, data); }
@@ -485,7 +500,7 @@ class RAGApiClient {
   async mcpPrompts() { return this.get('/mcp/prompts'); }
   async mcpRenderPrompt(name, args) { return this.post('/mcp/prompts/render', { prompt_name: name, arguments: args }); }
   async mcpResources() { return this.get('/mcp/resources'); }
-  async mcpGetResource(path) { return this.get(`/mcp/resources/${path}`); }
+  async mcpGetResource(path) { return this.get(`/mcp/resources/${encodeURIComponent(path)}`); }
   async mcpSession(id) { return this.get(`/mcp/sessions/${id}`); }
   async mcpClearSession(id) { return this.delete(`/mcp/sessions/${id}`); }
   
@@ -500,19 +515,79 @@ class RAGApiClient {
   async listModels() { return this.get('/models'); }
   
   // Streaming
-  async chatCompletionsStream(data, onChunk) {
+  async chatCompletionsStream(data, onChunk, options = {}) {
+    const controller = new AbortController();
+    const signal = options.signal ?? controller.signal;
+
+    const headers = { 'Content-Type': 'application/json' };
+    // If the client has an API key configured, send it as a Bearer token.
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, stream: true })
+      headers,
+      body: JSON.stringify({ ...data, stream: true }),
+      signal,
     });
+
+    if (!response.ok) {
+      throw new Error(
+        `Streaming request failed with status ${response.status} ${response.statusText}`,
+      );
+    }
+
+    if (!response.body) {
+      throw new Error('Streaming is not supported in this environment (response.body is null).');
+    }
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      onChunk(decoder.decode(value));
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(':')) {
+            // Ignore empty lines and SSE comments.
+            continue;
+          }
+
+          let payload = trimmed;
+          if (trimmed.startsWith('data:')) {
+            payload = trimmed.slice('data:'.length).trim();
+          }
+
+          if (payload === '[DONE]') {
+            // End of stream according to SSE/OpenAI semantics.
+            controller.abort();
+            return { cancel: () => controller.abort() };
+          }
+
+          onChunk(payload);
+        }
+      }
+
+      // Flush any remaining buffered data.
+      if (buffer.trim()) {
+        onChunk(buffer.trim());
+      }
+    } finally {
+      reader.releaseLock();
     }
+
+    // Allow callers to cancel the stream if desired.
+    return { cancel: () => controller.abort() };
   }
 }
 ```
@@ -572,7 +647,7 @@ const routes = {
 
 1. **Registry permisos:** `/app/storage/sources` tiene error de permisos en el contenedor
 2. **Traefik bloquea /docs:** FastAPI docs no accesibles via Traefik (solo interno en :9999)
-3. **API Keys:** Muchos endpoints usan `APIKeyHeader` - necesitamos gestión de keys en el frontend
+3. **API Keys / Auth:** Hay inconsistencia entre la tabla de Auth por módulo y el uso real de `APIKeyHeader`. Debemos marcar por endpoint cuáles son públicos y cuáles requieren API key, y definir cómo gestionará el frontend esas keys.
 4. **CORS:** Configurado como `*` pero algunos endpoints podrían necesitar configuración específica
 5. **Feedback vacío:** 0 feedback entries - el sistema de feedback actual no está conectado correctamente al endpoint
 
