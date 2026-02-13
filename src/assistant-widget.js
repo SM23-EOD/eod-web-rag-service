@@ -81,7 +81,7 @@ class RagAssistant extends HTMLElement {
     }
   }
 
-  async sendFeedback(messageId, rating) {
+  async sendFeedback(messageId, rating, comment = '') {
     // Buscar la conversación asociada al mensaje
     const conversation = this._conversations.find(c => c.messageId === messageId);
     if (!conversation) {
@@ -93,18 +93,21 @@ class RagAssistant extends HTMLElement {
     const feedbackEndpoint = this.endpoint.replace(/\/mcp\/tools\/call$/, '/feedback');
 
     try {
+      const payload = {
+        query: conversation.query,
+        response: conversation.response,
+        rating: rating,
+        confidence: conversation.confidence,
+        session_id: this.sessionId,
+      };
+      if (comment.trim()) payload.comment = comment.trim();
+
       const response = await fetch(feedbackEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          query: conversation.query,
-          response: conversation.response,
-          rating: rating,
-          confidence: conversation.confidence,
-          session_id: this.sessionId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -122,6 +125,26 @@ class RagAssistant extends HTMLElement {
     } catch (error) {
       console.error('Error al enviar feedback:', error);
     }
+  }
+
+  selectRating(messageId, rating) {
+    // Show comment form inside shadow DOM
+    const container = this.shadowRoot.querySelector(`[data-feedback-for="${messageId}"]`);
+    if (!container) return;
+
+    container.innerHTML = `
+      <div style="display:flex;gap:4px;margin-bottom:6px;align-items:center">
+        <span style="font-size:16px">${rating === 'positive' ? '👍' : '👎'}</span>
+        <span style="font-size:12px;color:#64748b">${rating === 'positive' ? 'Útil' : 'No útil'}</span>
+      </div>
+      <div class="feedback-comment">
+        <input type="text" placeholder="¿Por qué? Comentario opcional..." data-comment-for="${messageId}" />
+        <button class="send-btn" data-send-feedback="${messageId}" data-rating="${rating}">Enviar</button>
+        <button data-skip-feedback="${messageId}" data-rating="${rating}">Omitir</button>
+      </div>
+    `;
+    const input = container.querySelector('input');
+    if (input) input.focus();
   }
 
   renderMarkdown(text) {
@@ -594,6 +617,52 @@ class RagAssistant extends HTMLElement {
           margin-top: 4px;
         }
 
+        .feedback-comment {
+          display: flex;
+          gap: 6px;
+          margin-top: 6px;
+          align-items: flex-start;
+          width: 100%;
+        }
+
+        .feedback-comment input {
+          flex: 1;
+          padding: 6px 10px;
+          border: 1px solid #d9dfea;
+          border-radius: 8px;
+          font-size: 12px;
+          font-family: inherit;
+        }
+
+        .feedback-comment input:focus {
+          outline: none;
+          border-color: #3b82f6;
+        }
+
+        .feedback-comment button {
+          padding: 6px 12px;
+          font-size: 11px;
+          border: 1px solid #d9dfea;
+          border-radius: 8px;
+          cursor: pointer;
+          background: #f0f4f8;
+          white-space: nowrap;
+        }
+
+        .feedback-comment button:hover {
+          background: #e2e8f0;
+        }
+
+        .feedback-comment .send-btn {
+          background: #3b82f6;
+          color: #fff;
+          border-color: #3b82f6;
+        }
+
+        .feedback-comment .send-btn:hover {
+          background: #2563eb;
+        }
+
         .bubble.user {
           align-self: flex-end;
           background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
@@ -777,7 +846,7 @@ class RagAssistant extends HTMLElement {
               const feedbackHtml = message.feedbackSent
                 ? `<div class="feedback-thanks">✓ Gracias por tu feedback</div>`
                 : `
-                  <div class="feedback-buttons">
+                  <div class="feedback-buttons" data-feedback-for="${message.id}">
                     <button class="feedback-btn positive" data-msg-id="${message.id}" data-rating="positive" title="Respuesta útil">
                       👍 Útil
                     </button>
@@ -826,12 +895,33 @@ class RagAssistant extends HTMLElement {
       return;
     }
 
-    // Manejar clicks en botones de feedback
+    // Manejar clicks en botones de feedback (step 1: show comment form)
     const feedbackBtn = event.target.closest(".feedback-btn");
     if (feedbackBtn && !feedbackBtn.disabled) {
       const messageId = feedbackBtn.dataset.msgId;
       const rating = feedbackBtn.dataset.rating;
+      this.selectRating(messageId, rating);
+      return;
+    }
+
+    // Send feedback with comment
+    const sendBtn = event.target.closest("[data-send-feedback]");
+    if (sendBtn) {
+      const messageId = sendBtn.dataset.sendFeedback;
+      const rating = sendBtn.dataset.rating;
+      const input = this.shadowRoot.querySelector(`[data-comment-for="${messageId}"]`);
+      const comment = input ? input.value : '';
+      this.sendFeedback(messageId, rating, comment);
+      return;
+    }
+
+    // Skip comment, send feedback without
+    const skipBtn = event.target.closest("[data-skip-feedback]");
+    if (skipBtn) {
+      const messageId = skipBtn.dataset.skipFeedback;
+      const rating = skipBtn.dataset.rating;
       this.sendFeedback(messageId, rating);
+      return;
     }
   };
 
