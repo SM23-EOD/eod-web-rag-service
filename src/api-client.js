@@ -58,12 +58,13 @@ class RAGApiClient {
     async ingestAgent(id, docs) { return this.post(`/agents/${id}/ingest`, docs); }
     async agentStats(id) { return this.get(`/agents/${id}/stats`); }
 
-    // ── Document Registry ─────────────────────────────────────────
+    // ── Document Management (v2 /documents/* endpoints) ──────────
 
-    async registryIngest(file, forceReindex = false) {
-        const url = `${this.baseUrl}/registry/ingest?force_reindex=${forceReindex}`;
+    async uploadDocuments(files, tenantId, autoIndex = true, background = false) {
+        const params = new URLSearchParams({ tenant_id: tenantId, auto_index: autoIndex, background });
+        const url = `${this.baseUrl}/documents/upload?${params}`;
         const form = new FormData();
-        form.append('file', file);
+        files.forEach(f => form.append('files', f));
         const headers = {};
         if (this.apiKey) headers['X-API-Key'] = this.apiKey;
         const res = await fetch(url, { method: 'POST', headers, body: form });
@@ -74,27 +75,58 @@ class RAGApiClient {
         return res.json();
     }
 
-    async listDocuments(statusFilter = null, categoryFilter = null) {
+    async listDocuments(tenantId = null, statusFilter = null, categoryFilter = null) {
         const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
         if (statusFilter) params.set('status_filter', statusFilter);
         if (categoryFilter) params.set('category_filter', categoryFilter);
         const q = params.toString() ? `?${params}` : '';
-        return this.get(`/registry/documents${q}`);
+        return this.get(`/documents${q}`);
     }
-    async getDocument(id) { return this.get(`/registry/documents/${id}`); }
-    async deleteDocument(id) { return this.del(`/registry/documents/${id}`); }
-    async reindexDocument(id) { return this.post(`/registry/documents/${id}/reindex`); }
-    async registryStats() { return this.get('/registry/stats'); }
-    async syncDirectory(dir, recursive = true, force = false) {
-        return this.post(`/registry/sync/directory?directory=${encodeURIComponent(dir)}&recursive=${recursive}&force_reindex=${force}`);
+    async getDocument(id, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/documents/${id}${q}`);
     }
-    async scanInbox(tenantId = null, force = false) {
+    async deleteDocument(id, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.del(`/documents/${id}${q}`);
+    }
+    async deleteAllDocuments(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.del(`/documents${q}`);
+    }
+    async reindexDocument(id, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.post(`/documents/${id}/reindex${q}`);
+    }
+    async documentStats(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/documents/stats/summary${q}`);
+    }
+    async processPending(tenantId = null, forceReindex = false) {
         const params = new URLSearchParams();
         if (tenantId) params.set('tenant_id', tenantId);
-        params.set('force_reindex', force);
-        return this.post(`/registry/scan-inbox?${params}`);
+        if (forceReindex) params.set('force_reindex', 'true');
+        return this.post(`/documents/process-pending?${params}`);
     }
-    async resetReindex() { return this.post('/registry/reset-reindex'); }
+    async syncDirectory(dir, tenantId = null, recursive = true, forceReindex = false) {
+        const params = new URLSearchParams({ directory: dir, recursive, force_reindex: forceReindex });
+        if (tenantId) params.set('tenant_id', tenantId);
+        return this.post(`/documents/sync/directory?${params}`);
+    }
+    async resetReindex(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.post(`/documents/reset-reindex${q}`);
+    }
+
+    // Legacy aliases (registry endpoints — kept for backward compat)
+    async registryIngest(file, forceReindex = false) {
+        return this.uploadDocuments([file], null, !forceReindex, false);
+    }
+    async registryStats() { return this.documentStats(); }
+    async scanInbox(tenantId = null, force = false) {
+        return this.processPending(tenantId, force);
+    }
 
     // ── Tenants ───────────────────────────────────────────────────
 
