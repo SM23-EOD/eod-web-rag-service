@@ -639,6 +639,46 @@ select.form-control { cursor: pointer; }
     gap: 8px;
     margin-top: 8px;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.feedback-comment-form {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-top: 6px;
+    align-items: flex-start;
+}
+
+.feedback-comment-form textarea {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 36px;
+    max-height: 100px;
+    background: var(--bg-input);
+    color: var(--text);
+}
+
+.feedback-comment-form textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.feedback-comment-form .btn-send-comment {
+    padding: 6px 14px;
+    font-size: 12px;
+    white-space: nowrap;
+    align-self: flex-end;
+}
+
+.feedback-rating-selected {
+    opacity: 1 !important;
+    font-size: 18px;
 }
 
 .msg-sources {
@@ -1376,8 +1416,8 @@ function updateChatMessage(id, content, meta = null) {
         const metaEl = document.getElementById(`${id}-meta`);
         if (metaEl) {
             metaEl.innerHTML = `
-                <button class="btn btn-sm" onclick="sendFeedback('${id}', 'positive')" title="Buena respuesta">👍</button>
-                <button class="btn btn-sm" onclick="sendFeedback('${id}', 'negative')" title="Mala respuesta">👎</button>
+                <button class="btn btn-sm" onclick="selectRating('${id}', 'positive')" id="${id}-btn-pos" title="Buena respuesta">👍</button>
+                <button class="btn btn-sm" onclick="selectRating('${id}', 'negative')" id="${id}-btn-neg" title="Mala respuesta">👎</button>
                 ${meta.confidence !== undefined ? `<span class="badge ${meta.confidence > 0.7 ? 'badge-success' : meta.confidence > 0.4 ? 'badge-warning' : 'badge-danger'}">
                     Confianza: ${(meta.confidence * 100).toFixed(0)}%</span>` : ''}
                 ${meta.cached ? '<span class="badge badge-info">cached</span>' : ''}
@@ -1400,21 +1440,58 @@ function updateChatMeta(meta) {
     el.innerHTML = lines.join('<br>') || 'Sin datos';
 }
 
-async function sendFeedback(msgId, rating) {
+function selectRating(msgId, rating) {
+    const meta = document.getElementById(`${msgId}-meta`);
+    if (!meta) return;
+
+    // Highlight selected rating
+    const posBtn = document.getElementById(`${msgId}-btn-pos`);
+    const negBtn = document.getElementById(`${msgId}-btn-neg`);
+    if (posBtn) { posBtn.disabled = true; posBtn.style.opacity = rating === 'positive' ? '1' : '0.3'; }
+    if (negBtn) { negBtn.disabled = true; negBtn.style.opacity = rating === 'negative' ? '1' : '0.3'; }
+
+    // Remove existing comment form if any
+    const existing = meta.querySelector('.feedback-comment-form');
+    if (existing) existing.remove();
+
+    // Add comment form
+    const form = document.createElement('div');
+    form.className = 'feedback-comment-form';
+    form.innerHTML = `
+        <textarea placeholder="¿Por qué? Escribe un comentario opcional..." id="${msgId}-comment"></textarea>
+        <button class="btn btn-sm btn-send-comment" onclick="sendFeedback('${msgId}', '${rating}')">Enviar</button>
+        <button class="btn btn-sm" onclick="sendFeedback('${msgId}', '${rating}', true)" title="Enviar sin comentario" style="padding:6px 8px;font-size:11px;color:var(--text-muted)">Omitir</button>
+    `;
+    meta.appendChild(form);
+
+    // Focus textarea
+    setTimeout(() => meta.querySelector('textarea')?.focus(), 50);
+}
+
+async function sendFeedback(msgId, rating, skipComment = false) {
     const msgEl = document.getElementById(msgId);
     if (!msgEl) return;
     const content = msgEl.querySelector('.msg-content')?.textContent || '';
     // Find the preceding user message
     const prev = msgEl.previousElementSibling;
     const query = prev?.querySelector('.msg-content')?.textContent || '';
+    const comment = skipComment ? '' : (document.getElementById(`${msgId}-comment`)?.value || '');
 
     try {
-        await api.submitFeedback({ query, response: content, rating });
-        toast(`Feedback ${rating === 'positive' ? '👍' : '👎'} guardado`, 'success');
-        // Disable buttons
+        const payload = { query, response: content, rating };
+        if (comment.trim()) payload.comment = comment.trim();
+        await api.submitFeedback(payload);
+        toast(`Feedback ${rating === 'positive' ? '👍' : '👎'} guardado${comment.trim() ? ' con comentario' : ''}`, 'success');
+        // Replace with confirmation
         const meta = document.getElementById(`${msgId}-meta`);
         if (meta) {
+            const form = meta.querySelector('.feedback-comment-form');
+            if (form) form.remove();
             meta.querySelectorAll('button').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
+            const conf = document.createElement('span');
+            conf.className = 'badge badge-success';
+            conf.textContent = `✅ ${rating === 'positive' ? '👍' : '👎'} Enviado`;
+            meta.appendChild(conf);
         }
     } catch (e) {
         toast(`Error guardando feedback: ${e.message}`, 'error');
