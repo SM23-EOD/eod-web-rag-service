@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Integración — EOD Web RAG</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #ef4444;
+      --radius: 16px;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #fff;
+      padding: 28px 40px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header p {
+      font-size: 13px;
+      color: #94a3b8;
+      max-width: 700px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .header-actions a {
+      padding: 7px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .header-actions .btn-outline {
+      border: 1px solid rgba(255,255,255,.2);
+      color: #cbd5e1;
+    }
+    .header-actions .btn-outline:hover {
+      border-color: rgba(255,255,255,.4);
+      color: #fff;
+    }
+    .header-actions .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .header-actions .btn-primary:hover {
+      background: #1d4ed8;
+    }
+
+    /* ── Domain Nav ── */
+    .domain-nav {
+      display: flex;
+      gap: 6px;
+      padding: 0 40px;
+      background: #0f172a;
+      overflow-x: auto;
+    }
+    .domain-tab {
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: all .2s;
+    }
+    .domain-tab:hover { color: #94a3b8; }
+    .domain-tab.active {
+      color: #fff;
+      border-bottom-color: var(--primary);
+    }
+    .domain-tab .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 6px;
+      background: rgba(255,255,255,.1);
+      color: #94a3b8;
+    }
+    .domain-tab.active .badge {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* ── Main content ── */
+    .main {
+      padding: 28px 40px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .domain-section { display: none; }
+    .domain-section.active { display: block; }
+
+    .domain-header {
+      margin-bottom: 24px;
+    }
+    .domain-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .domain-header p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── Card grid ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    .interface-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .interface-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 20px rgba(0,0,0,.06);
+      transform: translateY(-1px);
+    }
+    .interface-card .card-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .card-status {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-live { background: #ecfdf5; color: #059669; }
+    .status-beta { background: #fef3c7; color: #92400e; }
+    .status-test { background: #eff6ff; color: #2563eb; }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .tag {
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .tag.proto-openai { background: #ecfdf5; color: #065f46; }
+    .tag.proto-mcp { background: #eff6ff; color: #1e40af; }
+    .tag.proto-rag { background: #fef3c7; color: #92400e; }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .card-actions a {
+      flex: 1;
+      text-align: center;
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .2s;
+    }
+    .btn-open {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-open:hover { background: #1d4ed8; }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    /* ── Chat Eval Area ── */
+    .eval-area {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .eval-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .eval-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .eval-config {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .eval-config label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .eval-config select,
+    .eval-config input {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: var(--sans);
+      background: var(--card);
+    }
+    .eval-config select:focus,
+    .eval-config input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .eval-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 620px;
+    }
+    @media (max-width: 900px) {
+      .eval-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Eval sidebar: param config */
+    .eval-sidebar {
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+      max-height: 620px;
+      background: #fafbfc;
+    }
+    .eval-sidebar h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .param-field {
+      margin-bottom: 14px;
+    }
+    .param-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .param-field .api-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+    .param-field select,
+    .param-field input[type="text"],
+    .param-field input[type="number"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: var(--sans);
+      background: #fff;
+    }
+    .param-field select:focus,
+    .param-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .range-row input[type="range"] { flex: 1; accent-color: var(--primary); }
+    .range-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+      min-width: 32px;
+      text-align: right;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .toggle-row label { font-size: 12px; font-weight: 500; margin-bottom: 0; }
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #cbd5e1; border-radius: 20px; transition: .3s;
+    }
+    .toggle .slider::before {
+      content: ''; position: absolute; height: 14px; width: 14px;
+      left: 3px; bottom: 3px; background: #fff;
+      border-radius: 50%; transition: .3s;
+    }
+    .toggle input:checked + .slider { background: var(--primary); }
+    .toggle input:checked + .slider::before { transform: translateX(16px); }
+
+    .apply-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all .2s;
+    }
+    .apply-btn:hover { background: #1d4ed8; }
+
+    /* Eval chat host */
+    .eval-chat-host {
+      padding: 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .eval-chat-host .widget-mount {
+      flex: 1;
+      position: relative;
+      min-height: 580px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 18px;
+      padding: 16px 24px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 20px 40px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+    .footer a { color: var(--primary); text-decoration: none; }
+
+    /* ── Section dividers ── */
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════ HEADER ════════════ -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>🧩 Centro de Integración</h1>
+        <p>Hub centralizado de todas las interfaces del sistema RAG — organizado por dominio funcional</p>
+      </div>
+      <div class="header-actions">
+        <a href="dashboard.html" class="btn-outline">📊 Admin Dashboard</a>
+        <a href="widget-generator.html" class="btn-primary">🛠️ Widget Generator</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ DOMAIN TABS ════════════ -->
+  <nav class="domain-nav">
+    <div class="domain-tab active" onclick="switchDomain('overview', this)">📋 Vista General <span class="badge">13</span></div>
+    <div class="domain-tab" onclick="switchDomain('widgets', this)">💬 Widget Demos <span class="badge">4</span></div>
+    <div class="domain-tab" onclick="switchDomain('eval', this)">🧪 Evaluación <span class="badge">3</span></div>
+    <div class="domain-tab" onclick="switchDomain('abtest', this)">📊 A/B Testing <span class="badge">3</span></div>
+    <div class="domain-tab" onclick="switchDomain('tools', this)">🛠️ Herramientas <span class="badge">2</span></div>
+    <div class="domain-tab" onclick="switchDomain('chat-eval', this)">🎯 Chat de Evaluación</div>
+  </nav>
+
+  <div class="main">
+
+    <!-- ════════════ OVERVIEW ════════════ -->
+    <div class="domain-section active" id="sec-overview">
+      <div class="domain-header">
+        <h2>Vista General de Interfaces</h2>
+        <p>Todas las interfaces desplegadas del sistema EOD Web RAG, organizadas por dominio funcional</p>
+      </div>
+
+      <!-- Operations -->
+      <div class="section-label">⚙️ Operaciones & Admin</div>
+      <div class="card-grid">
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#2563eb,#7c3aed)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#eff6ff">📊</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Admin Dashboard</div>
+          <div class="card-desc">Dashboard completo con 6 módulos: Chat, Documentos, Tenants, Agentes, Analytics y Admin MCP</div>
+          <div class="card-tags">
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag proto-openai">OpenAI</span>
+            <span class="tag">api-client.js</span>
+            <span class="tag">6 módulos</span>
+          </div>
+          <div class="card-actions">
+            <a href="dashboard.html" class="btn-open">Abrir Dashboard</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#2563eb,#06b6d4)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#eff6ff">💬</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Chat Interface</div>
+          <div class="card-desc">Interfaz de chat full-page estilo ChatGPT con historial, sidebar y endpoint configurable</div>
+          <div class="card-tags">
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag">Full-page</span>
+            <span class="tag">Standalone</span>
+          </div>
+          <div class="card-actions">
+            <a href="chat-interface.html" class="btn-open">Abrir Chat</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widgets -->
+      <div class="section-label">💬 Widget Demos</div>
+      <div class="card-grid">
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#8b5cf6,#ec4899)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#faf5ff">✨</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">DRAGA Chat</div>
+          <div class="card-desc">Widget multi-protocolo con sources, confianza, grounding, feedback e i18n</div>
+          <div class="card-tags">
+            <span class="tag proto-openai">OpenAI</span>
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag">Multi-protocolo</span>
+            <span class="tag">i18n</span>
+          </div>
+          <div class="card-actions">
+            <a href="demo-draga-chat.html" class="btn-open">Demo</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#059669,#10b981)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#ecfdf5">⚡</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Widget OpenAI</div>
+          <div class="card-desc">Widget OpenAI-compatible con SSE streaming, feedback con comentario y system prompt</div>
+          <div class="card-tags">
+            <span class="tag proto-openai">OpenAI</span>
+            <span class="tag">SSE Streaming</span>
+            <span class="tag">Feedback</span>
+          </div>
+          <div class="card-actions">
+            <a href="demo-widget-openai.html" class="btn-open">Demo</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#2563eb,#3b82f6)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#eff6ff">🤖</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Widget V2</div>
+          <div class="card-desc">Widget MCP mejorado con posición configurable, theme color y feedback con comentarios</div>
+          <div class="card-tags">
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag">Shadow DOM</span>
+            <span class="tag">Feedback</span>
+          </div>
+          <div class="card-actions">
+            <a href="demo-widget-v2.html" class="btn-open">Demo</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#64748b,#94a3b8)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#f1f5f9">📦</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Widget V1</div>
+          <div class="card-desc">Widget MCP original con sources, feedback y markdown rendering</div>
+          <div class="card-tags">
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag">Legacy</span>
+          </div>
+          <div class="card-actions">
+            <a href="index.html" class="btn-open">Demo</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evaluation -->
+      <div class="section-label">🧪 Evaluación & QA</div>
+      <div class="card-grid">
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#d97706,#f59e0b)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#fef3c7">🧪</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Centro de Evaluación</div>
+          <div class="card-desc">4 vistas de evaluación: QA estructurado, ChatGPT, Widget V2 y V1 con sidebar de preguntas rápidas</div>
+          <div class="card-tags">
+            <span class="tag proto-mcp">MCP</span>
+            <span class="tag">Multi-vista</span>
+            <span class="tag">QA</span>
+          </div>
+          <div class="card-actions">
+            <a href="evaluation.html" class="btn-open">Abrir</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#d97706,#fbbf24)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#fef3c7">📈</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Evaluation Dashboard</div>
+          <div class="card-desc">Analytics de sesiones de evaluación con charts, tablas y export desde localStorage</div>
+          <div class="card-tags">
+            <span class="tag">localStorage</span>
+            <span class="tag">Charts</span>
+          </div>
+          <div class="card-actions">
+            <a href="evaluation-dashboard.html" class="btn-open">Abrir</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- A/B -->
+      <div class="section-label">📊 A/B Testing</div>
+      <div class="card-grid">
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#f5f3ff">🔬</div>
+            <span class="card-status status-beta">● Beta</span>
+          </div>
+          <div class="card-title">A/B Test — Básico</div>
+          <div class="card-desc">Test A/B entre Widget V1 y V2 con integración GTM/dataLayer</div>
+          <div class="card-tags">
+            <span class="tag">V1 vs V2</span>
+            <span class="tag">GTM</span>
+          </div>
+          <div class="card-actions">
+            <a href="ab-test.html" class="btn-open">Abrir</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#7c3aed,#c084fc)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#f5f3ff">📡</div>
+            <span class="card-status status-beta">● Beta</span>
+          </div>
+          <div class="card-title">A/B Test — Full</div>
+          <div class="card-desc">Integración completa con GA4 + analytics backend para métricas de engagement</div>
+          <div class="card-tags">
+            <span class="tag">GA4</span>
+            <span class="tag">Backend Analytics</span>
+          </div>
+          <div class="card-actions">
+            <a href="ab-test-full.html" class="btn-open">Abrir</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#7c3aed,#e879f9)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#f5f3ff">🧬</div>
+            <span class="card-status status-test">● Tests</span>
+          </div>
+          <div class="card-title">A/B Test — Unit Tests</div>
+          <div class="card-desc">Suite de tests in-browser para el framework de A/B testing</div>
+          <div class="card-tags">
+            <span class="tag">Unit Tests</span>
+            <span class="tag">ab-test-loader</span>
+          </div>
+          <div class="card-actions">
+            <a href="ab-test-tests.html" class="btn-open">Ejecutar Tests</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tools -->
+      <div class="section-label">🛠️ Herramientas</div>
+      <div class="card-grid">
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#0891b2,#06b6d4)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#ecfeff">🛠️</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Widget Generator</div>
+          <div class="card-desc">Configurador visual de widgets con todos los parámetros API, preview en vivo y código de embed</div>
+          <div class="card-tags">
+            <span class="tag">4 widgets</span>
+            <span class="tag">Code Gen</span>
+            <span class="tag">Live Preview</span>
+          </div>
+          <div class="card-actions">
+            <a href="widget-generator.html" class="btn-open">Abrir</a>
+          </div>
+        </div>
+
+        <div class="interface-card">
+          <div class="card-accent" style="background:linear-gradient(90deg,#0891b2,#22d3ee)"></div>
+          <div class="card-head">
+            <div class="card-icon" style="background:#ecfeff">🎯</div>
+            <span class="card-status status-live">● Live</span>
+          </div>
+          <div class="card-title">Centro de Integración</div>
+          <div class="card-desc">Esta página — hub centralizado de todas las interfaces con chat de evaluación integrado</div>
+          <div class="card-tags">
+            <span class="tag">Hub</span>
+            <span class="tag">Chat Eval</span>
+          </div>
+          <div class="card-actions">
+            <a href="integration.html" class="btn-secondary">Estás aquí</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ WIDGETS ════════════ -->
+    <div class="domain-section" id="sec-widgets">
+      <div class="domain-header">
+        <h2>Widget Demos</h2>
+        <p>Demos interactivos de los 4 widgets web component del sistema RAG</p>
+      </div>
+      <div class="card-grid" id="widgets-grid"></div>
+    </div>
+
+    <!-- ════════════ EVALUATION ════════════ -->
+    <div class="domain-section" id="sec-eval">
+      <div class="domain-header">
+        <h2>Evaluación & QA</h2>
+        <p>Herramientas de evaluación de calidad del RAG y dashboards de métricas</p>
+      </div>
+      <div class="card-grid" id="eval-grid"></div>
+    </div>
+
+    <!-- ════════════ A/B TESTING ════════════ -->
+    <div class="domain-section" id="sec-abtest">
+      <div class="domain-header">
+        <h2>A/B Testing</h2>
+        <p>Framework de A/B testing para comparar variantes de widgets</p>
+      </div>
+      <div class="card-grid" id="abtest-grid"></div>
+    </div>
+
+    <!-- ════════════ TOOLS ════════════ -->
+    <div class="domain-section" id="sec-tools">
+      <div class="domain-header">
+        <h2>Herramientas</h2>
+        <p>Generadores y utilidades para configuración de widgets</p>
+      </div>
+      <div class="card-grid" id="tools-grid"></div>
+    </div>
+
+    <!-- ════════════ CHAT EVALUATION ════════════ -->
+    <div class="domain-section" id="sec-chat-eval">
+      <div class="domain-header">
+        <h2>Chat de Evaluación</h2>
+        <p>Prueba y evalúa cualquier widget con protocolo y parámetros configurables en tiempo real</p>
+      </div>
+
+      <div class="eval-area">
+        <div class="eval-header">
+          <h3>🎯 Widget de Evaluación</h3>
+          <div class="eval-config">
+            <div>
+              <label>Widget</label>
+              <select id="eval-widget" onchange="onEvalWidgetChange()">
+                <option value="draga-chat">DRAGA Chat</option>
+                <option value="rag-assistant-openai">OpenAI Widget</option>
+                <option value="rag-assistant-v2">Widget V2</option>
+                <option value="rag-assistant">Widget V1</option>
+              </select>
+            </div>
+            <div>
+              <label>Protocolo</label>
+              <select id="eval-protocol" onchange="onEvalConfigChange()">
+                <option value="openai">OpenAI</option>
+                <option value="mcp">MCP</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="eval-layout">
+          <!-- Sidebar de parámetros -->
+          <div class="eval-sidebar">
+            <h4>Conexión</h4>
+            <div class="param-field">
+              <label>Base URL <span class="api-tag">endpoint</span></label>
+              <input type="text" id="eval-baseurl" value="/api/v2" oninput="onEvalConfigChange()">
+            </div>
+            <div class="param-field" id="eval-field-agent">
+              <label>Agent <span class="api-tag">agent</span></label>
+              <input type="text" id="eval-agent" value="eod" oninput="onEvalConfigChange()">
+            </div>
+            <div class="param-field" id="eval-field-model">
+              <label>Modelo <span class="api-tag">model</span></label>
+              <input type="text" id="eval-model" value="eod-rag" oninput="onEvalConfigChange()">
+            </div>
+            <div class="param-field" id="eval-field-toolname">
+              <label>Tool name <span class="api-tag">tool_name</span></label>
+              <input type="text" id="eval-toolname" value="generate_rag_answer" oninput="onEvalConfigChange()">
+            </div>
+
+            <h4 style="margin-top:18px">Query</h4>
+            <div class="param-field" id="eval-field-topk">
+              <label>Top K <span class="api-tag">top_k</span></label>
+              <div class="range-row">
+                <input type="range" id="eval-topk" min="1" max="20" value="5" oninput="onEvalConfigChange()">
+                <span class="range-val" id="eval-val-topk">5</span>
+              </div>
+            </div>
+            <div class="param-field" id="eval-field-temperature">
+              <label>Temperatura <span class="api-tag">temperature</span></label>
+              <div class="range-row">
+                <input type="range" id="eval-temperature" min="0" max="100" value="30" oninput="onEvalConfigChange()">
+                <span class="range-val" id="eval-val-temperature">0.3</span>
+              </div>
+            </div>
+            <div class="param-field" id="eval-field-maxhistory">
+              <label>Max historial <span class="api-tag">max-history</span></label>
+              <div class="range-row">
+                <input type="range" id="eval-maxhistory" min="1" max="50" value="20" oninput="onEvalConfigChange()">
+                <span class="range-val" id="eval-val-maxhistory">20</span>
+              </div>
+            </div>
+
+            <h4 style="margin-top:18px">Funciones</h4>
+            <div class="toggle-row">
+              <label>Streaming</label>
+              <label class="toggle"><input type="checkbox" id="eval-streaming" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row" id="eval-field-sources">
+              <label>Fuentes</label>
+              <label class="toggle"><input type="checkbox" id="eval-sources" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row" id="eval-field-confidence">
+              <label>Confianza</label>
+              <label class="toggle"><input type="checkbox" id="eval-confidence" onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row" id="eval-field-feedback">
+              <label>Feedback</label>
+              <label class="toggle"><input type="checkbox" id="eval-feedback" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            </div>
+
+            <h4 style="margin-top:18px">Apariencia</h4>
+            <div class="param-field">
+              <label>Título</label>
+              <input type="text" id="eval-title" value="Evaluación Chat" oninput="onEvalConfigChange()">
+            </div>
+            <div class="param-field">
+              <label>Idioma</label>
+              <select id="eval-locale" onchange="onEvalConfigChange()">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+
+            <button class="apply-btn" onclick="applyEvalConfig()">🔄 Aplicar y Recargar Widget</button>
+          </div>
+
+          <!-- Chat widget mount -->
+          <div class="eval-chat-host">
+            <div class="widget-mount" id="eval-widget-mount"></div>
+            <div class="stats-bar">
+              <div class="stat-item">
+                <span class="stat-label">Widget</span>
+                <span class="stat-val" id="stat-widget">draga-chat</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Protocolo</span>
+                <span class="stat-val" id="stat-protocol">openai</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Streaming</span>
+                <span class="stat-val" id="stat-streaming">true</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Top K</span>
+                <span class="stat-val" id="stat-topk">5</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Temp</span>
+                <span class="stat-val" id="stat-temp">0.3</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    EOD Web RAG Service — Centro de Integración v1.0 · <a href="https://github.com/SM23-EOD/eod-web-rag-service">GitHub</a>
+  </div>
+
+  <!-- All widget scripts -->
+  <script src="src/draga-chat.js"></script>
+  <script src="src/assistant-widget-openai.js"></script>
+  <script src="src/assistant-widget-v2.js"></script>
+  <script src="src/assistant-widget.js"></script>
+
+  <script>
+    // ── Widget capability matrix ──
+    const CAPS = {
+      'draga-chat': {
+        tag: 'draga-chat', protocols: ['openai','mcp'],
+        hasProtocol: true, hasAgent: true, hasModel: true, hasToolName: false,
+        hasTopK: false, hasTemperature: false, hasMaxHistory: true,
+        hasStreaming: true, hasSources: true, hasConfidence: true, hasFeedback: true,
+        hasTitle: false, hasLocale: true,
+        baseUrlAttr: 'base-url', endpointSuffix: '',
+      },
+      'rag-assistant-openai': {
+        tag: 'rag-assistant-openai', protocols: ['openai'],
+        hasProtocol: false, hasAgent: false, hasModel: true, hasToolName: false,
+        hasTopK: true, hasTemperature: true, hasMaxHistory: false,
+        hasStreaming: true, hasSources: false, hasConfidence: false, hasFeedback: false,
+        hasTitle: true, hasLocale: false,
+        baseUrlAttr: 'endpoint', endpointSuffix: '',
+      },
+      'rag-assistant-v2': {
+        tag: 'rag-assistant-v2', protocols: ['mcp'],
+        hasProtocol: false, hasAgent: false, hasModel: false, hasToolName: true,
+        hasTopK: false, hasTemperature: false, hasMaxHistory: false,
+        hasStreaming: false, hasSources: true, hasConfidence: false, hasFeedback: false,
+        hasTitle: true, hasLocale: false,
+        baseUrlAttr: 'endpoint', endpointSuffix: '/mcp/tools/call',
+      },
+      'rag-assistant': {
+        tag: 'rag-assistant', protocols: ['mcp'],
+        hasProtocol: false, hasAgent: false, hasModel: false, hasToolName: true,
+        hasTopK: false, hasTemperature: false, hasMaxHistory: false,
+        hasStreaming: false, hasSources: true, hasConfidence: false, hasFeedback: false,
+        hasTitle: true, hasLocale: false,
+        baseUrlAttr: 'endpoint', endpointSuffix: '/mcp/tools/call',
+      },
+    };
+
+    // ── Domain tab switching ──
+    function switchDomain(name, el) {
+      document.querySelectorAll('.domain-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.domain-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('sec-' + name).classList.add('active');
+
+      // Populate filtered grids on first visit
+      if (name === 'widgets') populateGrid('widgets-grid', ['demo-draga-chat.html','demo-widget-openai.html','demo-widget-v2.html','index.html']);
+      if (name === 'eval') populateGrid('eval-grid', ['evaluation.html','evaluation-dashboard.html']);
+      if (name === 'abtest') populateGrid('abtest-grid', ['ab-test.html','ab-test-full.html','ab-test-tests.html']);
+      if (name === 'tools') populateGrid('tools-grid', ['widget-generator.html','integration.html']);
+
+      // Mount widget on first chat-eval visit
+      if (name === 'chat-eval' && !document.getElementById('eval-widget-mount').children.length) {
+        applyEvalConfig();
+      }
+    }
+
+    function populateGrid(gridId, pages) {
+      const grid = document.getElementById(gridId);
+      if (grid.children.length) return; // already populated
+      const overview = document.getElementById('sec-overview');
+      pages.forEach(page => {
+        const card = overview.querySelector(`a[href="${page}"]`);
+        if (card) {
+          const clone = card.closest('.interface-card').cloneNode(true);
+          grid.appendChild(clone);
+        }
+      });
+    }
+
+    // ── Eval widget config ──
+    function onEvalWidgetChange() {
+      const widget = document.getElementById('eval-widget').value;
+      const cap = CAPS[widget];
+
+      // Update protocol selector
+      const protSel = document.getElementById('eval-protocol');
+      protSel.querySelectorAll('option').forEach(o => {
+        o.disabled = !cap.protocols.includes(o.value);
+      });
+      if (!cap.protocols.includes(protSel.value)) protSel.value = cap.protocols[0];
+
+      // Show/hide fields
+      const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; };
+      show('eval-field-agent', cap.hasAgent);
+      show('eval-field-model', cap.hasModel);
+      show('eval-field-toolname', cap.hasToolName);
+      show('eval-field-topk', cap.hasTopK);
+      show('eval-field-temperature', cap.hasTemperature);
+      show('eval-field-maxhistory', cap.hasMaxHistory);
+      show('eval-field-sources', cap.hasSources);
+      show('eval-field-confidence', cap.hasConfidence);
+      show('eval-field-feedback', cap.hasFeedback);
+
+      onEvalConfigChange();
+    }
+
+    function onEvalConfigChange() {
+      // Update range displays
+      document.getElementById('eval-val-topk').textContent = document.getElementById('eval-topk').value;
+      document.getElementById('eval-val-temperature').textContent = (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1);
+      document.getElementById('eval-val-maxhistory').textContent = document.getElementById('eval-maxhistory').value;
+
+      // Update stats bar
+      document.getElementById('stat-widget').textContent = document.getElementById('eval-widget').value;
+      document.getElementById('stat-protocol').textContent = document.getElementById('eval-protocol').value;
+      document.getElementById('stat-streaming').textContent = document.getElementById('eval-streaming').checked;
+      document.getElementById('stat-topk').textContent = document.getElementById('eval-topk').value;
+      document.getElementById('stat-temp').textContent = (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1);
+    }
+
+    function applyEvalConfig() {
+      const mount = document.getElementById('eval-widget-mount');
+      mount.innerHTML = ''; // clear previous widget
+
+      const widgetName = document.getElementById('eval-widget').value;
+      const cap = CAPS[widgetName];
+      const el = document.createElement(cap.tag);
+
+      const baseUrl = document.getElementById('eval-baseurl').value.replace(/\/+$/, '');
+
+      // Base URL
+      if (cap.endpointSuffix) {
+        el.setAttribute(cap.baseUrlAttr, baseUrl + cap.endpointSuffix);
+      } else {
+        el.setAttribute(cap.baseUrlAttr, baseUrl);
+      }
+
+      // Connection
+      if (cap.hasProtocol) el.setAttribute('protocol', document.getElementById('eval-protocol').value);
+      if (cap.hasAgent) el.setAttribute('agent', document.getElementById('eval-agent').value);
+      if (cap.hasModel) el.setAttribute('model', document.getElementById('eval-model').value);
+      if (cap.hasToolName) el.setAttribute('tool-name', document.getElementById('eval-toolname').value);
+
+      // Query params
+      if (cap.hasTopK) el.setAttribute('top-k', document.getElementById('eval-topk').value);
+      if (cap.hasTemperature) el.setAttribute('temperature', (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1));
+      if (cap.hasMaxHistory) el.setAttribute('max-history', document.getElementById('eval-maxhistory').value);
+
+      // Features
+      if (cap.hasStreaming) el.setAttribute('streaming', document.getElementById('eval-streaming').checked);
+      el.setAttribute('stream', String(document.getElementById('eval-streaming').checked));
+      if (cap.hasSources) el.setAttribute('show-sources', document.getElementById('eval-sources').checked);
+      el.setAttribute('include-sources', String(document.getElementById('eval-sources').checked));
+      if (cap.hasConfidence) el.setAttribute('show-confidence', document.getElementById('eval-confidence').checked);
+      if (cap.hasFeedback) el.setAttribute('feedback', document.getElementById('eval-feedback').checked);
+
+      // Appearance — always inline for eval area
+      el.setAttribute('position', 'inline');
+      if (cap.hasTitle) el.setAttribute('title', document.getElementById('eval-title').value);
+      if (cap.hasLocale) el.setAttribute('locale', document.getElementById('eval-locale').value);
+      el.setAttribute('session-id', 'eval-' + Date.now());
+
+      // Apply draga-chat CSS custom property
+      if (cap.tag === 'draga-chat') {
+        el.style.setProperty('--draga-primary', '#2563eb');
+      }
+
+      mount.appendChild(el);
+      onEvalConfigChange();
+    }
+
+    // ── Init ──
+    onEvalWidgetChange();
+  </script>
+</body>
+</html>
