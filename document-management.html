@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Documentos — Envios23 RAG</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --primary: #ec8951;
+    --primary-dark: #d97a45;
+    --primary-light: #fde8d8;
+    --primary-alpha: rgba(236,137,81,0.15);
+    --secondary: #485ff2;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --bg-dark: #131a22;
+    --bg-main: #1a2332;
+    --bg-card: #222d3a;
+    --bg-input: #2a3747;
+    --bg-hover: #2f3e50;
+    --text-primary: #f0f2f5;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #2a3747;
+    --border-light: #334155;
+    --shadow: 0 4px 24px rgba(0,0,0,0.25);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --transition: 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.app {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 56px 1fr;
+    height: calc(100vh - 33px);
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.header {
+    grid-column: 1 / -1;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header-logo {
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+}
+
+.header-title {
+    font-size: 13px;
+    color: var(--text-muted);
+    border-left: 1px solid var(--border);
+    padding-left: 14px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.health-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(34,197,94,0.12);
+    color: var(--success);
+}
+.health-badge.offline {
+    background: rgba(239,68,68,0.12);
+    color: var(--danger);
+}
+.health-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* ── SIDEBAR ────────────────────────────────────────────────── */
+.sidebar {
+    background: var(--bg-main);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-section h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.tenant-selector {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+}
+
+.tenant-selector:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.tenant-info {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.tenant-info .label {
+    color: var(--text-muted);
+}
+.tenant-info .value {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* ── STATS CARDS ─────────────────────────────────────────────── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+}
+
+.stat-card .stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--primary);
+}
+
+.stat-card .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.stat-card.success .stat-value { color: var(--success); }
+.stat-card.danger .stat-value { color: var(--danger); }
+.stat-card.info .stat-value { color: var(--info); }
+
+/* ── SIDEBAR ACTIONS ───────────────────────────────────────── */
+.sidebar-actions {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-actions h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+.action-btn.danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+.action-btn .icon { font-size: 16px; }
+
+/* ── MAIN CONTENT ──────────────────────────────────────────── */
+.main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ── TOOLBAR ───────────────────────────────────────────────── */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.search-box {
+    flex: 1;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 8px 12px 8px 36px;
+    font-size: 13px;
+    font-family: inherit;
+}
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+.search-box .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-family: inherit;
+    border: 1px solid var(--border-light);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.filter-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.filter-btn.active {
+    background: var(--primary-alpha);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.toolbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.btn-primary:hover { background: var(--primary-dark); }
+
+.btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* ── DOCUMENT TABLE ────────────────────────────────────────── */
+.doc-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.doc-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.doc-table th {
+    background: var(--bg-main);
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+}
+.doc-table th:hover { color: var(--text-secondary); }
+
+.doc-table td {
+    padding: 12px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.doc-table tbody tr {
+    transition: var(--transition);
+}
+.doc-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.doc-table .checkbox-col {
+    width: 40px;
+    text-align: center;
+}
+.doc-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.doc-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.doc-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.doc-icon.md { background: rgba(59,130,246,0.15); }
+.doc-icon.pdf { background: rgba(239,68,68,0.15); }
+.doc-icon.txt { background: rgba(148,163,184,0.15); }
+.doc-icon.docx { background: rgba(59,130,246,0.15); }
+.doc-icon.json { background: rgba(245,158,11,0.15); }
+.doc-icon.xml { background: rgba(168,85,247,0.15); }
+.doc-icon.xlsx { background: rgba(34,197,94,0.15); }
+.doc-icon.unknown { background: rgba(148,163,184,0.15); }
+
+.doc-name-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.status-badge.indexed { background: rgba(34,197,94,0.12); color: var(--success); }
+.status-badge.pending { background: rgba(245,158,11,0.12); color: var(--warning); }
+.status-badge.processing { background: rgba(59,130,246,0.12); color: var(--info); }
+.status-badge.error { background: rgba(239,68,68,0.12); color: var(--danger); }
+.status-badge.deleted { background: rgba(148,163,184,0.12); color: var(--text-muted); }
+
+.category-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: var(--bg-input);
+    color: var(--text-muted);
+}
+
+.doc-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.doc-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: var(--transition);
+}
+.doc-action-btn:hover { background: var(--bg-input); color: var(--text-primary); }
+.doc-action-btn.danger:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+/* ── PAGINATION ────────────────────────────────────────────── */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background: var(--bg-main);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.selection-info { color: var(--primary); font-weight: 600; }
+
+.page-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-btn {
+    padding: 4px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.page-btn:hover { background: var(--bg-hover); }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── UPLOAD MODAL ──────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.show { display: flex; }
+
+.modal {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 580px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.modal-body { padding: 24px; }
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ── DROP ZONE ─────────────────────────────────────────────── */
+.drop-zone {
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    transition: var(--transition);
+    cursor: pointer;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--primary);
+    background: var(--primary-alpha);
+}
+
+.drop-zone .drop-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.7;
+}
+
+.drop-zone .drop-text {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.drop-zone .drop-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.drop-zone .drop-formats {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+.format-tag {
+    padding: 2px 8px;
+    background: var(--bg-input);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ── FILE LIST (modal) ─────────────────────────────────────── */
+.upload-file-list {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upload-file-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+.upload-file-item .file-icon { font-size: 20px; }
+.upload-file-item .file-name { flex: 1; color: var(--text-primary); font-weight: 600; }
+.upload-file-item .file-size { color: var(--text-muted); font-size: 12px; }
+
+.upload-file-item .file-status {
+    font-size: 12px;
+    font-weight: 600;
+}
+.upload-file-item .file-status.pending { color: var(--text-muted); }
+.upload-file-item .file-status.uploading { color: var(--info); }
+.upload-file-item .file-status.done { color: var(--success); }
+.upload-file-item .file-status.error { color: var(--danger); }
+
+.upload-file-item .file-remove {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.upload-file-item .file-remove:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+.upload-progress {
+    width: 100%;
+    height: 3px;
+    background: var(--bg-input);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+}
+.upload-progress .bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+/* ── UPLOAD OPTIONS ──────────────────────────────────────────── */
+.upload-options {
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--bg-card);
+    border-radius: var(--radius-sm);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.upload-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.upload-option input[type="checkbox"] {
+    accent-color: var(--primary);
+}
+
+/* ── CONFIRM MODAL ────────────────────────────────────────── */
+.confirm-body {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.confirm-body .confirm-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.confirm-body h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.confirm-body p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.btn-danger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.btn-danger:hover { background: #dc2626; }
+
+/* ── DETAIL PANEL ──────────────────────────────────────────── */
+.detail-panel {
+    position: fixed;
+    right: -420px;
+    top: 33px;
+    width: 420px;
+    height: calc(100vh - 33px);
+    background: var(--bg-main);
+    border-left: 1px solid var(--border);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.3);
+}
+.detail-panel.open { right: 0; }
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-header h3 { font-size: 15px; }
+
+.detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.detail-field {
+    margin-bottom: 16px;
+}
+
+.detail-field .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.detail-field .value {
+    font-size: 14px;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.detail-actions {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+}
+
+/* ── TOAST ─────────────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn 0.3s ease;
+    box-shadow: var(--shadow);
+}
+
+.toast.success { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+.toast.error { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+.toast.info { background: rgba(59,130,246,0.15); color: var(--info); border: 1px solid rgba(59,130,246,0.3); }
+.toast.warning { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── LOADING ───────────────────────────────────────────────── */
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* ── EMPTY STATE ───────────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 40px;
+    text-align: center;
+}
+
+.empty-state .empty-icon { font-size: 56px; opacity: 0.4; margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; }
+.empty-state p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════
+     BREADCRUMB NAV
+     ═══════════════════════════════════════════════════════════ -->
+<nav id="site-breadcrumb" style="background:#0f172a;padding:6px 18px;font:600 13px/1 'Lato',system-ui,sans-serif;display:flex;align-items:center;gap:8px;border-bottom:1px solid #1e293b;position:relative;z-index:9999;">
+  <a href="integration.html" style="color:#ec8951;text-decoration:none;" title="Hub de Integración">🏠 Hub</a>
+  <span style="color:#334155;">›</span>
+  <span style="color:#64748b;">Documentos</span>
+  <span style="color:#334155;">›</span>
+  <span style="color:#94a3b8;">Gestión de Documentos</span>
+  <span style="color:#1e293b;margin:0 4px;">|</span>
+  <a href="dashboard.html" style="color:#64748b;text-decoration:none;font-size:12px;" title="Admin Dashboard">📊 Dashboard</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="app">
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">
+                <span>📄</span> Gestión de Documentos
+            </div>
+            <div class="header-title">Knowledge Base Manager — Multi-Tenant</div>
+        </div>
+        <div class="header-right">
+            <div id="health-badge" class="health-badge">
+                <span class="health-dot"></span>
+                <span id="health-text">Checking...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <!-- Tenant Selector -->
+        <div class="sidebar-section">
+            <h3>🏢 Tenant</h3>
+            <select id="tenant-select" class="tenant-selector">
+                <option value="">Cargando tenants...</option>
+            </select>
+            <div id="tenant-info" class="tenant-info" style="display:none;">
+                <div><span class="label">Colección:</span> <span class="value" id="ti-collection">—</span></div>
+                <div><span class="label">Modelo:</span> <span class="value" id="ti-model">—</span></div>
+                <div><span class="label">Embedding:</span> <span class="value" id="ti-embedding">—</span></div>
+                <div><span class="label">Idioma:</span> <span class="value" id="ti-lang">—</span></div>
+                <div><span class="label">Creado:</span> <span class="value" id="ti-created">—</span></div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-docs">—</div>
+                <div class="stat-label">Documentos</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-value" id="stat-chunks">—</div>
+                <div class="stat-label">Chunks</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-value" id="stat-indexed">—</div>
+                <div class="stat-label">Indexados</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-value" id="stat-errors">—</div>
+                <div class="stat-label">Errores</div>
+            </div>
+        </div>
+
+        <!-- Storage -->
+        <div class="sidebar-section" id="storage-section" style="display:none;">
+            <h3>💾 Almacenamiento</h3>
+            <div class="tenant-info">
+                <div><span class="label">Total:</span> <span class="value" id="stat-size">—</span></div>
+                <div><span class="label">Ruta:</span> <span class="value" id="stat-path" style="font-size:11px;">—</span></div>
+                <div style="margin-top: 8px;">
+                    <div><span class="label">Por categoría:</span></div>
+                    <div id="stat-categories" style="margin-top:4px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="sidebar-actions">
+            <h3>⚡ Acciones Masivas</h3>
+            <button class="action-btn" onclick="App.processPending()" title="Procesar documentos pendientes de indexar">
+                <span class="icon">⏳</span> Procesar Pendientes
+            </button>
+            <button class="action-btn" onclick="App.syncDirectory()" title="Sincronizar desde directorio del servidor">
+                <span class="icon">🔄</span> Sincronizar Directorio
+            </button>
+            <button class="action-btn danger" onclick="App.confirmResetReindex()" title="⚠️ Reset nuclear: limpia todo y re-indexa">
+                <span class="icon">⚠️</span> Reset + Re-indexar Todo
+            </button>
+            <button class="action-btn danger" onclick="App.confirmDeleteAll()" title="Eliminar TODOS los documentos del tenant">
+                <span class="icon">🗑️</span> Eliminar Todos
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" placeholder="Buscar documentos..." oninput="App.filterDocuments()">
+            </div>
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="all" onclick="App.setFilter('all', this)">Todos</button>
+                <button class="filter-btn" data-filter="indexed" onclick="App.setFilter('indexed', this)">✅ Indexados</button>
+                <button class="filter-btn" data-filter="pending" onclick="App.setFilter('pending', this)">⏳ Pendientes</button>
+                <button class="filter-btn" data-filter="error" onclick="App.setFilter('error', this)">❌ Errores</button>
+                <button class="filter-btn" data-filter="deleted" onclick="App.setFilter('deleted', this)">🗑️ Eliminados</button>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn-secondary" onclick="App.refresh()">
+                    🔄 Recargar
+                </button>
+                <button class="btn-primary" onclick="App.openUploadModal()">
+                    📤 Subir Documentos
+                </button>
+            </div>
+        </div>
+
+        <!-- Document Table -->
+        <div class="doc-table-wrapper" id="doc-table-wrapper">
+            <div class="loading-overlay" id="loading-state">
+                <span class="spinner"></span> Cargando documentos...
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar">
+            <div>
+                <span id="pagination-info">—</span>
+                <span class="selection-info" id="selection-info" style="display:none;"></span>
+            </div>
+            <div class="page-controls">
+                <button class="page-btn" id="btn-prev" onclick="App.prevPage()" disabled>← Anterior</button>
+                <span id="page-indicator">1 / 1</span>
+                <button class="page-btn" id="btn-next" onclick="App.nextPage()" disabled>Siguiente →</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     UPLOAD MODAL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="upload-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📤 Subir Documentos</h2>
+            <button class="modal-close" onclick="App.closeUploadModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="drop-icon">📁</div>
+                <div class="drop-text">Arrastra archivos aquí o haz clic para seleccionar</div>
+                <div class="drop-hint">Sube documentos para agregar a la base de conocimientos</div>
+                <div class="drop-formats">
+                    <span class="format-tag">PDF</span>
+                    <span class="format-tag">MD</span>
+                    <span class="format-tag">TXT</span>
+                    <span class="format-tag">DOCX</span>
+                    <span class="format-tag">ODT</span>
+                    <span class="format-tag">XLSX</span>
+                    <span class="format-tag">XLS</span>
+                    <span class="format-tag">JSON</span>
+                    <span class="format-tag">XML</span>
+                </div>
+            </div>
+            <input type="file" id="file-input" multiple accept=".pdf,.md,.txt,.docx,.odt,.xlsx,.xls,.json,.xml" style="display:none;" onchange="App.handleFileSelect(event)">
+
+            <div id="upload-file-list" class="upload-file-list"></div>
+
+            <div class="upload-options" id="upload-options" style="display:none;">
+                <div class="upload-option">
+                    <input type="checkbox" id="opt-auto-index" checked>
+                    <label for="opt-auto-index">Auto-indexar</label>
+                </div>
+                <div class="upload-option">
+                    <input type="checkbox" id="opt-background">
+                    <label for="opt-background">Procesamiento en background</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" id="upload-footer" style="display:none;">
+            <button class="btn-secondary" onclick="App.clearUploadFiles()">Limpiar</button>
+            <button class="btn-primary" id="btn-upload" onclick="App.uploadFiles()">
+                📤 Subir <span id="upload-count"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CONFIRM MODAL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="confirm-modal">
+    <div class="modal" style="width:440px;">
+        <div class="modal-header">
+            <h2 id="confirm-title">Confirmar</h2>
+            <button class="modal-close" onclick="App.closeConfirmModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="confirm-body">
+                <div class="confirm-icon" id="confirm-icon">⚠️</div>
+                <h3 id="confirm-heading">¿Estás seguro?</h3>
+                <p id="confirm-text"></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="App.closeConfirmModal()">Cancelar</button>
+            <button class="btn-danger" id="confirm-action-btn" onclick="">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SYNC DIRECTORY MODAL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="sync-modal">
+    <div class="modal" style="width:480px;">
+        <div class="modal-header">
+            <h2>🔄 Sincronizar Directorio</h2>
+            <button class="modal-close" onclick="App.closeSyncModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-field">
+                <div class="label">Ruta del directorio en el servidor</div>
+                <input type="text" id="sync-directory" style="width:100%;background:var(--bg-input);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 12px;font-size:13px;font-family:inherit;margin-top:6px;" placeholder="/app/storage/sources/envios23">
+            </div>
+            <div style="display:flex;gap:16px;margin-top:14px;">
+                <div class="upload-option">
+                    <input type="checkbox" id="sync-recursive" checked>
+                    <label for="sync-recursive">Recursivo</label>
+                </div>
+                <div class="upload-option">
+                    <input type="checkbox" id="sync-force">
+                    <label for="sync-force">Forzar re-indexado</label>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="App.closeSyncModal()">Cancelar</button>
+            <button class="btn-primary" onclick="App.doSyncDirectory()">🔄 Sincronizar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DETAIL PANEL (slide-in)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+        <h3>📋 Detalle del Documento</h3>
+        <button class="modal-close" onclick="App.closeDetailPanel()">✕</button>
+    </div>
+    <div class="detail-body" id="detail-body">
+        <!-- Filled dynamically -->
+    </div>
+    <div class="detail-actions" id="detail-actions">
+        <!-- Filled dynamically -->
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APPLICATION LOGIC
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+const API_BASE = 'http://167.172.225.44/api/v2';
+const ITEMS_PER_PAGE = 25;
+
+const App = {
+    // ── State ──────────────────────────────────
+    tenants: [],
+    currentTenant: null,
+    documents: [],
+    filteredDocs: [],
+    selectedIds: new Set(),
+    currentFilter: 'all',
+    currentPage: 1,
+    totalPages: 1,
+    stats: null,
+    uploadFiles: [],
+    isUploading: false,
+
+    // ── Init ───────────────────────────────────
+    async init() {
+        await this.checkHealth();
+        await this.loadTenants();
+        this.setupDropZone();
+    },
+
+    // ── Health ─────────────────────────────────
+    async checkHealth() {
+        try {
+            const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+            const d = await r.json();
+            const badge = document.getElementById('health-badge');
+            const text = document.getElementById('health-text');
+            if (d.status === 'healthy') {
+                badge.classList.remove('offline');
+                text.textContent = 'API Online';
+            } else {
+                throw new Error('unhealthy');
+            }
+        } catch {
+            const badge = document.getElementById('health-badge');
+            badge.classList.add('offline');
+            document.getElementById('health-text').textContent = 'API Offline';
+        }
+    },
+
+    // ── Tenants ────────────────────────────────
+    async loadTenants() {
+        try {
+            const r = await fetch(`${API_BASE}/tenants`);
+            const d = await r.json();
+            this.tenants = d.tenants || [];
+            const sel = document.getElementById('tenant-select');
+            sel.innerHTML = this.tenants.map(t =>
+                `<option value="${t.tenant_id}">${t.name} (${t.tenant_id}) — ${t.document_count} docs</option>`
+            ).join('');
+            if (this.tenants.length === 0) {
+                sel.innerHTML = '<option value="">No hay tenants</option>';
+                return;
+            }
+            sel.addEventListener('change', () => this.selectTenant(sel.value));
+            this.selectTenant(this.tenants[0].tenant_id);
+        } catch (e) {
+            console.error('Error loading tenants:', e);
+            this.toast('Error cargando tenants', 'error');
+        }
+    },
+
+    async selectTenant(tenantId) {
+        this.currentTenant = this.tenants.find(t => t.tenant_id === tenantId);
+        if (!this.currentTenant) return;
+
+        // Show tenant info
+        const info = document.getElementById('tenant-info');
+        info.style.display = 'block';
+        document.getElementById('ti-collection').textContent = this.currentTenant.collection_name;
+        document.getElementById('ti-model').textContent = this.currentTenant.default_model?.split('/').pop() || '—';
+        document.getElementById('ti-embedding').textContent = this.currentTenant.embedding_model?.split('-').slice(0,2).join('-') || '—';
+        document.getElementById('ti-lang').textContent = this.currentTenant.response_language || '—';
+        document.getElementById('ti-created').textContent = this.currentTenant.created_at ? new Date(this.currentTenant.created_at).toLocaleDateString('es') : '—';
+
+        this.currentPage = 1;
+        this.currentFilter = 'all';
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'all'));
+        document.getElementById('search-input').value = '';
+
+        await Promise.all([this.loadDocuments(), this.loadStats()]);
+    },
+
+    // ── Load Documents ─────────────────────────
+    async loadDocuments() {
+        const wrapper = document.getElementById('doc-table-wrapper');
+        wrapper.innerHTML = '<div class="loading-overlay"><span class="spinner"></span> Cargando documentos...</div>';
+
+        try {
+            const url = `${API_BASE}/documents?tenant_id=${this.currentTenant.tenant_id}`;
+            const r = await fetch(url);
+            const d = await r.json();
+            this.documents = d.documents || d || [];
+            this.selectedIds.clear();
+            this.applyFilter();
+        } catch (e) {
+            console.error('Error loading documents:', e);
+            wrapper.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><h3>Error cargando documentos</h3><p>' + e.message + '</p></div>';
+        }
+    },
+
+    // ── Load Stats ─────────────────────────────
+    async loadStats() {
+        try {
+            const r = await fetch(`${API_BASE}/documents/stats/summary?tenant_id=${this.currentTenant.tenant_id}`);
+            const d = await r.json();
+            this.stats = d;
+
+            document.getElementById('stat-docs').textContent = d.total_documents || 0;
+            document.getElementById('stat-chunks').textContent = d.total_chunks || 0;
+            document.getElementById('stat-indexed').textContent = d.by_status?.indexed || 0;
+            document.getElementById('stat-errors').textContent = (d.by_status?.error || 0) + (d.by_status?.deleted || 0);
+
+            // Storage
+            const storageEl = document.getElementById('storage-section');
+            storageEl.style.display = 'block';
+            document.getElementById('stat-size').textContent = this.formatBytes(d.total_size_bytes || 0);
+            document.getElementById('stat-path').textContent = d.storage_path || '—';
+
+            // Categories
+            const catEl = document.getElementById('stat-categories');
+            const cats = d.by_category || {};
+            catEl.innerHTML = Object.entries(cats).map(([k, v]) =>
+                `<span class="category-badge" style="margin-right:4px;">${k}: ${v}</span>`
+            ).join('');
+        } catch (e) {
+            console.error('Error loading stats:', e);
+        }
+    },
+
+    // ── Filtering / Pagination ─────────────────
+    applyFilter() {
+        let docs = [...this.documents];
+
+        // Status filter
+        if (this.currentFilter !== 'all') {
+            docs = docs.filter(d => d.status === this.currentFilter);
+        }
+
+        // Search filter
+        const q = document.getElementById('search-input').value.toLowerCase().trim();
+        if (q) {
+            docs = docs.filter(d => d.filename.toLowerCase().includes(q) || d.document_id.includes(q));
+        }
+
+        this.filteredDocs = docs;
+        this.totalPages = Math.max(1, Math.ceil(docs.length / ITEMS_PER_PAGE));
+        if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+
+        this.renderTable();
+        this.updatePagination();
+    },
+
+    filterDocuments() {
+        this.currentPage = 1;
+        this.applyFilter();
+    },
+
+    setFilter(filter, btn) {
+        this.currentFilter = filter;
+        this.currentPage = 1;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.applyFilter();
+    },
+
+    prevPage() { if (this.currentPage > 1) { this.currentPage--; this.renderTable(); this.updatePagination(); } },
+    nextPage() { if (this.currentPage < this.totalPages) { this.currentPage++; this.renderTable(); this.updatePagination(); } },
+
+    updatePagination() {
+        const start = (this.currentPage - 1) * ITEMS_PER_PAGE;
+        const end = Math.min(start + ITEMS_PER_PAGE, this.filteredDocs.length);
+        document.getElementById('pagination-info').textContent = this.filteredDocs.length === 0
+            ? 'Sin resultados'
+            : `${start + 1}–${end} de ${this.filteredDocs.length} documentos`;
+        document.getElementById('page-indicator').textContent = `${this.currentPage} / ${this.totalPages}`;
+        document.getElementById('btn-prev').disabled = this.currentPage <= 1;
+        document.getElementById('btn-next').disabled = this.currentPage >= this.totalPages;
+        this.updateSelectionInfo();
+    },
+
+    updateSelectionInfo() {
+        const el = document.getElementById('selection-info');
+        if (this.selectedIds.size > 0) {
+            el.style.display = 'inline';
+            el.textContent = ` | ${this.selectedIds.size} seleccionado(s)`;
+        } else {
+            el.style.display = 'none';
+        }
+    },
+
+    // ── Render Table ───────────────────────────
+    renderTable() {
+        const wrapper = document.getElementById('doc-table-wrapper');
+        const start = (this.currentPage - 1) * ITEMS_PER_PAGE;
+        const page = this.filteredDocs.slice(start, start + ITEMS_PER_PAGE);
+
+        if (this.filteredDocs.length === 0) {
+            wrapper.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <h3>Sin documentos</h3>
+                    <p>No se encontraron documentos con los filtros actuales.<br>Sube documentos para nutrir la base de conocimientos.</p>
+                    <button class="btn-primary" onclick="App.openUploadModal()" style="margin-top:8px;">📤 Subir Documentos</button>
+                </div>`;
+            return;
+        }
+
+        const allChecked = page.every(d => this.selectedIds.has(d.document_id));
+        wrapper.innerHTML = `
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th class="checkbox-col"><input type="checkbox" ${allChecked ? 'checked' : ''} onchange="App.toggleAll(this.checked)"></th>
+                    <th>Documento</th>
+                    <th>Estado</th>
+                    <th>Categoría</th>
+                    <th>Chunks</th>
+                    <th>Tamaño</th>
+                    <th>Versión</th>
+                    <th>Indexado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${page.map(doc => this.renderRow(doc)).join('')}
+            </tbody>
+        </table>`;
+    },
+
+    renderRow(doc) {
+        const ext = this.getExtension(doc.filename);
+        const iconClass = ['md','pdf','txt','docx','json','xml','xlsx'].includes(ext) ? ext : 'unknown';
+        const iconEmoji = { md: '📝', pdf: '📕', txt: '📃', docx: '📘', json: '🔧', xml: '📐', xlsx: '📊', xls: '📊', odt: '📓' }[ext] || '📄';
+        const checked = this.selectedIds.has(doc.document_id) ? 'checked' : '';
+        const indexedAt = doc.indexed_at ? new Date(doc.indexed_at).toLocaleDateString('es', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+        const error = doc.error ? `<br><span style="font-size:11px;color:var(--danger);">Error: ${doc.error}</span>` : '';
+
+        return `<tr>
+            <td class="checkbox-col"><input type="checkbox" ${checked} onchange="App.toggleSelect('${doc.document_id}', this.checked)"></td>
+            <td>
+                <div class="doc-name">
+                    <div class="doc-icon ${iconClass}">${iconEmoji}</div>
+                    <div>
+                        <div class="doc-name-text" title="${doc.filename}">${doc.filename}</div>
+                        <div style="font-size:11px;color:var(--text-muted);font-weight:400;">${doc.document_id}</div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="status-badge ${doc.status}">${this.statusLabel(doc.status)}</span>${error}</td>
+            <td><span class="category-badge">${doc.category || '—'}</span></td>
+            <td style="text-align:center;">${doc.chunk_count || 0}</td>
+            <td>${this.formatBytes(doc.file_size_bytes || 0)}</td>
+            <td style="text-align:center;">v${doc.version || 1}</td>
+            <td style="font-size:12px;">${indexedAt}</td>
+            <td>
+                <div class="doc-actions">
+                    <button class="doc-action-btn" onclick="App.showDetail('${doc.document_id}')" title="Ver detalle">🔍</button>
+                    <button class="doc-action-btn" onclick="App.reindexDocument('${doc.document_id}')" title="Re-indexar">🔄</button>
+                    <button class="doc-action-btn danger" onclick="App.confirmDeleteOne('${doc.document_id}', '${doc.filename.replace(/'/g, "\\'")}')" title="Eliminar">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    },
+
+    toggleAll(checked) {
+        const start = (this.currentPage - 1) * ITEMS_PER_PAGE;
+        const page = this.filteredDocs.slice(start, start + ITEMS_PER_PAGE);
+        page.forEach(d => {
+            if (checked) this.selectedIds.add(d.document_id);
+            else this.selectedIds.delete(d.document_id);
+        });
+        this.renderTable();
+        this.updateSelectionInfo();
+    },
+
+    toggleSelect(id, checked) {
+        if (checked) this.selectedIds.add(id);
+        else this.selectedIds.delete(id);
+        this.updateSelectionInfo();
+    },
+
+    // ── Status ─────────────────────────────────
+    statusLabel(s) {
+        return { indexed: '✅ Indexado', pending: '⏳ Pendiente', processing: '⚙️ Procesando', error: '❌ Error', deleted: '🗑️ Eliminado' }[s] || s;
+    },
+
+    // ── Detail Panel ───────────────────────────
+    async showDetail(docId) {
+        const panel = document.getElementById('detail-panel');
+        const body = document.getElementById('detail-body');
+        const actions = document.getElementById('detail-actions');
+        body.innerHTML = '<div style="text-align:center;padding:40px;"><span class="spinner"></span></div>';
+        actions.innerHTML = '';
+        panel.classList.add('open');
+
+        try {
+            const r = await fetch(`${API_BASE}/documents/${docId}?tenant_id=${this.currentTenant.tenant_id}`);
+            const doc = await r.json();
+
+            body.innerHTML = `
+                <div class="detail-field"><div class="label">Nombre</div><div class="value">${doc.filename || doc.document_id}</div></div>
+                <div class="detail-field"><div class="label">ID</div><div class="value" style="font-size:12px;font-family:monospace;">${doc.document_id}</div></div>
+                <div class="detail-field"><div class="label">Estado</div><div class="value"><span class="status-badge ${doc.status}">${this.statusLabel(doc.status)}</span></div></div>
+                <div class="detail-field"><div class="label">Categoría</div><div class="value">${doc.category || '—'}</div></div>
+                <div class="detail-field"><div class="label">Chunks</div><div class="value">${doc.chunk_count || 0}</div></div>
+                <div class="detail-field"><div class="label">Tamaño</div><div class="value">${this.formatBytes(doc.file_size_bytes || 0)}</div></div>
+                <div class="detail-field"><div class="label">Versión</div><div class="value">v${doc.version || 1}</div></div>
+                <div class="detail-field"><div class="label">Content Hash</div><div class="value" style="font-size:11px;font-family:monospace;">${doc.content_hash || '—'}</div></div>
+                <div class="detail-field"><div class="label">Indexado</div><div class="value">${doc.indexed_at ? new Date(doc.indexed_at).toLocaleString('es') : '—'}</div></div>
+                ${doc.error ? `<div class="detail-field"><div class="label">Error</div><div class="value" style="color:var(--danger);">${doc.error}</div></div>` : ''}
+            `;
+
+            actions.innerHTML = `
+                <button class="btn-primary" style="flex:1;" onclick="App.reindexDocument('${doc.document_id}')">🔄 Re-indexar</button>
+                <button class="btn-danger" style="flex:1;" onclick="App.confirmDeleteOne('${doc.document_id}', '${(doc.filename || '').replace(/'/g, "\\'")}')">🗑️ Eliminar</button>
+            `;
+        } catch (e) {
+            body.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><h3>Error</h3><p>${e.message}</p></div>`;
+        }
+    },
+
+    closeDetailPanel() {
+        document.getElementById('detail-panel').classList.remove('open');
+    },
+
+    // ── Upload ─────────────────────────────────
+    uploadFilesList: [],
+
+    openUploadModal() {
+        this.uploadFilesList = [];
+        this.renderUploadFiles();
+        document.getElementById('upload-modal').classList.add('show');
+    },
+
+    closeUploadModal() {
+        document.getElementById('upload-modal').classList.remove('show');
+        this.uploadFilesList = [];
+        document.getElementById('file-input').value = '';
+    },
+
+    setupDropZone() {
+        const zone = document.getElementById('drop-zone');
+        ['dragenter','dragover'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add('drag-over'); }));
+        ['dragleave','drop'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove('drag-over'); }));
+        zone.addEventListener('drop', ev => {
+            const files = [...ev.dataTransfer.files];
+            this.addFiles(files);
+        });
+    },
+
+    handleFileSelect(event) {
+        const files = [...event.target.files];
+        this.addFiles(files);
+        event.target.value = '';
+    },
+
+    addFiles(files) {
+        const allowed = ['.pdf','.md','.txt','.docx','.odt','.xlsx','.xls','.json','.xml'];
+        files.forEach(f => {
+            const ext = '.' + f.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) {
+                this.toast(`Formato no soportado: ${f.name}`, 'warning');
+                return;
+            }
+            if (this.uploadFilesList.find(uf => uf.file.name === f.name && uf.file.size === f.size)) return;
+            this.uploadFilesList.push({ file: f, status: 'pending', progress: 0 });
+        });
+        this.renderUploadFiles();
+    },
+
+    clearUploadFiles() {
+        this.uploadFilesList = [];
+        this.renderUploadFiles();
+    },
+
+    removeUploadFile(idx) {
+        this.uploadFilesList.splice(idx, 1);
+        this.renderUploadFiles();
+    },
+
+    renderUploadFiles() {
+        const list = document.getElementById('upload-file-list');
+        const footer = document.getElementById('upload-footer');
+        const opts = document.getElementById('upload-options');
+        const count = document.getElementById('upload-count');
+
+        if (this.uploadFilesList.length === 0) {
+            list.innerHTML = '';
+            footer.style.display = 'none';
+            opts.style.display = 'none';
+            return;
+        }
+
+        footer.style.display = 'flex';
+        opts.style.display = 'flex';
+        count.textContent = `(${this.uploadFilesList.length})`;
+
+        list.innerHTML = this.uploadFilesList.map((uf, i) => {
+            const ext = this.getExtension(uf.file.name);
+            const iconEmoji = { md: '📝', pdf: '📕', txt: '📃', docx: '📘', json: '🔧', xml: '📐', xlsx: '📊', xls: '📊', odt: '📓' }[ext] || '📄';
+            const statusIcons = { pending: '⏳', uploading: '⬆️', done: '✅', error: '❌' };
+            return `<div class="upload-file-item">
+                <span class="file-icon">${iconEmoji}</span>
+                <span class="file-name">${uf.file.name}</span>
+                <span class="file-size">${this.formatBytes(uf.file.size)}</span>
+                <span class="file-status ${uf.status}">${statusIcons[uf.status] || ''} ${uf.status}</span>
+                ${uf.status === 'pending' ? `<button class="file-remove" onclick="App.removeUploadFile(${i})">✕</button>` : ''}
+            </div>
+            ${uf.status === 'uploading' ? `<div class="upload-progress"><div class="bar" style="width:${uf.progress}%"></div></div>` : ''}`;
+        }).join('');
+    },
+
+    async uploadFiles() {
+        if (this.isUploading || this.uploadFilesList.length === 0) return;
+        this.isUploading = true;
+
+        const btn = document.getElementById('btn-upload');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Subiendo...';
+
+        const autoIndex = document.getElementById('opt-auto-index').checked;
+        const background = document.getElementById('opt-background').checked;
+
+        const formData = new FormData();
+        this.uploadFilesList.forEach(uf => {
+            formData.append('files', uf.file);
+            uf.status = 'uploading';
+        });
+        this.renderUploadFiles();
+
+        try {
+            const url = `${API_BASE}/documents/upload?tenant_id=${this.currentTenant.tenant_id}&auto_index=${autoIndex}&background=${background}`;
+            const r = await fetch(url, { method: 'POST', body: formData });
+
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({ detail: r.statusText }));
+                throw new Error(err.detail || err.message || 'Upload failed');
+            }
+
+            const result = await r.json();
+            const results = result.results || [result];
+
+            this.uploadFilesList.forEach((uf, i) => {
+                const res = results[i] || results[0];
+                if (res && res.success !== false) {
+                    uf.status = 'done';
+                } else {
+                    uf.status = 'error';
+                }
+            });
+
+            this.renderUploadFiles();
+            const successCount = this.uploadFilesList.filter(uf => uf.status === 'done').length;
+            this.toast(`${successCount} documento(s) subidos correctamente`, 'success');
+
+            // Refresh after a short delay
+            setTimeout(() => {
+                this.closeUploadModal();
+                this.refresh();
+            }, 1500);
+
+        } catch (e) {
+            console.error('Upload error:', e);
+            this.uploadFilesList.forEach(uf => { if (uf.status === 'uploading') uf.status = 'error'; });
+            this.renderUploadFiles();
+            this.toast(`Error subiendo archivos: ${e.message}`, 'error');
+        } finally {
+            this.isUploading = false;
+            btn.disabled = false;
+            btn.innerHTML = '📤 Subir <span id="upload-count">(' + this.uploadFilesList.length + ')</span>';
+        }
+    },
+
+    // ── Document Actions ───────────────────────
+    async reindexDocument(docId) {
+        this.toast('Re-indexando documento...', 'info');
+        try {
+            const r = await fetch(`${API_BASE}/documents/${docId}/reindex?tenant_id=${this.currentTenant.tenant_id}`, { method: 'POST' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            this.toast('Documento re-indexado correctamente', 'success');
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error re-indexando: ${e.message}`, 'error');
+        }
+    },
+
+    confirmDeleteOne(docId, filename) {
+        this.showConfirm(
+            'Eliminar Documento',
+            '🗑️',
+            `¿Eliminar "${filename}"?`,
+            'Se eliminará de la base de conocimientos, el registro y el vector store.',
+            () => this.deleteDocument(docId)
+        );
+    },
+
+    async deleteDocument(docId) {
+        this.closeConfirmModal();
+        this.toast('Eliminando documento...', 'info');
+        try {
+            const r = await fetch(`${API_BASE}/documents/${docId}?tenant_id=${this.currentTenant.tenant_id}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            this.toast('Documento eliminado', 'success');
+            this.closeDetailPanel();
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error eliminando: ${e.message}`, 'error');
+        }
+    },
+
+    async deleteSelected() {
+        this.closeConfirmModal();
+        const ids = [...this.selectedIds];
+        this.toast(`Eliminando ${ids.length} documento(s)...`, 'info');
+        let ok = 0, fail = 0;
+        for (const id of ids) {
+            try {
+                const r = await fetch(`${API_BASE}/documents/${id}?tenant_id=${this.currentTenant.tenant_id}`, { method: 'DELETE' });
+                if (r.ok) ok++; else fail++;
+            } catch { fail++; }
+        }
+        this.toast(`Eliminados: ${ok} | Errores: ${fail}`, ok > 0 ? 'success' : 'error');
+        this.selectedIds.clear();
+        this.refresh();
+    },
+
+    confirmDeleteAll() {
+        this.showConfirm(
+            'Eliminar TODOS los documentos',
+            '☢️',
+            '¿Eliminar TODOS los documentos?',
+            `Se eliminarán TODOS los documentos del tenant "${this.currentTenant?.tenant_id}". Esta acción NO se puede deshacer.`,
+            () => this.deleteAllDocuments()
+        );
+    },
+
+    async deleteAllDocuments() {
+        this.closeConfirmModal();
+        this.toast('Eliminando todos los documentos...', 'warning');
+        try {
+            const r = await fetch(`${API_BASE}/documents?tenant_id=${this.currentTenant.tenant_id}`, { method: 'DELETE' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            this.toast('Todos los documentos eliminados', 'success');
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error: ${e.message}`, 'error');
+        }
+    },
+
+    // ── Bulk Actions ───────────────────────────
+    async processPending() {
+        this.toast('Procesando documentos pendientes...', 'info');
+        try {
+            const r = await fetch(`${API_BASE}/documents/process-pending?tenant_id=${this.currentTenant.tenant_id}`, { method: 'POST' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            const d = await r.json();
+            this.toast(`Procesamiento completado: ${JSON.stringify(d).substring(0, 100)}`, 'success');
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error: ${e.message}`, 'error');
+        }
+    },
+
+    syncDirectory() {
+        const path = this.stats?.storage_path || `/app/storage/sources/${this.currentTenant?.tenant_id || ''}`;
+        document.getElementById('sync-directory').value = path;
+        document.getElementById('sync-modal').classList.add('show');
+    },
+
+    closeSyncModal() {
+        document.getElementById('sync-modal').classList.remove('show');
+    },
+
+    async doSyncDirectory() {
+        const dir = document.getElementById('sync-directory').value.trim();
+        if (!dir) { this.toast('Especifica un directorio', 'warning'); return; }
+        const recursive = document.getElementById('sync-recursive').checked;
+        const force = document.getElementById('sync-force').checked;
+        this.closeSyncModal();
+        this.toast('Sincronizando directorio...', 'info');
+        try {
+            const url = `${API_BASE}/documents/sync/directory?directory=${encodeURIComponent(dir)}&tenant_id=${this.currentTenant.tenant_id}&recursive=${recursive}&force_reindex=${force}`;
+            const r = await fetch(url, { method: 'POST' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            const d = await r.json();
+            this.toast(`Sincronización completada`, 'success');
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error sincronizando: ${e.message}`, 'error');
+        }
+    },
+
+    confirmResetReindex() {
+        this.showConfirm(
+            '⚠️ Reset + Re-indexar TODO',
+            '☢️',
+            '¿Reset NUCLEAR de la base de conocimientos?',
+            `Se limpiarán TODOS los chunks vectoriales del tenant "${this.currentTenant?.tenant_id}" y se re-indexarán todos los documentos desde cero. Este proceso puede demorar varios minutos.`,
+            () => this.doResetReindex()
+        );
+    },
+
+    async doResetReindex() {
+        this.closeConfirmModal();
+        this.toast('⚠️ Reset + re-indexando... Esto puede demorar.', 'warning');
+        try {
+            const r = await fetch(`${API_BASE}/documents/reset-reindex?tenant_id=${this.currentTenant.tenant_id}`, { method: 'POST' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+            this.toast('Reset + re-indexado completado', 'success');
+            this.refresh();
+        } catch (e) {
+            this.toast(`Error: ${e.message}`, 'error');
+        }
+    },
+
+    // ── Confirm Modal ──────────────────────────
+    showConfirm(title, icon, heading, text, action) {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-icon').textContent = icon;
+        document.getElementById('confirm-heading').textContent = heading;
+        document.getElementById('confirm-text').textContent = text;
+        document.getElementById('confirm-action-btn').onclick = action;
+        document.getElementById('confirm-modal').classList.add('show');
+    },
+
+    closeConfirmModal() {
+        document.getElementById('confirm-modal').classList.remove('show');
+    },
+
+    // ── Refresh ────────────────────────────────
+    async refresh() {
+        if (!this.currentTenant) return;
+        await Promise.all([this.loadDocuments(), this.loadStats()]);
+    },
+
+    // ── Helpers ────────────────────────────────
+    getExtension(filename) {
+        return (filename || '').split('.').pop().toLowerCase();
+    },
+
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    },
+
+    toast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `${icons[type] || ''} ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(40px)'; setTimeout(() => toast.remove(), 300); }, 4000);
+    }
+};
+
+// ── Boot ───────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
