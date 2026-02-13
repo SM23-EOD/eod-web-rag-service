@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRAGA Chat — Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff;
+      padding: 28px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-header h1 { font-size: 26px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+    .page-header p { font-size: 14px; opacity: .85; margin-top: 4px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; background: rgba(255,255,255,.18);
+      border-radius: 10px; font-size: 12px; font-weight: 500;
+    }
+
+    /* ── Config panel ── */
+    .config-panel {
+      background: #fff;
+      margin: 24px;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border: 1px solid #e2e8f0;
+      padding: 24px;
+    }
+    .config-panel h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .config-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .config-field select,
+    .config-field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color .2s;
+    }
+    .config-field select:focus,
+    .config-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+    }
+    .toggle-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 10px;
+    }
+    .toggle-field input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+    .toggle-field label { font-size: 13px; color: #475569; font-weight: 500; }
+    .apply-btn {
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .apply-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, .3); }
+
+    /* ── Inline demo ── */
+    .inline-section {
+      margin: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .inline-section { grid-template-columns: 1fr; } }
+    .inline-container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border: 1px solid #e2e8f0;
+      padding: 24px;
+    }
+    .inline-container h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .inline-widget-host {
+      height: 520px;
+    }
+
+    /* ── Info cards ── */
+    .info-section {
+      margin: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .info-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      border: 1px solid #e2e8f0;
+      padding: 22px;
+    }
+    .info-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .protocol-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .protocol-table th, .protocol-table td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .protocol-table th {
+      font-weight: 600;
+      color: #64748b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .protocol-table td code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .attr-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .attr-list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .attr-list code {
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-weight: 600;
+      color: #7c3aed;
+      font-size: 12px;
+    }
+    .attr-list .type {
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      padding: 6px 0;
+    }
+    .feature-item .icon { font-size: 16px; }
+
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <h1>💬 DRAGA Chat Widget</h1>
+      <p>Multi-protocol Web Component — OpenAI / RAG / MCP</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <span class="badge">🏷️ v1.0.0</span>
+      <span class="badge">📦 Web Component</span>
+      <span class="badge" id="health-badge">⏳ checking...</span>
+    </div>
+  </div>
+
+  <!-- Configuration panel -->
+  <div class="config-panel">
+    <h2>⚙️ Live Configuration</h2>
+    <div class="config-grid">
+      <div class="config-field">
+        <label>Protocol</label>
+        <select id="cfg-protocol">
+          <option value="openai" selected>OpenAI (Chat Completions)</option>
+          <option value="rag">RAG (Direct Query)</option>
+          <option value="mcp">MCP (Tool Call)</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Agent / Tenant ID</label>
+        <input id="cfg-agent" type="text" value="eod" placeholder="eod">
+      </div>
+      <div class="config-field">
+        <label>Base URL</label>
+        <input id="cfg-baseurl" type="text" value="/api/v2" placeholder="/api/v2">
+      </div>
+      <div class="config-field">
+        <label>Model</label>
+        <input id="cfg-model" type="text" value="eod-rag" placeholder="eod-rag">
+      </div>
+      <div class="config-field">
+        <label>Language</label>
+        <select id="cfg-locale">
+          <option value="es" selected>Español</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Theme</label>
+        <select id="cfg-theme">
+          <option value="auto" selected>Auto (system)</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Position (floating)</label>
+        <select id="cfg-position">
+          <option value="bottom-right" selected>Bottom Right</option>
+          <option value="bottom-left">Bottom Left</option>
+        </select>
+      </div>
+      <div class="config-field">
+        <label>Max History</label>
+        <input id="cfg-maxhistory" type="number" value="20" min="1" max="100">
+      </div>
+      <div class="config-field toggle-field">
+        <input type="checkbox" id="cfg-streaming" checked>
+        <label for="cfg-streaming">Streaming enabled</label>
+      </div>
+      <div class="config-field toggle-field">
+        <input type="checkbox" id="cfg-sources" checked>
+        <label for="cfg-sources">Show sources</label>
+      </div>
+      <div class="config-field toggle-field">
+        <input type="checkbox" id="cfg-confidence">
+        <label for="cfg-confidence">Show confidence</label>
+      </div>
+      <div class="config-field toggle-field">
+        <input type="checkbox" id="cfg-grounding">
+        <label for="cfg-grounding">Show grounding detail</label>
+      </div>
+      <div class="config-field toggle-field">
+        <input type="checkbox" id="cfg-feedback" checked>
+        <label for="cfg-feedback">Feedback enabled</label>
+      </div>
+    </div>
+    <button class="apply-btn" onclick="applyConfig()">🚀 Apply Configuration</button>
+  </div>
+
+  <!-- Inline demo side-by-side -->
+  <div class="inline-section">
+    <div class="inline-container">
+      <h2>📌 Inline Widget (embedded)</h2>
+      <div class="inline-widget-host" id="inline-host">
+        <!-- Inline widget will be inserted here -->
+      </div>
+    </div>
+    <div class="inline-container">
+      <h2>📋 Generated Code</h2>
+      <pre id="code-preview" style="background:#1e293b;color:#e2e8f0;padding:18px;border-radius:12px;font-size:13px;overflow-x:auto;white-space:pre-wrap;line-height:1.7;height:520px;overflow-y:auto"></pre>
+    </div>
+  </div>
+
+  <!-- Info cards -->
+  <div class="info-section">
+    <div class="info-card">
+      <h3>🔌 Protocol Comparison</h3>
+      <table class="protocol-table">
+        <thead><tr><th>Feature</th><th>OpenAI</th><th>RAG</th><th>MCP</th></tr></thead>
+        <tbody>
+          <tr><td>Streaming</td><td>✅ SSE</td><td>❌ simulated</td><td>❌ simulated</td></tr>
+          <tr><td>Chat history</td><td>✅ messages[]</td><td>❌ single query</td><td>❌ single query</td></tr>
+          <tr><td>Sources</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Confidence</td><td>✅</td><td>✅</td><td>⚠️ partial</td></tr>
+          <tr><td>Grounding</td><td>✅</td><td>✅ metadata</td><td>❌</td></tr>
+          <tr><td>Session</td><td>✅ tenant_id</td><td>✅ session_id</td><td>✅ session_id</td></tr>
+          <tr><td>Endpoint</td><td><code>/chat/completions</code></td><td><code>/agents/{id}/query</code></td><td><code>/mcp/tools/call</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-card">
+      <h3>🏷️ HTML Attributes</h3>
+      <ul class="attr-list">
+        <li><code>agent</code> <span class="type">string</span> — Tenant / agent ID</li>
+        <li><code>base-url</code> <span class="type">string</span> — API base URL</li>
+        <li><code>protocol</code> <span class="type">"openai"|"rag"|"mcp"</span></li>
+        <li><code>model</code> <span class="type">string</span> — Model name</li>
+        <li><code>streaming</code> <span class="type">boolean</span> — SSE streaming</li>
+        <li><code>locale</code> <span class="type">"es"|"en"</span> — Language</li>
+        <li><code>position</code> <span class="type">"bottom-right"|"bottom-left"|"inline"</span></li>
+        <li><code>show-sources</code> <span class="type">boolean</span> — Show source chips</li>
+        <li><code>show-confidence</code> <span class="type">boolean</span> — Confidence badge</li>
+        <li><code>show-grounding</code> <span class="type">boolean</span> — Grounding detail</li>
+        <li><code>feedback</code> <span class="type">boolean</span> — Thumbs feedback</li>
+        <li><code>max-history</code> <span class="type">number</span> — Msg history limit</li>
+        <li><code>theme</code> <span class="type">"auto"|"light"|"dark"</span></li>
+        <li><code>api-key</code> <span class="type">string</span> — X-API-Key header</li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <h3>✨ Features</h3>
+      <div class="feature-grid">
+        <div class="feature-item"><span class="icon">🔴</span> Real-time SSE streaming</div>
+        <div class="feature-item"><span class="icon">📚</span> Source chips with similarity</div>
+        <div class="feature-item"><span class="icon">🟢</span> Confidence badges</div>
+        <div class="feature-item"><span class="icon">✅</span> Grounding verification</div>
+        <div class="feature-item"><span class="icon">👍</span> Feedback system</div>
+        <div class="feature-item"><span class="icon">🌐</span> i18n (es / en)</div>
+        <div class="feature-item"><span class="icon">🎨</span> CSS custom properties</div>
+        <div class="feature-item"><span class="icon">📱</span> Responsive design</div>
+        <div class="feature-item"><span class="icon">♿</span> WCAG 2.1 AA</div>
+        <div class="feature-item"><span class="icon">⌨️</span> Keyboard shortcuts</div>
+        <div class="feature-item"><span class="icon">🔄</span> Auto-retry (backoff)</div>
+        <div class="feature-item"><span class="icon">📡</span> Offline detection</div>
+        <div class="feature-item"><span class="icon">🔧</span> Widget config loader</div>
+        <div class="feature-item"><span class="icon">🧹</span> Shadow DOM isolation</div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3>🎨 CSS Custom Properties</h3>
+      <ul class="attr-list">
+        <li><code>--draga-primary</code> — Primary color (#2563eb)</li>
+        <li><code>--draga-bg</code> — Background color (#ffffff)</li>
+        <li><code>--draga-font</code> — Font family</li>
+        <li><code>--draga-radius</code> — Border radius (16px)</li>
+      </ul>
+      <pre style="background:#f1f5f9;padding:12px;border-radius:8px;font-size:12px;margin-top:12px">draga-chat {
+  --draga-primary: #7c3aed;
+  --draga-bg: #fef3c7;
+  --draga-font: 'Inter', sans-serif;
+  --draga-radius: 12px;
+}</pre>
+    </div>
+  </div>
+
+  <div class="footer">
+    DRAGA Chat Widget v1.0.0 · Web Component · Shadow DOM · Zero-build
+  </div>
+
+  <!-- Widget script -->
+  <script src="src/draga-chat.js"></script>
+
+  <!-- Floating widget (changes with Apply) -->
+  <div id="floating-widget-host"></div>
+
+  <script>
+    // ── Health check ──
+    fetch('/api/v2/health').then(r => {
+      const badge = document.getElementById('health-badge');
+      badge.textContent = r.ok ? '✅ API online' : '❌ API offline';
+    }).catch(() => {
+      document.getElementById('health-badge').textContent = '❌ API offline';
+    });
+
+    // ── Spawn initial widgets ──
+    function spawnWidgets() {
+      const cfg = getConfig();
+
+      // Inline widget
+      const inlineHost = document.getElementById('inline-host');
+      inlineHost.innerHTML = '';
+      const inlineEl = document.createElement('draga-chat');
+      inlineEl.setAttribute('agent', cfg.agent);
+      inlineEl.setAttribute('base-url', cfg.baseUrl);
+      inlineEl.setAttribute('protocol', cfg.protocol);
+      inlineEl.setAttribute('model', cfg.model);
+      inlineEl.setAttribute('locale', cfg.locale);
+      inlineEl.setAttribute('theme', cfg.theme);
+      inlineEl.setAttribute('position', 'inline');
+      inlineEl.setAttribute('streaming', cfg.streaming);
+      inlineEl.setAttribute('show-sources', cfg.showSources);
+      inlineEl.setAttribute('show-confidence', cfg.showConfidence);
+      inlineEl.setAttribute('show-grounding', cfg.showGrounding);
+      inlineEl.setAttribute('feedback', cfg.feedback);
+      inlineEl.setAttribute('max-history', cfg.maxHistory);
+      inlineHost.appendChild(inlineEl);
+
+      // Floating widget
+      const floatHost = document.getElementById('floating-widget-host');
+      floatHost.innerHTML = '';
+      const floatEl = document.createElement('draga-chat');
+      floatEl.setAttribute('agent', cfg.agent);
+      floatEl.setAttribute('base-url', cfg.baseUrl);
+      floatEl.setAttribute('protocol', cfg.protocol);
+      floatEl.setAttribute('model', cfg.model);
+      floatEl.setAttribute('locale', cfg.locale);
+      floatEl.setAttribute('theme', cfg.theme);
+      floatEl.setAttribute('position', cfg.position);
+      floatEl.setAttribute('streaming', cfg.streaming);
+      floatEl.setAttribute('show-sources', cfg.showSources);
+      floatEl.setAttribute('show-confidence', cfg.showConfidence);
+      floatEl.setAttribute('show-grounding', cfg.showGrounding);
+      floatEl.setAttribute('feedback', cfg.feedback);
+      floatEl.setAttribute('max-history', cfg.maxHistory);
+      floatHost.appendChild(floatEl);
+
+      // Code preview
+      updateCodePreview(cfg);
+    }
+
+    function getConfig() {
+      return {
+        protocol: document.getElementById('cfg-protocol').value,
+        agent: document.getElementById('cfg-agent').value,
+        baseUrl: document.getElementById('cfg-baseurl').value,
+        model: document.getElementById('cfg-model').value,
+        locale: document.getElementById('cfg-locale').value,
+        theme: document.getElementById('cfg-theme').value,
+        position: document.getElementById('cfg-position').value,
+        maxHistory: document.getElementById('cfg-maxhistory').value,
+        streaming: document.getElementById('cfg-streaming').checked,
+        showSources: document.getElementById('cfg-sources').checked,
+        showConfidence: document.getElementById('cfg-confidence').checked,
+        showGrounding: document.getElementById('cfg-grounding').checked,
+        feedback: document.getElementById('cfg-feedback').checked,
+      };
+    }
+
+    function updateCodePreview(cfg) {
+      const attrs = [
+        `  agent="${cfg.agent}"`,
+        `  base-url="${cfg.baseUrl}"`,
+        `  protocol="${cfg.protocol}"`,
+        `  model="${cfg.model}"`,
+        `  locale="${cfg.locale}"`,
+        `  position="${cfg.position}"`,
+        `  streaming="${cfg.streaming}"`,
+        `  show-sources="${cfg.showSources}"`,
+        cfg.showConfidence ? `  show-confidence="true"` : null,
+        cfg.showGrounding ? `  show-grounding="true"` : null,
+        `  feedback="${cfg.feedback}"`,
+        `  max-history="${cfg.maxHistory}"`,
+      ].filter(Boolean).join('\n');
+
+      const code = `<!-- 1. Include the script -->
+<script src="src/draga-chat.js"><\/script>
+
+<!-- 2. Drop the widget -->
+<draga-chat
+${attrs}
+><\/draga-chat>
+
+<!-- Optional: CSS theming -->
+<style>
+  draga-chat {
+    --draga-primary: #2563eb;
+    --draga-bg: #ffffff;
+    --draga-radius: 16px;
+  }
+<\/style>`;
+      document.getElementById('code-preview').textContent = code;
+    }
+
+    function applyConfig() {
+      spawnWidgets();
+    }
+
+    // Initial spawn
+    spawnWidgets();
+  </script>
+</body>
+</html>
