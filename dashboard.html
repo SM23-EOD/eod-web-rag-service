@@ -1095,6 +1095,265 @@ select.form-control { cursor: pointer; }
 .confirm-content .ci { font-size: 44px; margin-bottom: 14px; }
 .confirm-content h3 { font-size: 17px; margin-bottom: 6px; }
 .confirm-content p { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+
+/* ═══════════════════════════════════════════════════════════════
+   SOURCE SELECTOR PANEL
+   ═══════════════════════════════════════════════════════════════ */
+.src-panel {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    overflow: hidden;
+}
+.src-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+.src-panel-head:hover { background: var(--bg-hover); }
+.src-panel-head .src-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.src-panel-head .src-count {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.src-panel-head .src-arrow {
+    transition: transform 0.2s ease;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.src-panel.open .src-arrow { transform: rotate(180deg); }
+.src-count-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.src-count-badge.all { background: rgba(34,197,94,0.15); color: var(--success); }
+.src-count-badge.partial { background: rgba(245,158,11,0.15); color: var(--warning); }
+.src-count-badge.none { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+.src-panel-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.src-panel.open .src-panel-body {
+    max-height: 2000px;
+}
+
+.src-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-main);
+}
+.src-toolbar .src-search {
+    flex: 1;
+    min-width: 140px;
+    max-width: 260px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: inherit;
+}
+.src-toolbar .src-search:focus { outline: none; border-color: var(--primary); }
+
+.src-list {
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+.src-list::-webkit-scrollbar { width: 6px; }
+.src-list::-webkit-scrollbar-track { background: transparent; }
+.src-list::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+
+.src-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    transition: background 0.1s ease;
+}
+.src-item:hover { background: var(--bg-hover); }
+.src-item.disabled { opacity: 0.45; }
+
+.src-item .src-toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.src-item .src-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.src-item .src-toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-input);
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: 0.2s;
+}
+.src-item .src-toggle .slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    top: 2px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: 0.2s;
+}
+.src-item .src-toggle input:checked + .slider {
+    background: var(--primary-alpha);
+    border-color: var(--primary);
+}
+.src-item .src-toggle input:checked + .slider::before {
+    transform: translateX(16px);
+    background: var(--primary);
+}
+
+.src-item .src-icon { font-size: 16px; flex-shrink: 0; }
+
+.src-item .src-info {
+    flex: 1;
+    min-width: 0;
+}
+.src-item .src-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.src-item .src-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.src-item .src-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.src-item:hover .src-actions { opacity: 1; }
+.src-actions .src-act-btn {
+    width: 26px; height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+.src-actions .src-act-btn:hover { background: var(--bg-input); color: var(--text-primary); }
+.src-actions .src-act-btn.danger:hover { color: var(--danger); }
+
+/* Edit Name Modal (inline) */
+.src-edit-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.src-edit-inline input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 600;
+}
+.src-edit-inline input:focus { outline: none; }
+.src-edit-inline button {
+    width: 24px; height: 24px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+}
+.src-edit-inline button:hover { background: var(--bg-hover); }
+
+/* Source info bar below panel when collapsed */
+.src-active-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.src-active-bar .src-active-chips {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+.src-active-chip {
+    padding: 2px 8px;
+    background: var(--primary-alpha);
+    color: var(--primary);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.src-disabled-chip {
+    padding: 2px 8px;
+    background: rgba(239,68,68,0.1);
+    color: var(--danger);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
     </style>
 </head>
 <body>
@@ -1231,6 +1490,33 @@ select.form-control { cursor: pointer; }
         <div class="stat-card"><div class="label">Indexados</div><div class="value" id="docIndexed" style="color:var(--success)">—</div></div>
         <div class="stat-card"><div class="label">Categorías</div><div class="value" id="docCategories">—</div></div>
         <div class="stat-card"><div class="label">Errores</div><div class="value" id="docErrors" style="color:var(--danger)">—</div></div>
+    </div>
+
+    <!-- Source Selector Panel -->
+    <div class="src-panel" id="srcPanel">
+        <div class="src-panel-head" onclick="SrcMgr.togglePanel()">
+            <div class="src-title">📚 Fuentes <span class="src-count-badge all" id="srcBadge">—</span></div>
+            <div class="src-count">
+                <span id="srcCountText">Cargando fuentes...</span>
+                <span class="src-arrow" id="srcArrow">▼</span>
+            </div>
+        </div>
+        <div class="src-panel-body">
+            <div class="src-toolbar">
+                <input type="text" class="src-search" id="srcSearchInput" placeholder="Buscar fuente..." oninput="SrcMgr.renderList()">
+                <button class="btn btn-sm" onclick="SrcMgr.enableAll()" title="Activar todas">✅ Todas</button>
+                <button class="btn btn-sm" onclick="SrcMgr.disableAll()" title="Desactivar todas">⬜ Ninguna</button>
+            </div>
+            <div class="src-list" id="srcList">
+                <div class="loading-overlay" style="padding:20px;"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Active Summary Bar (visible when panel is collapsed and not all active) -->
+    <div class="src-active-bar" id="srcActiveBar" style="display:none;">
+        <span>📚 Fuentes activas:</span>
+        <div class="src-active-chips" id="srcActiveChips"></div>
     </div>
 
     <!-- Toolbar -->
@@ -1932,6 +2218,8 @@ const DocMgr = {
         this.statusFilter = 'all';
         document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.f === 'all'));
         document.getElementById('docSearchInput').value = '';
+        document.getElementById('srcSearchInput').value = '';
+        SrcMgr.editing = null;
         await Promise.all([this.loadDocs(), this.loadStats()]);
     },
 
@@ -1943,6 +2231,7 @@ const DocMgr = {
             this.docs = data.documents || data || [];
             this.selected.clear();
             this.applyFilter();
+            SrcMgr.refresh();
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="9" style="color:var(--danger);padding:20px;">❌ Error: ${e.message}</td></tr>`;
         }
@@ -2020,14 +2309,17 @@ const DocMgr = {
             const chk = this.selected.has(d.document_id) ? 'checked' : '';
             const dt = d.indexed_at ? new Date(d.indexed_at).toLocaleDateString('es', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
             const err = d.error ? `<br><span style="font-size:11px;color:var(--danger)">⚠️ ${d.error}</span>` : '';
-            return `<tr>
+            const displayName = SrcMgr.getDisplayName(d);
+            const srcEnabled = SrcMgr.isEnabled(d.document_id);
+            const rowStyle = srcEnabled ? '' : ' style="opacity:0.45;"';
+            return `<tr${rowStyle}>
                 <td style="text-align:center;"><input type="checkbox" ${chk} onchange="DocMgr.toggleSel('${d.document_id}',this.checked)" style="accent-color:var(--primary);cursor:pointer;"></td>
                 <td>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:18px;">${ico}</span>
                         <div>
-                            <div style="color:var(--text-primary);font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.filename}">${d.filename}</div>
-                            <div style="font-size:11px;color:var(--text-muted);">${d.document_id}</div>
+                            <div style="color:var(--text-primary);font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.filename}">${displayName}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${d.document_id}${!srcEnabled ? ' · ⏸️ desactivada' : ''}</div>
                         </div>
                     </div>
                 </td>
@@ -2069,8 +2361,10 @@ const DocMgr = {
         panel.classList.add('open');
         try {
             const doc = await api.getDocument(docId, this.currentTenant.tenant_id);
+            const displayName = SrcMgr.getDisplayName(doc);
             body.innerHTML = [
-                ['Nombre', doc.filename || doc.document_id],
+                ['Nombre', displayName],
+                ...(displayName !== doc.filename ? [['Archivo', doc.filename]] : []),
                 ['ID', `<span style="font-size:11px;font-family:monospace;">${doc.document_id}</span>`],
                 ['Estado', statusBadge(doc.status)],
                 ['Categoría', doc.category || '—'],
@@ -2265,6 +2559,269 @@ const DocMgr = {
     async reload() {
         if (!this.currentTenant) return;
         await Promise.all([this.loadDocs(), this.loadStats()]);
+        SrcMgr.refresh();
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// SOURCE MANAGER — Select, edit, delete sources
+// ══════════════════════════════════════════════════════════════
+const SrcMgr = {
+    open: false,
+    editing: null, // document_id being edited
+
+    // ── Storage helpers (localStorage) ──
+    _storeKey(suffix) {
+        const tid = DocMgr.currentTenant?.tenant_id || 'default';
+        return `srcmgr_${tid}_${suffix}`;
+    },
+
+    getNames() {
+        try { return JSON.parse(localStorage.getItem(this._storeKey('names')) || '{}'); } catch { return {}; }
+    },
+    setName(docId, name) {
+        const names = this.getNames();
+        if (name && name.trim()) names[docId] = name.trim();
+        else delete names[docId];
+        localStorage.setItem(this._storeKey('names'), JSON.stringify(names));
+    },
+
+    getEnabled() {
+        try {
+            const stored = localStorage.getItem(this._storeKey('enabled'));
+            return stored ? JSON.parse(stored) : null; // null = all enabled (default)
+        } catch { return null; }
+    },
+    setEnabled(enabledMap) {
+        localStorage.setItem(this._storeKey('enabled'), JSON.stringify(enabledMap));
+    },
+
+    isEnabled(docId) {
+        const map = this.getEnabled();
+        if (!map) return true; // default: all enabled
+        return map[docId] !== false;
+    },
+
+    getDisplayName(doc) {
+        const names = this.getNames();
+        return names[doc.document_id] || doc.filename || doc.document_id;
+    },
+
+    // ── Counts ──
+    getActiveSources() {
+        return DocMgr.docs.filter(d => this.isEnabled(d.document_id));
+    },
+
+    getActiveIds() {
+        return this.getActiveSources().map(d => d.document_id);
+    },
+
+    // ── Panel toggle ──
+    togglePanel() {
+        this.open = !this.open;
+        document.getElementById('srcPanel').classList.toggle('open', this.open);
+        this.updateBar();
+    },
+
+    // ── Refresh after docs loaded ──
+    refresh() {
+        this.updateBadge();
+        this.renderList();
+        this.updateBar();
+    },
+
+    // ── Badge ──
+    updateBadge() {
+        const total = DocMgr.docs.length;
+        const active = this.getActiveSources().length;
+        const badge = document.getElementById('srcBadge');
+        const text = document.getElementById('srcCountText');
+
+        badge.textContent = `${active}/${total}`;
+        badge.className = 'src-count-badge';
+        if (active === total) badge.classList.add('all');
+        else if (active === 0) badge.classList.add('none');
+        else badge.classList.add('partial');
+
+        if (total === 0) text.textContent = 'Sin fuentes';
+        else if (active === total) text.textContent = 'Todas las fuentes activas';
+        else if (active === 0) text.textContent = '⚠️ Ninguna fuente activa';
+        else text.textContent = `${total - active} fuente(s) desactivada(s)`;
+    },
+
+    // ── Summary bar (when collapsed) ──
+    updateBar() {
+        const bar = document.getElementById('srcActiveBar');
+        const total = DocMgr.docs.length;
+        const active = this.getActiveSources();
+
+        // Show bar only when collapsed and not all active
+        if (this.open || active.length === total || total === 0) {
+            bar.style.display = 'none';
+            return;
+        }
+
+        bar.style.display = 'flex';
+        const chips = document.getElementById('srcActiveChips');
+        if (active.length === 0) {
+            chips.innerHTML = '<span class="src-disabled-chip">⚠️ Ninguna activa — El RAG no buscará en fuentes</span>';
+        } else if (active.length <= 6) {
+            chips.innerHTML = active.map(d =>
+                `<span class="src-active-chip" title="${d.filename}">${this.getDisplayName(d)}</span>`
+            ).join('');
+        } else {
+            const shown = active.slice(0, 4);
+            chips.innerHTML = shown.map(d =>
+                `<span class="src-active-chip" title="${d.filename}">${this.getDisplayName(d)}</span>`
+            ).join('') + `<span class="src-active-chip">+${active.length - 4} más</span>`;
+        }
+    },
+
+    // ── Render source list ──
+    renderList() {
+        const list = document.getElementById('srcList');
+        const q = (document.getElementById('srcSearchInput')?.value || '').toLowerCase().trim();
+        let docs = [...DocMgr.docs];
+        if (q) {
+            docs = docs.filter(d =>
+                d.filename.toLowerCase().includes(q) ||
+                d.document_id.includes(q) ||
+                this.getDisplayName(d).toLowerCase().includes(q)
+            );
+        }
+
+        if (docs.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sin fuentes</div>';
+            return;
+        }
+
+        const icons = { md:'📝', pdf:'📕', txt:'📃', docx:'📘', json:'🔧', xml:'📐', xlsx:'📊', xls:'📊', odt:'📓' };
+
+        list.innerHTML = docs.map(d => {
+            const ext = (d.filename || '').split('.').pop().toLowerCase();
+            const ico = icons[ext] || '📄';
+            const enabled = this.isEnabled(d.document_id);
+            const displayName = this.getDisplayName(d);
+            const isSystemName = displayName === d.filename || displayName === d.document_id;
+            const checkedAttr = enabled ? 'checked' : '';
+            const disabledClass = enabled ? '' : ' disabled';
+
+            if (this.editing === d.document_id) {
+                return `<div class="src-item${disabledClass}">
+                    <label class="src-toggle">
+                        <input type="checkbox" ${checkedAttr} onchange="SrcMgr.toggle('${d.document_id}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="src-icon">${ico}</span>
+                    <div class="src-edit-inline">
+                        <input type="text" id="srcEditInput" value="${displayName.replace(/"/g, '&quot;')}" 
+                               onkeydown="if(event.key==='Enter')SrcMgr.saveEdit('${d.document_id}'); if(event.key==='Escape')SrcMgr.cancelEdit();">
+                        <button onclick="SrcMgr.saveEdit('${d.document_id}')" title="Guardar">✓</button>
+                        <button onclick="SrcMgr.cancelEdit()" title="Cancelar">✕</button>
+                    </div>
+                </div>`;
+            }
+
+            return `<div class="src-item${disabledClass}">
+                <label class="src-toggle">
+                    <input type="checkbox" ${checkedAttr} onchange="SrcMgr.toggle('${d.document_id}', this.checked)">
+                    <span class="slider"></span>
+                </label>
+                <span class="src-icon">${ico}</span>
+                <div class="src-info">
+                    <div class="src-name" title="${displayName}">${displayName}</div>
+                    <div class="src-meta">${d.document_id} · ${statusBadge(d.status)} · ${d.chunk_count || 0} chunks · ${formatBytes(d.file_size_bytes || 0)}${!isSystemName ? ' · 📝 nombre editado' : ''}</div>
+                </div>
+                <div class="src-actions">
+                    <button class="src-act-btn" onclick="SrcMgr.startEdit('${d.document_id}')" title="Editar nombre">✏️</button>
+                    <button class="src-act-btn" onclick="DocMgr.reindex('${d.document_id}')" title="Re-indexar">🔄</button>
+                    <button class="src-act-btn danger" onclick="DocMgr.confirmDeleteOne('${d.document_id}','${(d.filename||'').replace(/'/g, "\\'") }')" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Auto-focus edit input
+        if (this.editing) {
+            const inp = document.getElementById('srcEditInput');
+            if (inp) { inp.focus(); inp.select(); }
+        }
+    },
+
+    // ── Toggle source ──
+    toggle(docId, checked) {
+        let map = this.getEnabled();
+        if (!map) {
+            // First toggle: create map from current state (all enabled)
+            map = {};
+            DocMgr.docs.forEach(d => { map[d.document_id] = true; });
+        }
+        map[docId] = checked;
+        this.setEnabled(map);
+        this.updateBadge();
+        this.renderList();
+        this.updateBar();
+        // Notify — will be used by backend when source filtering is available
+        this.onSelectionChange();
+    },
+
+    enableAll() {
+        // Remove the enabled map entirely = default all enabled
+        localStorage.removeItem(this._storeKey('enabled'));
+        this.updateBadge();
+        this.renderList();
+        this.updateBar();
+        this.onSelectionChange();
+    },
+
+    disableAll() {
+        const map = {};
+        DocMgr.docs.forEach(d => { map[d.document_id] = false; });
+        this.setEnabled(map);
+        this.updateBadge();
+        this.renderList();
+        this.updateBar();
+        this.onSelectionChange();
+    },
+
+    // ── Edit name ──
+    startEdit(docId) {
+        this.editing = docId;
+        this.renderList();
+    },
+
+    cancelEdit() {
+        this.editing = null;
+        this.renderList();
+    },
+
+    saveEdit(docId) {
+        const inp = document.getElementById('srcEditInput');
+        if (!inp) return;
+        const newName = inp.value.trim();
+        const doc = DocMgr.docs.find(d => d.document_id === docId);
+        // If user clears the name or sets it back to the system name, remove custom name
+        if (!newName || (doc && (newName === doc.filename || newName === doc.document_id))) {
+            this.setName(docId, '');
+        } else {
+            this.setName(docId, newName);
+        }
+        this.editing = null;
+        this.renderList();
+        this.updateBar();
+        toast('✅ Nombre actualizado', 'success');
+    },
+
+    // ── Selection change callback ──
+    // This is called when sources are toggled. Currently stores state for future
+    // backend integration. When backend supports source_filter, this will send
+    // the active document_ids to filter vector search.
+    onSelectionChange() {
+        const activeIds = this.getActiveIds();
+        const total = DocMgr.docs.length;
+        console.log(`[SrcMgr] Sources: ${activeIds.length}/${total} active`, activeIds);
+        // TODO: When backend supports source_filter in /query and /chat/completions,
+        // update the API calls to include document_ids filter.
+        // e.g. api.setSourceFilter(activeIds.length < total ? activeIds : null);
     }
 };
 
