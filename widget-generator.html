@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Generator — DRAGA</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      --danger: #ef4444;
+      --success: #059669;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --radius: 14px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      background: linear-gradient(135deg, var(--primary), #7c3aed);
+      color: #fff;
+      padding: 24px 32px;
+    }
+    .page-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-header p {
+      font-size: 14px;
+      opacity: .85;
+      margin-top: 4px;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 80px);
+    }
+    @media (max-width: 1024px) {
+      .layout { grid-template-columns: 1fr; }
+      .preview-panel { border-left: none !important; border-top: 1px solid var(--border); }
+    }
+
+    /* ── Config sidebar ── */
+    .config-panel {
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      max-height: calc(100vh - 80px);
+      position: sticky;
+      top: 0;
+    }
+
+    .config-section {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .config-section:last-child { border-bottom: none; }
+
+    .config-section h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    .field label .api-param {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .field select,
+    .field input[type="text"],
+    .field input[type="number"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: var(--sans);
+      transition: all .2s;
+      background: var(--card);
+    }
+    .field select:focus,
+    .field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+    }
+    .field input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .range-row input[type="range"] { flex: 1; }
+    .range-row .range-val {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .toggle-row label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 0;
+    }
+    .toggle-row .api-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #cbd5e1;
+      border-radius: 22px;
+      transition: .3s;
+    }
+    .toggle .slider::before {
+      content: '';
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: .3s;
+    }
+    .toggle input:checked + .slider {
+      background: var(--primary);
+    }
+    .toggle input:checked + .slider::before {
+      transform: translateX(18px);
+    }
+
+    .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: var(--sans);
+      resize: vertical;
+      min-height: 60px;
+      transition: all .2s;
+    }
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .color-row input[type="color"] {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 2px;
+    }
+    .color-row input[type="text"] {
+      flex: 1;
+    }
+
+    /* ── Preview panel ── */
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .preview-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      padding: 0 24px;
+    }
+    .preview-tab {
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .preview-tab:hover { color: var(--text); }
+    .preview-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .preview-content {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .preview-live {
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 600px;
+      position: relative;
+    }
+    .preview-live-host {
+      width: 100%;
+      height: 580px;
+      position: relative;
+    }
+
+    .preview-code {
+      padding: 24px;
+      display: none;
+    }
+    .preview-code.active { display: block; }
+    .preview-live.active { display: flex; }
+    .preview-live:not(.active) { display: none; }
+
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      background: rgba(255,255,255,.05);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .code-header span {
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+    .copy-btn {
+      padding: 5px 14px;
+      background: rgba(255,255,255,.1);
+      color: #e2e8f0;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,.2); }
+    .copy-btn.copied { background: var(--success); color: #fff; }
+    .code-body {
+      padding: 18px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ── Endpoint summary ── */
+    .endpoint-summary {
+      margin-top: 20px;
+    }
+    .endpoint-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .endpoint-card-header {
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .endpoint-card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .method-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: var(--mono);
+    }
+    .method-badge.post { background: #dbeafe; color: #1d4ed8; }
+    .endpoint-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .endpoint-table th {
+      text-align: left;
+      padding: 10px 18px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .endpoint-table td {
+      padding: 8px 18px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .endpoint-table tr:last-child td { border-bottom: none; }
+    .endpoint-table code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .val-active { color: var(--primary); font-weight: 600; }
+    .val-default { color: var(--muted); }
+
+    /* Protocol badge */
+    .proto-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .proto-badge.openai { background: #ecfdf5; color: #059669; }
+    .proto-badge.rag { background: #fef3c7; color: #92400e; }
+    .proto-badge.mcp { background: #eff6ff; color: #2563eb; }
+
+    /* ── Widget selector ── */
+    .widget-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .widget-card {
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+    }
+    .widget-card:hover { border-color: #94a3b8; }
+    .widget-card.selected {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .widget-card .icon { font-size: 24px; margin-bottom: 4px; }
+    .widget-card .name { font-size: 12px; font-weight: 600; }
+    .widget-card .tag { font-size: 10px; color: var(--muted); }
+
+    .help-text {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .gen-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>🛠️ Widget Generator</h1>
+    <p>Configura los parámetros del widget y la query API — genera el código de embedding listo para copiar</p>
+  </div>
+
+  <div class="layout">
+    <!-- ════════════ CONFIG SIDEBAR ════════════ -->
+    <div class="config-panel">
+
+      <!-- Widget selection -->
+      <div class="config-section">
+        <h2>📦 Widget</h2>
+        <div class="widget-cards" id="widget-selector">
+          <div class="widget-card selected" data-widget="draga-chat" onclick="selectWidget(this)">
+            <div class="icon">💬</div>
+            <div class="name">DRAGA Chat</div>
+            <div class="tag">Multi-protocolo</div>
+          </div>
+          <div class="widget-card" data-widget="rag-assistant-openai" onclick="selectWidget(this)">
+            <div class="icon">⚡</div>
+            <div class="name">OpenAI Widget</div>
+            <div class="tag">SSE Streaming</div>
+          </div>
+          <div class="widget-card" data-widget="rag-assistant-v2" onclick="selectWidget(this)">
+            <div class="icon">🤖</div>
+            <div class="name">Widget v2</div>
+            <div class="tag">MCP Protocol</div>
+          </div>
+          <div class="widget-card" data-widget="rag-assistant" onclick="selectWidget(this)">
+            <div class="icon">📦</div>
+            <div class="name">Widget v1</div>
+            <div class="tag">MCP Básico</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection -->
+      <div class="config-section">
+        <h2>🔌 Conexión</h2>
+        <div class="field" id="field-protocol">
+          <label>Protocolo <span class="api-param">protocol</span></label>
+          <select id="cfg-protocol" onchange="onConfigChange()">
+            <option value="openai">OpenAI (Chat Completions)</option>
+            <option value="rag">RAG (Direct Query)</option>
+            <option value="mcp">MCP (Tool Call)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Base URL <span class="api-param">base-url / endpoint</span></label>
+          <input type="text" id="cfg-baseurl" value="/api/v2" oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-agent">
+          <label>Agent / Tenant ID <span class="api-param">agent / tenant_id</span></label>
+          <input type="text" id="cfg-agent" value="eod" oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-apikey">
+          <label>API Key <span class="api-param">X-API-Key</span></label>
+          <input type="text" id="cfg-apikey" value="" placeholder="(opcional)" oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-model">
+          <label>Modelo <span class="api-param">model</span></label>
+          <input type="text" id="cfg-model" value="eod-rag" oninput="onConfigChange()">
+        </div>
+      </div>
+
+      <!-- Query parameters -->
+      <div class="config-section">
+        <h2>🔍 Parámetros de Query</h2>
+        <div class="field" id="field-topk">
+          <label>Top K (documentos) <span class="api-param">top_k</span></label>
+          <div class="range-row">
+            <input type="range" id="cfg-topk" min="1" max="20" value="5" oninput="onConfigChange()">
+            <span class="range-val" id="val-topk">5</span>
+          </div>
+          <div class="help-text">Cantidad de fragmentos de documentos a recuperar del RAG</div>
+        </div>
+        <div class="field" id="field-temperature">
+          <label>Temperatura <span class="api-param">temperature</span></label>
+          <div class="range-row">
+            <input type="range" id="cfg-temperature" min="0" max="100" value="30" oninput="onConfigChange()">
+            <span class="range-val" id="val-temperature">0.3</span>
+          </div>
+          <div class="help-text">0 = determinístico, 1 = creativo. RAG recomendado: 0.1–0.4</div>
+        </div>
+        <div class="field" id="field-similarity">
+          <label>Umbral de similitud <span class="api-param">similarity_threshold</span></label>
+          <div class="range-row">
+            <input type="range" id="cfg-similarity" min="0" max="100" value="30" oninput="onConfigChange()">
+            <span class="range-val" id="val-similarity">0.30</span>
+          </div>
+          <div class="help-text">Similitud mínima para incluir un fragmento (0.0–1.0)</div>
+        </div>
+        <div class="field" id="field-maxtokens">
+          <label>Max tokens <span class="api-param">max_tokens</span></label>
+          <div class="range-row">
+            <input type="range" id="cfg-maxtokens" min="256" max="8192" value="2048" step="256" oninput="onConfigChange()">
+            <span class="range-val" id="val-maxtokens">2048</span>
+          </div>
+          <div class="help-text">Máximo de tokens en la respuesta</div>
+        </div>
+        <div class="field" id="field-maxhistory">
+          <label>Max historial <span class="api-param">max-history</span></label>
+          <div class="range-row">
+            <input type="range" id="cfg-maxhistory" min="1" max="50" value="20" oninput="onConfigChange()">
+            <span class="range-val" id="val-maxhistory">20</span>
+          </div>
+          <div class="help-text">Turnos de conversación enviados al modelo</div>
+        </div>
+        <div class="field" id="field-toolname">
+          <label>Tool name (MCP) <span class="api-param">tool_name</span></label>
+          <input type="text" id="cfg-toolname" value="generate_rag_answer" oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-systemprompt">
+          <label>System prompt <span class="api-param">system-prompt</span></label>
+          <textarea id="cfg-systemprompt" placeholder="Eres un asistente de ayuda..." oninput="onConfigChange()"></textarea>
+        </div>
+      </div>
+
+      <!-- Feature toggles -->
+      <div class="config-section">
+        <h2>✨ Funcionalidades</h2>
+        <div class="toggle-row">
+          <label>Streaming <span class="api-tag">stream</span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-streaming" checked onchange="onConfigChange()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" id="field-sources">
+          <label>Mostrar fuentes <span class="api-tag">include_sources</span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-sources" checked onchange="onConfigChange()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" id="field-confidence">
+          <label>Mostrar confianza <span class="api-tag">show-confidence</span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-confidence" onchange="onConfigChange()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" id="field-grounding">
+          <label>Mostrar grounding <span class="api-tag">show-grounding</span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-grounding" onchange="onConfigChange()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row" id="field-feedback">
+          <label>Feedback <span class="api-tag">POST /feedback</span></label>
+          <label class="toggle"><input type="checkbox" id="cfg-feedback" checked onchange="onConfigChange()"><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <!-- UI / Theme -->
+      <div class="config-section">
+        <h2>🎨 Apariencia</h2>
+        <div class="field">
+          <label>Color principal <span class="api-param">--draga-primary</span></label>
+          <div class="color-row">
+            <input type="color" id="cfg-color-pick" value="#2563eb" oninput="syncColor(this.value)">
+            <input type="text" id="cfg-color" value="#2563eb" oninput="syncColorText(this.value)">
+          </div>
+        </div>
+        <div class="field">
+          <label>Posición <span class="api-param">position</span></label>
+          <select id="cfg-position" onchange="onConfigChange()">
+            <option value="bottom-right">Bottom Right</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="inline">Inline (embedded)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Idioma <span class="api-param">locale</span></label>
+          <select id="cfg-locale" onchange="onConfigChange()">
+            <option value="es">Español</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div class="field" id="field-title">
+          <label>Título <span class="api-param">title</span></label>
+          <input type="text" id="cfg-title" value="Asistente Virtual" oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-placeholder">
+          <label>Placeholder <span class="api-param">placeholder</span></label>
+          <input type="text" id="cfg-placeholder" value="Escribe tu consulta..." oninput="onConfigChange()">
+        </div>
+        <div class="field" id="field-sessionid">
+          <label>Session ID <span class="api-param">session-id</span></label>
+          <input type="text" id="cfg-sessionid" value="web" oninput="onConfigChange()">
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ PREVIEW PANEL ════════════ -->
+    <div class="preview-panel">
+      <div class="preview-tabs">
+        <div class="preview-tab active" onclick="switchTab('live', this)">👁️ Vista previa</div>
+        <div class="preview-tab" onclick="switchTab('html', this)">📋 HTML Embed</div>
+        <div class="preview-tab" onclick="switchTab('api', this)">📡 API Request</div>
+      </div>
+
+      <!-- Live preview -->
+      <div class="preview-content">
+        <div class="preview-live active" id="tab-live">
+          <div class="preview-live-host" id="preview-host"></div>
+        </div>
+
+        <!-- HTML code -->
+        <div class="preview-code" id="tab-html">
+          <div class="code-block">
+            <div class="code-header">
+              <span>HTML — Código de embedding</span>
+              <button class="copy-btn" onclick="copyCode('embed')">📋 Copiar</button>
+            </div>
+            <pre class="code-body" id="code-embed"></pre>
+          </div>
+        </div>
+
+        <!-- API request -->
+        <div class="preview-code" id="tab-api">
+          <div class="code-block">
+            <div class="code-header">
+              <span>cURL — Request que enviará el widget</span>
+              <button class="copy-btn" onclick="copyCode('curl')">📋 Copiar</button>
+            </div>
+            <pre class="code-body" id="code-curl"></pre>
+          </div>
+          <div class="endpoint-summary" id="endpoint-summary"></div>
+        </div>
+      </div>
+
+      <div class="gen-footer">
+        <span>Widget Generator v1.0 · DRAGA</span>
+        <span id="footer-info"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- All widget scripts -->
+  <script src="src/draga-chat.js"></script>
+  <script src="src/assistant-widget-openai.js"></script>
+  <script src="src/assistant-widget-v2.js"></script>
+  <script src="src/assistant-widget.js"></script>
+
+  <script>
+    // ── State ──
+    let selectedWidget = 'draga-chat';
+
+    // Widget capability matrix
+    const CAPS = {
+      'draga-chat': {
+        tag: 'draga-chat',
+        script: 'src/draga-chat.js',
+        protocols: ['openai', 'rag', 'mcp'],
+        hasProtocol: true,
+        hasAgent: true,
+        hasApiKey: true,
+        hasModel: true,
+        hasTopK: false,       // hardcoded in protocol classes
+        hasTemperature: false, // hardcoded
+        hasSimilarity: false,  // hardcoded
+        hasMaxTokens: false,   // hardcoded
+        hasMaxHistory: true,
+        hasToolName: false,
+        hasSystemPrompt: false, // via widget-config
+        hasStreaming: true,
+        hasSources: true,
+        hasConfidence: true,
+        hasGrounding: true,
+        hasFeedback: true,
+        hasPosition: true,
+        hasLocale: true,
+        hasTitle: false,        // via widget-config
+        hasPlaceholder: false,  // via widget-config
+        hasSessionId: false,    // auto-generated
+        hasColor: true,         // CSS custom property
+        baseUrlAttr: 'base-url',
+        endpointSuffix: '',
+      },
+      'rag-assistant-openai': {
+        tag: 'rag-assistant-openai',
+        script: 'src/assistant-widget-openai.js',
+        protocols: ['openai'],
+        hasProtocol: false,
+        hasAgent: false,
+        hasApiKey: false,
+        hasModel: true,
+        hasTopK: true,
+        hasTemperature: true,
+        hasSimilarity: false,
+        hasMaxTokens: false,
+        hasMaxHistory: false,   // hardcoded 20
+        hasToolName: false,
+        hasSystemPrompt: true,
+        hasStreaming: true,
+        hasSources: false,
+        hasConfidence: false,
+        hasGrounding: false,
+        hasFeedback: false,     // always on
+        hasPosition: true,
+        hasLocale: false,
+        hasTitle: true,
+        hasPlaceholder: true,
+        hasSessionId: true,
+        hasColor: true,
+        baseUrlAttr: 'endpoint',
+        endpointSuffix: '',
+      },
+      'rag-assistant-v2': {
+        tag: 'rag-assistant-v2',
+        script: 'src/assistant-widget-v2.js',
+        protocols: ['mcp'],
+        hasProtocol: false,
+        hasAgent: false,
+        hasApiKey: false,
+        hasModel: false,
+        hasTopK: false,
+        hasTemperature: false,
+        hasSimilarity: false,
+        hasMaxTokens: false,
+        hasMaxHistory: false,
+        hasToolName: true,
+        hasSystemPrompt: false,
+        hasStreaming: false,
+        hasSources: true,
+        hasConfidence: false,
+        hasGrounding: false,
+        hasFeedback: false,   // always on
+        hasPosition: true,
+        hasLocale: false,
+        hasTitle: true,
+        hasPlaceholder: true,
+        hasSessionId: true,
+        hasColor: true,
+        baseUrlAttr: 'endpoint',
+        endpointSuffix: '/mcp/tools/call',
+      },
+      'rag-assistant': {
+        tag: 'rag-assistant',
+        script: 'src/assistant-widget.js',
+        protocols: ['mcp'],
+        hasProtocol: false,
+        hasAgent: false,
+        hasApiKey: false,
+        hasModel: false,
+        hasTopK: false,
+        hasTemperature: false,
+        hasSimilarity: false,
+        hasMaxTokens: false,
+        hasMaxHistory: false,
+        hasToolName: true,
+        hasSystemPrompt: false,
+        hasStreaming: false,
+        hasSources: true,
+        hasConfidence: false,
+        hasGrounding: false,
+        hasFeedback: false,
+        hasPosition: false,
+        hasLocale: false,
+        hasTitle: true,
+        hasPlaceholder: true,
+        hasSessionId: true,
+        hasColor: false,
+        baseUrlAttr: 'endpoint',
+        endpointSuffix: '/mcp/tools/call',
+      },
+    };
+
+    // ── Helpers ──
+    function $(id) { return document.getElementById(id); }
+    function show(id, v) { const el = $(id); if (el) el.style.display = v ? '' : 'none'; }
+
+    function selectWidget(el) {
+      document.querySelectorAll('.widget-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedWidget = el.dataset.widget;
+      applyVisibility();
+      onConfigChange();
+    }
+
+    function applyVisibility() {
+      const cap = CAPS[selectedWidget];
+
+      // Protocol selector
+      show('field-protocol', cap.hasProtocol);
+      if (cap.hasProtocol) {
+        // Reset protocol options based on widget
+        const sel = $('cfg-protocol');
+        sel.querySelectorAll('option').forEach(o => {
+          o.disabled = !cap.protocols.includes(o.value);
+        });
+        if (!cap.protocols.includes(sel.value)) sel.value = cap.protocols[0];
+      }
+
+      show('field-agent', cap.hasAgent);
+      show('field-apikey', cap.hasApiKey);
+      show('field-model', cap.hasModel);
+      show('field-topk', cap.hasTopK);
+      show('field-temperature', cap.hasTemperature);
+      show('field-similarity', cap.hasSimilarity);
+      show('field-maxtokens', cap.hasMaxTokens);
+      show('field-maxhistory', cap.hasMaxHistory);
+      show('field-toolname', cap.hasToolName);
+      show('field-systemprompt', cap.hasSystemPrompt);
+      show('field-sources', cap.hasSources);
+      show('field-confidence', cap.hasConfidence);
+      show('field-grounding', cap.hasGrounding);
+      show('field-feedback', cap.hasFeedback);
+      show('field-title', cap.hasTitle);
+      show('field-placeholder', cap.hasPlaceholder);
+      show('field-sessionid', cap.hasSessionId);
+    }
+
+    // ── Gather config ──
+    function getConfig() {
+      return {
+        widget: selectedWidget,
+        protocol: $('cfg-protocol').value,
+        baseUrl: $('cfg-baseurl').value.replace(/\/+$/, ''),
+        agent: $('cfg-agent').value,
+        apiKey: $('cfg-apikey').value,
+        model: $('cfg-model').value,
+        topK: parseInt($('cfg-topk').value),
+        temperature: parseInt($('cfg-temperature').value) / 100,
+        similarity: parseInt($('cfg-similarity').value) / 100,
+        maxTokens: parseInt($('cfg-maxtokens').value),
+        maxHistory: parseInt($('cfg-maxhistory').value),
+        toolName: $('cfg-toolname').value,
+        systemPrompt: $('cfg-systemprompt').value,
+        streaming: $('cfg-streaming').checked,
+        sources: $('cfg-sources').checked,
+        confidence: $('cfg-confidence').checked,
+        grounding: $('cfg-grounding').checked,
+        feedback: $('cfg-feedback').checked,
+        color: $('cfg-color').value,
+        position: $('cfg-position').value,
+        locale: $('cfg-locale').value,
+        title: $('cfg-title').value,
+        placeholder: $('cfg-placeholder').value,
+        sessionId: $('cfg-sessionid').value,
+      };
+    }
+
+    // ── Generate HTML embed code ──
+    function generateEmbed(cfg) {
+      const cap = CAPS[cfg.widget];
+      const attrs = [];
+
+      // Base URL / endpoint
+      if (cap.endpointSuffix) {
+        attrs.push(`  ${cap.baseUrlAttr}="${cfg.baseUrl}${cap.endpointSuffix}"`);
+      } else {
+        attrs.push(`  ${cap.baseUrlAttr}="${cfg.baseUrl}"`);
+      }
+
+      // draga-chat specific
+      if (cap.hasProtocol) attrs.push(`  protocol="${cfg.protocol}"`);
+      if (cap.hasAgent) attrs.push(`  agent="${cfg.agent}"`);
+      if (cap.hasApiKey && cfg.apiKey) attrs.push(`  api-key="${cfg.apiKey}"`);
+
+      // Model
+      if (cap.hasModel) attrs.push(`  model="${cfg.model}"`);
+
+      // Query params as attributes
+      if (cap.hasTopK) attrs.push(`  top-k="${cfg.topK}"`);
+      if (cap.hasTemperature) attrs.push(`  temperature="${cfg.temperature}"`);
+      if (cap.hasMaxHistory) attrs.push(`  max-history="${cfg.maxHistory}"`);
+      if (cap.hasToolName) attrs.push(`  tool-name="${cfg.toolName}"`);
+      if (cap.hasSystemPrompt && cfg.systemPrompt) attrs.push(`  system-prompt="${escHtml(cfg.systemPrompt)}"`);
+
+      // Features
+      if (cap.hasStreaming) attrs.push(`  streaming="${cfg.streaming}"`);
+      if (cap.hasSources) attrs.push(`  show-sources="${cfg.sources}"`);
+      if (cap.hasConfidence && cfg.confidence) attrs.push(`  show-confidence="true"`);
+      if (cap.hasGrounding && cfg.grounding) attrs.push(`  show-grounding="true"`);
+      if (cap.hasFeedback) attrs.push(`  feedback="${cfg.feedback}"`);
+
+      // UI
+      if (cap.hasPosition) attrs.push(`  position="${cfg.position}"`);
+      if (cap.hasLocale) attrs.push(`  locale="${cfg.locale}"`);
+      if (cap.hasTitle) attrs.push(`  title="${escHtml(cfg.title)}"`);
+      if (cap.hasPlaceholder) attrs.push(`  placeholder="${escHtml(cfg.placeholder)}"`);
+      if (cap.hasSessionId) attrs.push(`  session-id="${cfg.sessionId}"`);
+      if (cap.hasColor && cap.tag !== 'draga-chat') attrs.push(`  theme-color="${cfg.color}"`);
+
+      // Build HTML
+      let html = `<!-- Widget: ${cap.tag} -->\n`;
+      html += `<script src="${cap.script}"><\/script>\n\n`;
+      html += `<${cap.tag}\n${attrs.join('\n')}\n></${cap.tag}>`;
+
+      // CSS custom properties for draga-chat
+      if (cap.hasColor && cap.tag === 'draga-chat') {
+        html += `\n\n<style>\n  draga-chat {\n    --draga-primary: ${cfg.color};\n  }\n</style>`;
+      }
+
+      return html;
+    }
+
+    // ── Generate cURL command ──
+    function generateCurl(cfg) {
+      const cap = CAPS[cfg.widget];
+      const protocol = cap.hasProtocol ? cfg.protocol : (cap.protocols[0]);
+
+      let url, body, headers = ['-H "Content-Type: application/json"'];
+      if (cfg.apiKey) headers.push(`-H "X-API-Key: ${cfg.apiKey}"`);
+
+      switch (protocol) {
+        case 'openai': {
+          url = `${cfg.baseUrl}/chat/completions`;
+          body = {
+            model: cfg.model,
+            messages: [
+              { role: 'system', content: cfg.systemPrompt || '(system prompt)' },
+              { role: 'user', content: '¿Cuál es tu pregunta de ejemplo?' },
+            ],
+            stream: cfg.streaming,
+            top_k: cfg.topK,
+            temperature: cfg.temperature,
+          };
+          if (cap.hasAgent || cfg.agent) body.tenant_id = cfg.agent;
+          if (cfg.maxTokens && cfg.maxTokens !== 2048) body.max_tokens = cfg.maxTokens;
+          body.similarity_threshold = cfg.similarity;
+          body.include_sources = cfg.sources;
+          break;
+        }
+        case 'rag': {
+          url = `${cfg.baseUrl}/agents/${cfg.agent}/query`;
+          body = {
+            query: '¿Cuál es tu pregunta de ejemplo?',
+            top_k: cfg.topK,
+            similarity_threshold: cfg.similarity,
+            include_sources: cfg.sources,
+            session_id: cfg.sessionId,
+          };
+          break;
+        }
+        case 'mcp': {
+          url = `${cfg.baseUrl}/mcp/tools/call`;
+          body = {
+            tool_name: cfg.toolName,
+            arguments: {
+              query: '¿Cuál es tu pregunta de ejemplo?',
+              include_sources: cfg.sources,
+            },
+            session_id: cfg.sessionId,
+          };
+          if (cfg.agent) body.arguments.tenant_id = cfg.agent;
+          break;
+        }
+      }
+
+      const bodyStr = JSON.stringify(body, null, 2);
+      return `curl -X POST "${url}" \\\n  ${headers.join(' \\\n  ')} \\\n  -d '${bodyStr}'`;
+    }
+
+    // ── Generate endpoint summary table ──
+    function generateEndpointSummary(cfg) {
+      const cap = CAPS[cfg.widget];
+      const protocol = cap.hasProtocol ? cfg.protocol : cap.protocols[0];
+
+      const endpointMap = {
+        openai: { method: 'POST', path: '/chat/completions', label: 'Chat Completions' },
+        rag:    { method: 'POST', path: `/agents/${cfg.agent}/query`, label: 'RAG Query' },
+        mcp:    { method: 'POST', path: '/mcp/tools/call', label: 'MCP Tool Call' },
+      };
+      const ep = endpointMap[protocol];
+
+      // Build params table
+      const params = [];
+      if (protocol === 'openai') {
+        params.push({ name: 'model', value: cfg.model, default: 'eod-rag' });
+        params.push({ name: 'messages', value: `[...${cfg.maxHistory} turns]`, default: '—' });
+        params.push({ name: 'stream', value: String(cfg.streaming), default: 'true' });
+        params.push({ name: 'top_k', value: String(cfg.topK), default: '5' });
+        params.push({ name: 'temperature', value: String(cfg.temperature), default: '0.3' });
+        params.push({ name: 'similarity_threshold', value: cfg.similarity.toFixed(2), default: '0.30' });
+        params.push({ name: 'max_tokens', value: String(cfg.maxTokens), default: '2048' });
+        params.push({ name: 'include_sources', value: String(cfg.sources), default: 'true' });
+        params.push({ name: 'tenant_id', value: cfg.agent || '—', default: '—' });
+      } else if (protocol === 'rag') {
+        params.push({ name: 'query', value: '(user input)', default: '—' });
+        params.push({ name: 'top_k', value: String(cfg.topK), default: '5' });
+        params.push({ name: 'similarity_threshold', value: cfg.similarity.toFixed(2), default: '0.30' });
+        params.push({ name: 'include_sources', value: String(cfg.sources), default: 'true' });
+        params.push({ name: 'session_id', value: cfg.sessionId, default: 'web' });
+      } else {
+        params.push({ name: 'tool_name', value: cfg.toolName, default: 'generate_rag_answer' });
+        params.push({ name: 'arguments.query', value: '(user input)', default: '—' });
+        params.push({ name: 'arguments.include_sources', value: String(cfg.sources), default: 'true' });
+        params.push({ name: 'session_id', value: cfg.sessionId, default: 'web' });
+      }
+
+      const rows = params.map(p => {
+        const changed = p.value !== p.default;
+        return `<tr>
+          <td><code>${p.name}</code></td>
+          <td class="${changed ? 'val-active' : 'val-default'}">${escHtml(p.value)}</td>
+          <td class="val-default">${escHtml(p.default)}</td>
+        </tr>`;
+      }).join('');
+
+      return `
+        <div class="endpoint-card" style="margin-top:20px">
+          <div class="endpoint-card-header">
+            <span class="method-badge post">POST</span>
+            <h3>${cfg.baseUrl}${ep.path}</h3>
+            <span class="proto-badge ${protocol}">${protocol}</span>
+          </div>
+          <table class="endpoint-table">
+            <thead><tr><th>Parámetro</th><th>Valor configurado</th><th>Default</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── Tabs ──
+    function switchTab(name, el) {
+      document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      ['live', 'html', 'api'].forEach(t => {
+        const section = $('tab-' + t);
+        section.classList.toggle('active', t === name);
+      });
+    }
+
+    // ── Copy ──
+    function copyCode(which) {
+      const el = $(`code-${which === 'embed' ? 'embed' : 'curl'}`);
+      navigator.clipboard.writeText(el.textContent).then(() => {
+        const btn = el.closest('.code-block').querySelector('.copy-btn');
+        btn.textContent = '✅ Copiado';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    // ── Color sync ──
+    function syncColor(v) {
+      $('cfg-color').value = v;
+      onConfigChange();
+    }
+    function syncColorText(v) {
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) $('cfg-color-pick').value = v;
+      onConfigChange();
+    }
+
+    // ── Main update ──
+    function onConfigChange() {
+      // Update range value displays
+      $('val-topk').textContent = $('cfg-topk').value;
+      $('val-temperature').textContent = (parseInt($('cfg-temperature').value) / 100).toFixed(1);
+      $('val-similarity').textContent = (parseInt($('cfg-similarity').value) / 100).toFixed(2);
+      $('val-maxtokens').textContent = $('cfg-maxtokens').value;
+      $('val-maxhistory').textContent = $('cfg-maxhistory').value;
+
+      const cfg = getConfig();
+      const cap = CAPS[cfg.widget];
+
+      // HTML embed code
+      $('code-embed').textContent = generateEmbed(cfg);
+
+      // cURL
+      $('code-curl').textContent = generateCurl(cfg);
+
+      // Endpoint summary
+      $('endpoint-summary').innerHTML = generateEndpointSummary(cfg);
+
+      // Footer info
+      const protocol = cap.hasProtocol ? cfg.protocol : cap.protocols[0];
+      $('footer-info').textContent = `${cap.tag} · ${protocol} · ${cfg.streaming ? 'streaming' : 'batch'}`;
+
+      // Live preview
+      updatePreview(cfg, cap);
+    }
+
+    function updatePreview(cfg, cap) {
+      const host = $('preview-host');
+      host.innerHTML = '';
+
+      const el = document.createElement(cap.tag);
+
+      // Set attributes based on widget type
+      if (cap.endpointSuffix) {
+        el.setAttribute(cap.baseUrlAttr, cfg.baseUrl + cap.endpointSuffix);
+      } else {
+        el.setAttribute(cap.baseUrlAttr, cfg.baseUrl);
+      }
+
+      if (cap.hasProtocol) el.setAttribute('protocol', cfg.protocol);
+      if (cap.hasAgent) el.setAttribute('agent', cfg.agent);
+      if (cap.hasApiKey && cfg.apiKey) el.setAttribute('api-key', cfg.apiKey);
+      if (cap.hasModel) el.setAttribute('model', cfg.model);
+      if (cap.hasTopK) el.setAttribute('top-k', cfg.topK);
+      if (cap.hasTemperature) el.setAttribute('temperature', cfg.temperature);
+      if (cap.hasMaxHistory) el.setAttribute('max-history', cfg.maxHistory);
+      if (cap.hasToolName) el.setAttribute('tool-name', cfg.toolName);
+      if (cap.hasSystemPrompt && cfg.systemPrompt) el.setAttribute('system-prompt', cfg.systemPrompt);
+      if (cap.hasStreaming) el.setAttribute('streaming', cfg.streaming);
+      el.setAttribute('stream', String(cfg.streaming));
+      if (cap.hasSources) el.setAttribute('show-sources', cfg.sources);
+      el.setAttribute('include-sources', String(cfg.sources));
+      if (cap.hasConfidence) el.setAttribute('show-confidence', cfg.confidence);
+      if (cap.hasGrounding) el.setAttribute('show-grounding', cfg.grounding);
+      if (cap.hasFeedback) el.setAttribute('feedback', cfg.feedback);
+      if (cap.hasPosition) {
+        // For preview always use inline so it renders in the panel
+        el.setAttribute('position', 'inline');
+      }
+      if (cap.hasLocale) el.setAttribute('locale', cfg.locale);
+      if (cap.hasTitle) el.setAttribute('title', cfg.title);
+      if (cap.hasPlaceholder) el.setAttribute('placeholder', cfg.placeholder);
+      if (cap.hasSessionId) el.setAttribute('session-id', cfg.sessionId);
+      if (cap.hasColor && cap.tag !== 'draga-chat') el.setAttribute('theme-color', cfg.color);
+      if (cap.hasColor && cap.tag === 'draga-chat') el.style.setProperty('--draga-primary', cfg.color);
+
+      host.appendChild(el);
+    }
+
+    // ── Escape ──
+    function escHtml(t) {
+      const d = document.createElement('div');
+      d.textContent = t;
+      return d.innerHTML;
+    }
+
+    // ── Init ──
+    applyVisibility();
+    onConfigChange();
+  </script>
+</body>
+</html>
