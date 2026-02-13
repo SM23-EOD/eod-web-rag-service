@@ -38,8 +38,10 @@ class RagAssistantOpenAI extends HTMLElement {
       chatHistory: [],      // OpenAI message history for context
       unreadCount: 0,
       streamingText: null,  // Current streaming text (null = not streaming)
+      feedbackOpen: null,   // message ID with open feedback form
     };
     this._abortController = null;
+    this._conversations = []; // {query, response} pairs for feedback correlation
   }
 
   connectedCallback() {
@@ -116,6 +118,43 @@ class RagAssistantOpenAI extends HTMLElement {
       }
     };
     document.addEventListener('keydown', this._keyHandler);
+  }
+
+  // ── Feedback ──────────────────────────────────────────────────
+
+  async sendFeedback(messageId, rating, comment = '') {
+    const msg = this.state.messages.find(m => m.id === messageId);
+    if (!msg || msg.feedbackSent) return;
+
+    // Find matching conversation
+    const conv = this._conversations.find(c => c.messageId === messageId);
+    const query = conv?.query || '';
+    const response = msg.content || '';
+
+    const feedbackUrl = `${this.endpoint}/feedback`;
+    const payload = {
+      query,
+      response,
+      rating,
+      session_id: this.sessionId,
+    };
+    if (comment) payload.comment = comment;
+
+    try {
+      await fetch(feedbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch { /* best effort */ }
+
+    // Mark as sent in UI
+    this.setState({
+      messages: this.state.messages.map(m =>
+        m.id === messageId ? { ...m, feedbackSent: true, feedbackRating: rating } : m
+      ),
+      feedbackOpen: null,
+    });
   }
 
   // ── OpenAI Chat Completions ───────────────────────────────────
@@ -274,6 +313,9 @@ class RagAssistantOpenAI extends HTMLElement {
         { role: 'assistant', content: result.content },
       );
 
+      // Track conversation for feedback correlation
+      this._conversations.push({ query: text, response: result.content, messageId: msgId });
+
     } catch (error) {
       if (error.name === 'AbortError') {
         this.updateMessage(msgId, '⏹️ Streaming cancelado.', { streaming: false });
@@ -304,8 +346,9 @@ class RagAssistantOpenAI extends HTMLElement {
   clearChat() {
     if (confirm('¿Limpiar conversación?')) {
       this._abortStreaming();
-      this.setState({ messages: [], unreadCount: 0, streamingText: null });
+      this.setState({ messages: [], unreadCount: 0, streamingText: null, feedbackOpen: null });
       this.state.chatHistory = [];
+      this._conversations = [];
     }
   }
 
@@ -413,6 +456,22 @@ class RagAssistantOpenAI extends HTMLElement {
         .msg-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:#9ca3af}
         .meta-model{background:#f3f4f6;padding:1px 6px;border-radius:6px;font-size:10px;color:#6b7280}
         .meta-stream{color:${tc};font-weight:500}
+
+        /* Feedback */
+        .msg-feedback{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap}
+        .fb-btn{padding:4px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;transition:all .2s}
+        .fb-btn:hover:not([disabled]){border-color:#9ca3af}
+        .fb-btn.pos:hover:not([disabled]){background:#ecfdf5;border-color:#34d399}
+        .fb-btn.neg:hover:not([disabled]){background:#fef2f2;border-color:#f87171}
+        .fb-btn.selected.pos{background:#ecfdf5;border-color:#34d399;color:#065f46}
+        .fb-btn.selected.neg{background:#fef2f2;border-color:#f87171;color:#991b1b}
+        .fb-btn[disabled]{opacity:.5;cursor:not-allowed}
+        .fb-thanks{font-size:11px;color:#6b7280;display:flex;align-items:center;gap:4px;padding:2px 0}
+        .fb-comment-row{display:flex;gap:6px;width:100%;margin-top:4px}
+        .fb-comment-row input{flex:1;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:inherit}
+        .fb-comment-row input:focus{outline:none;border-color:${tc}}
+        .fb-comment-row button{padding:6px 12px;background:${tc};color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;transition:all .2s}
+        .fb-comment-row button:hover{opacity:.85}
 
         .typing{display:flex;align-items:center;gap:5px;padding:10px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;border-bottom-left-radius:4px;width:fit-content}
         .dot{width:7px;height:7px;border-radius:50%;background:#9ca3af;animation:bounce 1.4s infinite}
@@ -555,11 +614,36 @@ class RagAssistantOpenAI extends HTMLElement {
       metaHtml += `<span class="meta-model">${u.prompt_tokens || '?'}→${u.completion_tokens || '?'} tok</span>`;
     }
 
+    // Feedback buttons for assistant messages (not while streaming, not on errors)
+    let feedbackHtml = '';
+    if (!isUser && !isStreaming && !msg.metadata?.error && msg.content) {
+      if (msg.feedbackSent) {
+        feedbackHtml = `<div class="fb-thanks">✓ Gracias por tu feedback (${msg.feedbackRating === 'positive' ? '👍' : '👎'})</div>`;
+      } else if (this.state.feedbackOpen === msg.id) {
+        feedbackHtml = `
+          <div class="msg-feedback">
+            <button class="fb-btn pos selected" data-fb-id="${msg.id}" data-fb-rating="positive">👍 Útil</button>
+            <button class="fb-btn neg" data-fb-id="${msg.id}" data-fb-rating="negative">👎 No útil</button>
+          </div>
+          <div class="fb-comment-row">
+            <input type="text" class="fb-input" data-fb-id="${msg.id}" placeholder="Comentario opcional...">
+            <button class="fb-send" data-fb-id="${msg.id}">Enviar</button>
+          </div>`;
+      } else {
+        feedbackHtml = `
+          <div class="msg-feedback">
+            <button class="fb-btn pos" data-fb-id="${msg.id}" data-fb-rating="positive">👍</button>
+            <button class="fb-btn neg" data-fb-id="${msg.id}" data-fb-rating="negative">👎</button>
+          </div>`;
+      }
+    }
+
     return `
       <div class="msg-row ${msg.role}" data-msg-id="${msg.id}">
         <div class="msg-avatar">${avatar}</div>
         <div class="msg-body">
           <div class="message-bubble${isStreaming ? ' cursor-blink' : ''}">${content || '&nbsp;'}</div>
+          ${feedbackHtml}
           <div class="msg-meta">${metaHtml}</div>
         </div>
       </div>`;
@@ -577,6 +661,32 @@ class RagAssistantOpenAI extends HTMLElement {
     if (sug) {
       const ta = this.shadowRoot.querySelector("textarea");
       if (ta) { ta.value = sug.dataset.sug; ta.focus(); }
+      return;
+    }
+    // Feedback button click
+    const fbBtn = e.target.closest(".fb-btn");
+    if (fbBtn) {
+      const id = fbBtn.dataset.fbId;
+      const rating = fbBtn.dataset.fbRating;
+      if (this.state.feedbackOpen === id) {
+        // Already open — send immediately
+        this.sendFeedback(id, rating);
+      } else {
+        // Open the comment form
+        this.setState({ feedbackOpen: id });
+      }
+      return;
+    }
+    // Feedback send with comment
+    const fbSend = e.target.closest(".fb-send");
+    if (fbSend) {
+      const id = fbSend.dataset.fbId;
+      const input = this.shadowRoot.querySelector(`.fb-input[data-fb-id="${id}"]`);
+      const comment = input?.value || '';
+      const selectedBtn = this.shadowRoot.querySelector(`.fb-btn.selected[data-fb-id="${id}"]`);
+      const rating = selectedBtn?.dataset.fbRating || 'positive';
+      this.sendFeedback(id, rating, comment);
+      return;
     }
   };
 
