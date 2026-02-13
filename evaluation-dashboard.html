@@ -41,7 +41,7 @@
         /* ===== Layout ===== */
         .dashboard-layout {
             display: flex;
-            min-height: 100vh;
+            min-height: calc(100vh - 33px);
         }
 
         /* ===== Sidebar Nav ===== */
@@ -52,7 +52,8 @@
             display: flex;
             flex-direction: column;
             position: fixed;
-            height: 100vh;
+            top: 33px;
+            height: calc(100vh - 33px);
             z-index: 100;
         }
 
@@ -450,6 +451,7 @@
     </style>
 </head>
 <body>
+    <nav id="site-breadcrumb" style="display:flex;align-items:center;gap:8px;padding:6px 20px;background:#0f172a;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border-bottom:1px solid #1e293b;flex-wrap:wrap;"><a href="integration.html" style="color:#93c5fd;text-decoration:none;font-weight:600;">🏠 Hub</a><span style="color:#475569;">›</span><a href="integration.html" style="color:#94a3b8;text-decoration:none;">Evaluación</a><span style="color:#475569;">›</span><span style="color:#cbd5e1;font-weight:500;">Eval Dashboard</span><span style="color:#334155;margin:0 4px 0 auto;">|</span><a href="evaluation.html" style="color:#64748b;text-decoration:none;font-size:11px;padding:2px 6px;">🧪 Evaluación</a></nav>
     <div class="dashboard-layout">
         <!-- Sidebar Navigation -->
         <nav class="sidebar-nav">
