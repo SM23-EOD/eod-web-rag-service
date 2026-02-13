@@ -495,9 +495,10 @@
           <label>Protocolo <span class="api-param">protocol</span></label>
           <select id="cfg-protocol" onchange="onConfigChange()">
             <option value="openai">OpenAI (Chat Completions)</option>
-            <option value="rag">RAG (Direct Query)</option>
+            <option value="rag" disabled>RAG (Direct Query) — no disponible</option>
             <option value="mcp">MCP (Tool Call)</option>
           </select>
+          <div class="help-text">⚠️ RAG endpoint (<code>/agents/{id}/query</code>) no implementado en el backend actual</div>
         </div>
         <div class="field">
           <label>Base URL <span class="api-param">base-url / endpoint</span></label>
@@ -695,7 +696,7 @@
       'draga-chat': {
         tag: 'draga-chat',
         script: 'src/draga-chat.js',
-        protocols: ['openai', 'rag', 'mcp'],
+        protocols: ['openai', 'mcp'],
         hasProtocol: true,
         hasAgent: true,
         hasApiKey: true,
