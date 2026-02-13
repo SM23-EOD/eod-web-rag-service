@@ -1385,11 +1385,11 @@
             <h2>🔧 Configuración</h2>
             <div class="form-group">
                 <label>Endpoint API</label>
-                <input type="text" id="cfgEndpoint" placeholder="http://167.172.225.44/api/v2/mcp/tools/call">
+                <input type="text" id="cfgEndpoint" placeholder="/api/v2/mcp/tools/call">
             </div>
             <div class="form-group">
                 <label>Endpoint Feedback</label>
-                <input type="text" id="cfgFeedbackEndpoint" placeholder="http://167.172.225.44/api/v2/feedback">
+                <input type="text" id="cfgFeedbackEndpoint" placeholder="/api/v2/feedback">
             </div>
             <div class="form-group">
                 <label>Tool Name</label>
@@ -1445,8 +1445,8 @@
                 } catch (e) { /* ignore */ }
 
                 this.chat = new EvaluationChat({
-                    endpoint: savedCfg.endpoint || 'http://167.172.225.44/api/v2/mcp/tools/call',
-                    feedbackEndpoint: savedCfg.feedbackEndpoint || 'http://167.172.225.44/api/v2/feedback',
+                    endpoint: savedCfg.endpoint || '/api/v2/mcp/tools/call',
+                    feedbackEndpoint: savedCfg.feedbackEndpoint || '/api/v2/feedback',
                     toolName: savedCfg.toolName || 'generate_rag_answer',
                     sessionId: savedCfg.sessionId || undefined,
                     includeSources: savedCfg.includeSources !== undefined ? savedCfg.includeSources : true,

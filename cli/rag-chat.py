@@ -38,12 +38,12 @@ def ask_question(query: str, session_id: Optional[str] = None) -> Dict[str, Any]
     Envía una pregunta al API RAG y retorna la respuesta
     """
     payload = {
-        "name": TOOL_NAME,
+        "tool_name": TOOL_NAME,
         "arguments": {
             "query": query,
-            "session_id": session_id or SESSION_ID,
             "include_sources": INCLUDE_SOURCES
-        }
+        },
+        "session_id": session_id or SESSION_ID
     }
     
     try:

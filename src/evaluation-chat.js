@@ -7,8 +7,8 @@
 class EvaluationChat {
   constructor(options = {}) {
     this.config = {
-      endpoint: options.endpoint || 'http://167.172.225.44/api/v2/mcp/tools/call',
-      feedbackEndpoint: options.feedbackEndpoint || 'http://167.172.225.44/api/v2/feedback',
+      endpoint: options.endpoint || '/api/v2/mcp/tools/call',
+      feedbackEndpoint: options.feedbackEndpoint || '/api/v2/feedback',
       toolName: options.toolName || 'generate_rag_answer',
       sessionId: options.sessionId || 'eval-' + Date.now() + Math.random().toString(36).substr(2, 5),
       includeSources: options.includeSources !== undefined ? options.includeSources : true,
