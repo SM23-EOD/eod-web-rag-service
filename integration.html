@@ -260,112 +260,7 @@
     }
     .btn-secondary:hover { background: #e2e8f0; }
 
-    /* ── Chat Eval Area ── */
-    .eval-area {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .eval-header {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .eval-header h3 {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .eval-config {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .eval-config label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-    }
-    .eval-config select,
-    .eval-config input {
-      padding: 7px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 12px;
-      font-family: var(--sans);
-      background: var(--card);
-    }
-    .eval-config select:focus,
-    .eval-config input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .eval-layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      min-height: 620px;
-    }
-    @media (max-width: 900px) {
-      .eval-layout { grid-template-columns: 1fr; }
-    }
-
-    /* Eval sidebar: param config */
-    .eval-sidebar {
-      border-right: 1px solid var(--border);
-      padding: 20px;
-      overflow-y: auto;
-      max-height: 620px;
-      background: #fafbfc;
-    }
-    .eval-sidebar h4 {
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: var(--muted);
-      margin-bottom: 14px;
-    }
-    .param-field {
-      margin-bottom: 14px;
-    }
-    .param-field label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    .param-field .api-tag {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--primary);
-      background: var(--primary-light);
-      padding: 1px 6px;
-      border-radius: 4px;
-      margin-left: 4px;
-    }
-    .param-field select,
-    .param-field input[type="text"],
-    .param-field input[type="number"] {
-      width: 100%;
-      padding: 7px 10px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 12px;
-      font-family: var(--sans);
-      background: #fff;
-    }
-    .param-field select:focus,
-    .param-field input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
+    /* ── Shared controls ── */
     .range-row {
       display: flex;
       align-items: center;
@@ -406,60 +301,6 @@
     .toggle input:checked + .slider { background: var(--primary); }
     .toggle input:checked + .slider::before { transform: translateX(16px); }
 
-    .apply-btn {
-      width: 100%;
-      padding: 10px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 10px;
-      transition: all .2s;
-    }
-    .apply-btn:hover { background: #1d4ed8; }
-
-    /* Eval chat host */
-    .eval-chat-host {
-      padding: 0;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-    .eval-chat-host .widget-mount {
-      flex: 1;
-      position: relative;
-      min-height: 580px;
-    }
-
-    /* ── Stats bar ── */
-    .stats-bar {
-      display: flex;
-      gap: 18px;
-      padding: 16px 24px;
-      background: #f8fafc;
-      border-top: 1px solid var(--border);
-      flex-wrap: wrap;
-    }
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .stat-label {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .stat-val {
-      font-family: var(--mono);
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
     /* ── Footer ── */
     .footer {
       text-align: center;
@@ -488,6 +329,300 @@
       height: 1px;
       background: var(--border);
     }
+
+    /* ── Generator: Widget card selector ── */
+    .gen-widget-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) { .gen-widget-cards { grid-template-columns: 1fr 1fr; } }
+    .gen-wcard {
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+    }
+    .gen-wcard:hover { border-color: #94a3b8; }
+    .gen-wcard.selected { border-color: var(--primary); background: var(--primary-light); }
+    .gen-wcard .gw-icon { font-size: 22px; margin-bottom: 2px; }
+    .gen-wcard .gw-name { font-size: 12px; font-weight: 600; }
+    .gen-wcard .gw-tag { font-size: 10px; color: var(--muted); }
+
+    /* ── Generator layout ── */
+    .gen-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      overflow: hidden;
+      min-height: 680px;
+    }
+    @media (max-width: 1024px) { .gen-layout { grid-template-columns: 1fr; } }
+    .gen-sidebar {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      max-height: 680px;
+      background: #fafbfc;
+    }
+    .gen-sidebar-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .gen-sidebar-section:last-child { border-bottom: none; }
+    .gen-sidebar-section h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gen-field { margin-bottom: 12px; }
+    .gen-field:last-child { margin-bottom: 0; }
+    .gen-field label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .gen-field .api-param {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .gen-field select,
+    .gen-field input[type="text"],
+    .gen-field input[type="number"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: var(--sans);
+      background: #fff;
+      transition: all .2s;
+    }
+    .gen-field select:focus,
+    .gen-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .gen-field textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: var(--sans);
+      resize: vertical;
+      min-height: 52px;
+      transition: all .2s;
+    }
+    .gen-field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    .gen-help {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .gen-color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gen-color-row input[type="color"] {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 1px;
+    }
+    .gen-color-row input[type="text"] { flex: 1; }
+
+    /* ── Generator preview panel ── */
+    .gen-preview {
+      display: flex;
+      flex-direction: column;
+    }
+    .gen-prev-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      padding: 0 20px;
+    }
+    .gen-prev-tab {
+      padding: 10px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .2s;
+    }
+    .gen-prev-tab:hover { color: var(--text); }
+    .gen-prev-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .gen-prev-content { flex: 1; overflow: auto; }
+    .gen-tab-pane { display: none; }
+    .gen-tab-pane.active { display: block; }
+    .gen-tab-live {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-height: 600px;
+      padding: 20px;
+      position: relative;
+    }
+    .gen-tab-live.active { display: flex; }
+    .gen-live-host {
+      width: 100%;
+      height: 560px;
+      position: relative;
+    }
+
+    /* ── Code blocks ── */
+    .gen-code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px;
+    }
+    .gen-code-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,.05);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .gen-code-hdr span { font-size: 12px; font-weight: 600; color: #94a3b8; }
+    .gen-copy-btn {
+      padding: 4px 12px;
+      background: rgba(255,255,255,.1);
+      color: #e2e8f0;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .gen-copy-btn:hover { background: rgba(255,255,255,.2); }
+    .gen-copy-btn.copied { background: var(--success); color: #fff; }
+    .gen-code-body {
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ── Endpoint summary ── */
+    .gen-ep-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 0 20px 20px;
+    }
+    .gen-ep-hdr {
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gen-ep-hdr h5 { font-size: 13px; font-weight: 600; }
+    .gen-method {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-family: var(--mono);
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .gen-proto-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .gen-proto-badge.openai { background: #ecfdf5; color: #059669; }
+    .gen-proto-badge.mcp { background: #eff6ff; color: #2563eb; }
+    .gen-ep-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .gen-ep-table th {
+      text-align: left;
+      padding: 8px 16px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .gen-ep-table td {
+      padding: 6px 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .gen-ep-table tr:last-child td { border-bottom: none; }
+    .gen-ep-table code {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .gen-val-active { color: var(--primary); font-weight: 600; }
+    .gen-val-default { color: var(--muted); }
+
+    /* ── Generator footer bar ── */
+    .gen-footer-bar {
+      display: flex;
+      gap: 14px;
+      padding: 12px 20px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .gen-footer-bar .gf-tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
@@ -513,7 +648,7 @@
     <div class="domain-tab" onclick="switchDomain('eval', this)">🧪 Evaluación <span class="badge">3</span></div>
     <div class="domain-tab" onclick="switchDomain('abtest', this)">📊 A/B Testing <span class="badge">3</span></div>
     <div class="domain-tab" onclick="switchDomain('tools', this)">🛠️ Herramientas <span class="badge">2</span></div>
-    <div class="domain-tab" onclick="switchDomain('chat-eval', this)">🎯 Chat de Evaluación</div>
+    <div class="domain-tab" onclick="switchDomain('generator', this)">🛠️ Widget Generator</div>
   </nav>
 
   <div class="main">
@@ -812,139 +947,221 @@
       <div class="card-grid" id="tools-grid"></div>
     </div>
 
-    <!-- ════════════ CHAT EVALUATION ════════════ -->
-    <div class="domain-section" id="sec-chat-eval">
+    <!-- ════════════ WIDGET GENERATOR ════════════ -->
+    <div class="domain-section" id="sec-generator">
       <div class="domain-header">
-        <h2>Chat de Evaluación</h2>
-        <p>Prueba y evalúa cualquier widget con protocolo y parámetros configurables en tiempo real</p>
+        <h2>🛠️ Widget Generator</h2>
+        <p>Configura cualquier widget del sistema con protocolo y parámetros completos — vista previa en vivo, código HTML y request API</p>
       </div>
 
-      <div class="eval-area">
-        <div class="eval-header">
-          <h3>🎯 Widget de Evaluación</h3>
-          <div class="eval-config">
-            <div>
-              <label>Widget</label>
-              <select id="eval-widget" onchange="onEvalWidgetChange()">
-                <option value="draga-chat">DRAGA Chat</option>
-                <option value="rag-assistant-openai">OpenAI Widget</option>
-                <option value="rag-assistant-v2">Widget V2</option>
-                <option value="rag-assistant">Widget V1</option>
+      <!-- Widget selector cards -->
+      <div class="gen-widget-cards" id="gen-widget-sel">
+        <div class="gen-wcard selected" data-widget="draga-chat" onclick="genSelectWidget(this)">
+          <div class="gw-icon">💬</div>
+          <div class="gw-name">DRAGA Chat</div>
+          <div class="gw-tag">Multi-protocolo</div>
+        </div>
+        <div class="gen-wcard" data-widget="rag-assistant-openai" onclick="genSelectWidget(this)">
+          <div class="gw-icon">⚡</div>
+          <div class="gw-name">OpenAI Widget</div>
+          <div class="gw-tag">SSE Streaming</div>
+        </div>
+        <div class="gen-wcard" data-widget="rag-assistant-v2" onclick="genSelectWidget(this)">
+          <div class="gw-icon">🤖</div>
+          <div class="gw-name">Widget V2</div>
+          <div class="gw-tag">MCP Protocol</div>
+        </div>
+        <div class="gen-wcard" data-widget="rag-assistant" onclick="genSelectWidget(this)">
+          <div class="gw-icon">📦</div>
+          <div class="gw-name">Widget V1</div>
+          <div class="gw-tag">MCP Básico</div>
+        </div>
+      </div>
+
+      <!-- Generator layout: sidebar + preview -->
+      <div class="gen-layout">
+        <div class="gen-sidebar">
+
+          <!-- Connection -->
+          <div class="gen-sidebar-section">
+            <h4>🔌 Conexión</h4>
+            <div class="gen-field" id="gf-protocol">
+              <label>Protocolo <span class="api-param">protocol</span></label>
+              <select id="gen-protocol" onchange="genUpdate()">
+                <option value="openai">OpenAI (Chat Completions)</option>
+                <option value="rag" disabled>RAG (Direct Query) — no disponible</option>
+                <option value="mcp">MCP (Tool Call)</option>
               </select>
+              <div class="gen-help">⚠️ RAG endpoint no implementado en el backend actual</div>
             </div>
-            <div>
-              <label>Protocolo</label>
-              <select id="eval-protocol" onchange="onEvalConfigChange()">
-                <option value="openai">OpenAI</option>
-                <option value="mcp">MCP</option>
-              </select>
+            <div class="gen-field">
+              <label>Base URL <span class="api-param">base-url</span></label>
+              <input type="text" id="gen-baseurl" value="/api/v2" oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-agent">
+              <label>Agent <span class="api-param">agent</span></label>
+              <input type="text" id="gen-agent" value="eod" oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-apikey">
+              <label>API Key <span class="api-param">X-API-Key</span></label>
+              <input type="text" id="gen-apikey" value="" placeholder="(opcional)" oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-model">
+              <label>Modelo <span class="api-param">model</span></label>
+              <input type="text" id="gen-model" value="eod-rag" oninput="genUpdate()">
             </div>
           </div>
-        </div>
 
-        <div class="eval-layout">
-          <!-- Sidebar de parámetros -->
-          <div class="eval-sidebar">
-            <h4>Conexión</h4>
-            <div class="param-field">
-              <label>Base URL <span class="api-tag">endpoint</span></label>
-              <input type="text" id="eval-baseurl" value="/api/v2" oninput="onEvalConfigChange()">
-            </div>
-            <div class="param-field" id="eval-field-agent">
-              <label>Agent <span class="api-tag">agent</span></label>
-              <input type="text" id="eval-agent" value="eod" oninput="onEvalConfigChange()">
-            </div>
-            <div class="param-field" id="eval-field-model">
-              <label>Modelo <span class="api-tag">model</span></label>
-              <input type="text" id="eval-model" value="eod-rag" oninput="onEvalConfigChange()">
-            </div>
-            <div class="param-field" id="eval-field-toolname">
-              <label>Tool name <span class="api-tag">tool_name</span></label>
-              <input type="text" id="eval-toolname" value="generate_rag_answer" oninput="onEvalConfigChange()">
-            </div>
-
-            <h4 style="margin-top:18px">Query</h4>
-            <div class="param-field" id="eval-field-topk">
-              <label>Top K <span class="api-tag">top_k</span></label>
+          <!-- Query params -->
+          <div class="gen-sidebar-section">
+            <h4>🔍 Query</h4>
+            <div class="gen-field" id="gf-topk">
+              <label>Top K <span class="api-param">top_k</span></label>
               <div class="range-row">
-                <input type="range" id="eval-topk" min="1" max="20" value="5" oninput="onEvalConfigChange()">
-                <span class="range-val" id="eval-val-topk">5</span>
+                <input type="range" id="gen-topk" min="1" max="20" value="5" oninput="genUpdate()">
+                <span class="range-val" id="gv-topk">5</span>
+              </div>
+              <div class="gen-help">Fragmentos de documentos a recuperar</div>
+            </div>
+            <div class="gen-field" id="gf-temperature">
+              <label>Temperatura <span class="api-param">temperature</span></label>
+              <div class="range-row">
+                <input type="range" id="gen-temperature" min="0" max="100" value="30" oninput="genUpdate()">
+                <span class="range-val" id="gv-temperature">0.3</span>
+              </div>
+              <div class="gen-help">0 = determinístico, 1 = creativo</div>
+            </div>
+            <div class="gen-field" id="gf-similarity">
+              <label>Similitud <span class="api-param">similarity_threshold</span></label>
+              <div class="range-row">
+                <input type="range" id="gen-similarity" min="0" max="100" value="30" oninput="genUpdate()">
+                <span class="range-val" id="gv-similarity">0.30</span>
               </div>
             </div>
-            <div class="param-field" id="eval-field-temperature">
-              <label>Temperatura <span class="api-tag">temperature</span></label>
+            <div class="gen-field" id="gf-maxtokens">
+              <label>Max tokens <span class="api-param">max_tokens</span></label>
               <div class="range-row">
-                <input type="range" id="eval-temperature" min="0" max="100" value="30" oninput="onEvalConfigChange()">
-                <span class="range-val" id="eval-val-temperature">0.3</span>
+                <input type="range" id="gen-maxtokens" min="256" max="8192" value="2048" step="256" oninput="genUpdate()">
+                <span class="range-val" id="gv-maxtokens">2048</span>
               </div>
             </div>
-            <div class="param-field" id="eval-field-maxhistory">
-              <label>Max historial <span class="api-tag">max-history</span></label>
+            <div class="gen-field" id="gf-maxhistory">
+              <label>Max historial <span class="api-param">max-history</span></label>
               <div class="range-row">
-                <input type="range" id="eval-maxhistory" min="1" max="50" value="20" oninput="onEvalConfigChange()">
-                <span class="range-val" id="eval-val-maxhistory">20</span>
+                <input type="range" id="gen-maxhistory" min="1" max="50" value="20" oninput="genUpdate()">
+                <span class="range-val" id="gv-maxhistory">20</span>
               </div>
             </div>
+            <div class="gen-field" id="gf-toolname">
+              <label>Tool name <span class="api-param">tool_name</span></label>
+              <input type="text" id="gen-toolname" value="generate_rag_answer" oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-systemprompt">
+              <label>System prompt <span class="api-param">system-prompt</span></label>
+              <textarea id="gen-systemprompt" placeholder="Eres un asistente de ayuda..." oninput="genUpdate()"></textarea>
+            </div>
+          </div>
 
-            <h4 style="margin-top:18px">Funciones</h4>
+          <!-- Features -->
+          <div class="gen-sidebar-section">
+            <h4>✨ Funciones</h4>
             <div class="toggle-row">
-              <label>Streaming</label>
-              <label class="toggle"><input type="checkbox" id="eval-streaming" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+              <label>Streaming <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px">stream</span></label>
+              <label class="toggle"><input type="checkbox" id="gen-streaming" checked onchange="genUpdate()"><span class="slider"></span></label>
             </div>
-            <div class="toggle-row" id="eval-field-sources">
-              <label>Fuentes</label>
-              <label class="toggle"><input type="checkbox" id="eval-sources" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            <div class="toggle-row" id="gf-sources">
+              <label>Fuentes <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px">include_sources</span></label>
+              <label class="toggle"><input type="checkbox" id="gen-sources" checked onchange="genUpdate()"><span class="slider"></span></label>
             </div>
-            <div class="toggle-row" id="eval-field-confidence">
-              <label>Confianza</label>
-              <label class="toggle"><input type="checkbox" id="eval-confidence" onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            <div class="toggle-row" id="gf-confidence">
+              <label>Confianza <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px">show-confidence</span></label>
+              <label class="toggle"><input type="checkbox" id="gen-confidence" onchange="genUpdate()"><span class="slider"></span></label>
             </div>
-            <div class="toggle-row" id="eval-field-feedback">
-              <label>Feedback</label>
-              <label class="toggle"><input type="checkbox" id="eval-feedback" checked onchange="onEvalConfigChange()"><span class="slider"></span></label>
+            <div class="toggle-row" id="gf-grounding">
+              <label>Grounding <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px">show-grounding</span></label>
+              <label class="toggle"><input type="checkbox" id="gen-grounding" onchange="genUpdate()"><span class="slider"></span></label>
             </div>
+            <div class="toggle-row" id="gf-feedback">
+              <label>Feedback <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px">POST /feedback</span></label>
+              <label class="toggle"><input type="checkbox" id="gen-feedback" checked onchange="genUpdate()"><span class="slider"></span></label>
+            </div>
+          </div>
 
-            <h4 style="margin-top:18px">Apariencia</h4>
-            <div class="param-field">
-              <label>Título</label>
-              <input type="text" id="eval-title" value="Evaluación Chat" oninput="onEvalConfigChange()">
+          <!-- Appearance -->
+          <div class="gen-sidebar-section">
+            <h4>🎨 Apariencia</h4>
+            <div class="gen-field">
+              <label>Color <span class="api-param">--draga-primary</span></label>
+              <div class="gen-color-row">
+                <input type="color" id="gen-color-pick" value="#2563eb" oninput="document.getElementById('gen-color').value=this.value;genUpdate()">
+                <input type="text" id="gen-color" value="#2563eb" oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value))document.getElementById('gen-color-pick').value=this.value;genUpdate()">
+              </div>
             </div>
-            <div class="param-field">
-              <label>Idioma</label>
-              <select id="eval-locale" onchange="onEvalConfigChange()">
+            <div class="gen-field">
+              <label>Posición <span class="api-param">position</span></label>
+              <select id="gen-position" onchange="genUpdate()">
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="inline" selected>Inline (embedded)</option>
+              </select>
+            </div>
+            <div class="gen-field">
+              <label>Idioma <span class="api-param">locale</span></label>
+              <select id="gen-locale" onchange="genUpdate()">
                 <option value="es">Español</option>
                 <option value="en">English</option>
               </select>
             </div>
-
-            <button class="apply-btn" onclick="applyEvalConfig()">🔄 Aplicar y Recargar Widget</button>
+            <div class="gen-field" id="gf-title">
+              <label>Título <span class="api-param">title</span></label>
+              <input type="text" id="gen-title" value="Asistente Virtual" oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-placeholder">
+              <label>Placeholder <span class="api-param">placeholder</span></label>
+              <input type="text" id="gen-placeholder" value="Escribe tu consulta..." oninput="genUpdate()">
+            </div>
+            <div class="gen-field" id="gf-sessionid">
+              <label>Session ID <span class="api-param">session-id</span></label>
+              <input type="text" id="gen-sessionid" value="web" oninput="genUpdate()">
+            </div>
           </div>
+        </div>
 
-          <!-- Chat widget mount -->
-          <div class="eval-chat-host">
-            <div class="widget-mount" id="eval-widget-mount"></div>
-            <div class="stats-bar">
-              <div class="stat-item">
-                <span class="stat-label">Widget</span>
-                <span class="stat-val" id="stat-widget">draga-chat</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Protocolo</span>
-                <span class="stat-val" id="stat-protocol">openai</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Streaming</span>
-                <span class="stat-val" id="stat-streaming">true</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Top K</span>
-                <span class="stat-val" id="stat-topk">5</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Temp</span>
-                <span class="stat-val" id="stat-temp">0.3</span>
+        <!-- Preview -->
+        <div class="gen-preview">
+          <div class="gen-prev-tabs">
+            <div class="gen-prev-tab active" onclick="genSwitchTab('live',this)">👁️ Vista previa</div>
+            <div class="gen-prev-tab" onclick="genSwitchTab('html',this)">📋 HTML Embed</div>
+            <div class="gen-prev-tab" onclick="genSwitchTab('api',this)">📡 API Request</div>
+          </div>
+          <div class="gen-prev-content">
+            <div class="gen-tab-live active" id="gen-tab-live">
+              <div class="gen-live-host" id="gen-preview-host"></div>
+            </div>
+            <div class="gen-tab-pane" id="gen-tab-html">
+              <div class="gen-code-block">
+                <div class="gen-code-hdr">
+                  <span>HTML — Código de embedding</span>
+                  <button class="gen-copy-btn" onclick="genCopy('gen-code-embed')">📋 Copiar</button>
+                </div>
+                <pre class="gen-code-body" id="gen-code-embed"></pre>
               </div>
             </div>
+            <div class="gen-tab-pane" id="gen-tab-api">
+              <div class="gen-code-block">
+                <div class="gen-code-hdr">
+                  <span>cURL — Request que enviará el widget</span>
+                  <button class="gen-copy-btn" onclick="genCopy('gen-code-curl')">📋 Copiar</button>
+                </div>
+                <pre class="gen-code-body" id="gen-code-curl"></pre>
+              </div>
+              <div id="gen-ep-summary"></div>
+            </div>
+          </div>
+          <div class="gen-footer-bar">
+            <span>Widget:</span> <span class="gf-tag" id="gen-footer-widget">draga-chat</span>
+            <span>Protocolo:</span> <span class="gf-tag" id="gen-footer-proto">openai</span>
+            <span>Streaming:</span> <span class="gf-tag" id="gen-footer-stream">true</span>
           </div>
         </div>
       </div>
@@ -963,41 +1180,53 @@
   <script src="src/assistant-widget.js"></script>
 
   <script>
-    // ── Widget capability matrix ──
+    // ── Full widget capability matrix (same pattern for all widgets) ──
     const CAPS = {
       'draga-chat': {
-        tag: 'draga-chat', protocols: ['openai','mcp'],
-        hasProtocol: true, hasAgent: true, hasModel: true, hasToolName: false,
-        hasTopK: false, hasTemperature: false, hasMaxHistory: true,
-        hasStreaming: true, hasSources: true, hasConfidence: true, hasFeedback: true,
-        hasTitle: false, hasLocale: true,
+        tag: 'draga-chat', script: 'src/draga-chat.js',
+        protocols: ['openai','mcp'],
+        hasProtocol: true, hasAgent: true, hasApiKey: true, hasModel: true,
+        hasTopK: false, hasTemperature: false, hasSimilarity: false, hasMaxTokens: false,
+        hasMaxHistory: true, hasToolName: false, hasSystemPrompt: false,
+        hasStreaming: true, hasSources: true, hasConfidence: true, hasGrounding: true, hasFeedback: true,
+        hasPosition: true, hasLocale: true, hasTitle: false, hasPlaceholder: false, hasSessionId: false, hasColor: true,
         baseUrlAttr: 'base-url', endpointSuffix: '',
       },
       'rag-assistant-openai': {
-        tag: 'rag-assistant-openai', protocols: ['openai'],
-        hasProtocol: false, hasAgent: false, hasModel: true, hasToolName: false,
-        hasTopK: true, hasTemperature: true, hasMaxHistory: false,
-        hasStreaming: true, hasSources: false, hasConfidence: false, hasFeedback: false,
-        hasTitle: true, hasLocale: false,
+        tag: 'rag-assistant-openai', script: 'src/assistant-widget-openai.js',
+        protocols: ['openai'],
+        hasProtocol: false, hasAgent: false, hasApiKey: false, hasModel: true,
+        hasTopK: true, hasTemperature: true, hasSimilarity: false, hasMaxTokens: false,
+        hasMaxHistory: false, hasToolName: false, hasSystemPrompt: true,
+        hasStreaming: true, hasSources: false, hasConfidence: false, hasGrounding: false, hasFeedback: false,
+        hasPosition: true, hasLocale: false, hasTitle: true, hasPlaceholder: true, hasSessionId: true, hasColor: true,
         baseUrlAttr: 'endpoint', endpointSuffix: '',
       },
       'rag-assistant-v2': {
-        tag: 'rag-assistant-v2', protocols: ['mcp'],
-        hasProtocol: false, hasAgent: false, hasModel: false, hasToolName: true,
-        hasTopK: false, hasTemperature: false, hasMaxHistory: false,
-        hasStreaming: false, hasSources: true, hasConfidence: false, hasFeedback: false,
-        hasTitle: true, hasLocale: false,
+        tag: 'rag-assistant-v2', script: 'src/assistant-widget-v2.js',
+        protocols: ['mcp'],
+        hasProtocol: false, hasAgent: false, hasApiKey: false, hasModel: false,
+        hasTopK: false, hasTemperature: false, hasSimilarity: false, hasMaxTokens: false,
+        hasMaxHistory: false, hasToolName: true, hasSystemPrompt: false,
+        hasStreaming: false, hasSources: true, hasConfidence: false, hasGrounding: false, hasFeedback: false,
+        hasPosition: true, hasLocale: false, hasTitle: true, hasPlaceholder: true, hasSessionId: true, hasColor: true,
         baseUrlAttr: 'endpoint', endpointSuffix: '/mcp/tools/call',
       },
       'rag-assistant': {
-        tag: 'rag-assistant', protocols: ['mcp'],
-        hasProtocol: false, hasAgent: false, hasModel: false, hasToolName: true,
-        hasTopK: false, hasTemperature: false, hasMaxHistory: false,
-        hasStreaming: false, hasSources: true, hasConfidence: false, hasFeedback: false,
-        hasTitle: true, hasLocale: false,
+        tag: 'rag-assistant', script: 'src/assistant-widget.js',
+        protocols: ['mcp'],
+        hasProtocol: false, hasAgent: false, hasApiKey: false, hasModel: false,
+        hasTopK: false, hasTemperature: false, hasSimilarity: false, hasMaxTokens: false,
+        hasMaxHistory: false, hasToolName: true, hasSystemPrompt: false,
+        hasStreaming: false, hasSources: true, hasConfidence: false, hasGrounding: false, hasFeedback: false,
+        hasPosition: false, hasLocale: false, hasTitle: true, hasPlaceholder: true, hasSessionId: true, hasColor: false,
         baseUrlAttr: 'endpoint', endpointSuffix: '/mcp/tools/call',
       },
     };
+
+    let genSelected = 'draga-chat';
+    const $ = id => document.getElementById(id);
+    const show = (id, v) => { const el = $(id); if (el) el.style.display = v ? '' : 'none'; };
 
     // ── Domain tab switching ──
     function switchDomain(name, el) {
@@ -1006,125 +1235,292 @@
       document.querySelectorAll('.domain-section').forEach(s => s.classList.remove('active'));
       document.getElementById('sec-' + name).classList.add('active');
 
-      // Populate filtered grids on first visit
       if (name === 'widgets') populateGrid('widgets-grid', ['demo-draga-chat.html','demo-widget-openai.html','demo-widget-v2.html','index.html']);
       if (name === 'eval') populateGrid('eval-grid', ['evaluation.html','evaluation-dashboard.html']);
       if (name === 'abtest') populateGrid('abtest-grid', ['ab-test.html','ab-test-full.html','ab-test-tests.html']);
       if (name === 'tools') populateGrid('tools-grid', ['widget-generator.html','integration.html']);
-
-      // Mount widget on first chat-eval visit
-      if (name === 'chat-eval' && !document.getElementById('eval-widget-mount').children.length) {
-        applyEvalConfig();
-      }
+      if (name === 'generator' && !$('gen-preview-host').children.length) genUpdatePreview();
     }
 
     function populateGrid(gridId, pages) {
-      const grid = document.getElementById(gridId);
-      if (grid.children.length) return; // already populated
-      const overview = document.getElementById('sec-overview');
+      const grid = $(gridId);
+      if (grid.children.length) return;
+      const overview = $('sec-overview');
       pages.forEach(page => {
         const card = overview.querySelector(`a[href="${page}"]`);
-        if (card) {
-          const clone = card.closest('.interface-card').cloneNode(true);
-          grid.appendChild(clone);
+        if (card) grid.appendChild(card.closest('.interface-card').cloneNode(true));
+      });
+    }
+
+    // ── Generator: Widget selector ──
+    function genSelectWidget(el) {
+      document.querySelectorAll('.gen-wcard').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      genSelected = el.dataset.widget;
+      genApplyVisibility();
+      genUpdate();
+    }
+
+    function genApplyVisibility() {
+      const cap = CAPS[genSelected];
+      show('gf-protocol', cap.hasProtocol);
+      if (cap.hasProtocol) {
+        $('gen-protocol').querySelectorAll('option').forEach(o => {
+          o.disabled = !cap.protocols.includes(o.value);
+        });
+        if (!cap.protocols.includes($('gen-protocol').value)) $('gen-protocol').value = cap.protocols[0];
+      }
+      show('gf-agent', cap.hasAgent);
+      show('gf-apikey', cap.hasApiKey);
+      show('gf-model', cap.hasModel);
+      show('gf-topk', cap.hasTopK);
+      show('gf-temperature', cap.hasTemperature);
+      show('gf-similarity', cap.hasSimilarity);
+      show('gf-maxtokens', cap.hasMaxTokens);
+      show('gf-maxhistory', cap.hasMaxHistory);
+      show('gf-toolname', cap.hasToolName);
+      show('gf-systemprompt', cap.hasSystemPrompt);
+      show('gf-sources', cap.hasSources);
+      show('gf-confidence', cap.hasConfidence);
+      show('gf-grounding', cap.hasGrounding);
+      show('gf-feedback', cap.hasFeedback);
+      show('gf-title', cap.hasTitle);
+      show('gf-placeholder', cap.hasPlaceholder);
+      show('gf-sessionid', cap.hasSessionId);
+    }
+
+    // ── Gather config ──
+    function genGetConfig() {
+      return {
+        widget: genSelected,
+        protocol: $('gen-protocol').value,
+        baseUrl: $('gen-baseurl').value.replace(/\/+$/, ''),
+        agent: $('gen-agent').value,
+        apiKey: $('gen-apikey').value,
+        model: $('gen-model').value,
+        topK: parseInt($('gen-topk').value),
+        temperature: parseInt($('gen-temperature').value) / 100,
+        similarity: parseInt($('gen-similarity').value) / 100,
+        maxTokens: parseInt($('gen-maxtokens').value),
+        maxHistory: parseInt($('gen-maxhistory').value),
+        toolName: $('gen-toolname').value,
+        systemPrompt: $('gen-systemprompt').value,
+        streaming: $('gen-streaming').checked,
+        sources: $('gen-sources').checked,
+        confidence: $('gen-confidence').checked,
+        grounding: $('gen-grounding').checked,
+        feedback: $('gen-feedback').checked,
+        color: $('gen-color').value,
+        position: $('gen-position').value,
+        locale: $('gen-locale').value,
+        title: $('gen-title').value,
+        placeholder: $('gen-placeholder').value,
+        sessionId: $('gen-sessionid').value,
+      };
+    }
+
+    function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    // ── Generate HTML embed ──
+    function genBuildEmbed(cfg) {
+      const cap = CAPS[cfg.widget];
+      const attrs = [];
+      if (cap.endpointSuffix) {
+        attrs.push(`  ${cap.baseUrlAttr}="${cfg.baseUrl}${cap.endpointSuffix}"`);
+      } else {
+        attrs.push(`  ${cap.baseUrlAttr}="${cfg.baseUrl}"`);
+      }
+      if (cap.hasProtocol) attrs.push(`  protocol="${cfg.protocol}"`);
+      if (cap.hasAgent) attrs.push(`  agent="${cfg.agent}"`);
+      if (cap.hasApiKey && cfg.apiKey) attrs.push(`  api-key="${cfg.apiKey}"`);
+      if (cap.hasModel) attrs.push(`  model="${cfg.model}"`);
+      if (cap.hasTopK) attrs.push(`  top-k="${cfg.topK}"`);
+      if (cap.hasTemperature) attrs.push(`  temperature="${cfg.temperature}"`);
+      if (cap.hasMaxHistory) attrs.push(`  max-history="${cfg.maxHistory}"`);
+      if (cap.hasToolName) attrs.push(`  tool-name="${cfg.toolName}"`);
+      if (cap.hasSystemPrompt && cfg.systemPrompt) attrs.push(`  system-prompt="${escHtml(cfg.systemPrompt)}"`);
+      if (cap.hasStreaming) attrs.push(`  streaming="${cfg.streaming}"`);
+      if (cap.hasSources) attrs.push(`  show-sources="${cfg.sources}"`);
+      if (cap.hasConfidence && cfg.confidence) attrs.push(`  show-confidence="true"`);
+      if (cap.hasGrounding && cfg.grounding) attrs.push(`  show-grounding="true"`);
+      if (cap.hasFeedback) attrs.push(`  feedback="${cfg.feedback}"`);
+      if (cap.hasPosition) attrs.push(`  position="${cfg.position}"`);
+      if (cap.hasLocale) attrs.push(`  locale="${cfg.locale}"`);
+      if (cap.hasTitle) attrs.push(`  title="${escHtml(cfg.title)}"`);
+      if (cap.hasPlaceholder) attrs.push(`  placeholder="${escHtml(cfg.placeholder)}"`);
+      if (cap.hasSessionId) attrs.push(`  session-id="${cfg.sessionId}"`);
+      if (cap.hasColor && cap.tag !== 'draga-chat') attrs.push(`  theme-color="${cfg.color}"`);
+
+      let html = `<!-- Widget: ${cap.tag} -->\n<script src="${cap.script}"><\/script>\n\n<${cap.tag}\n${attrs.join('\n')}\n></${cap.tag}>`;
+      if (cap.hasColor && cap.tag === 'draga-chat') {
+        html += `\n\n<style>\n  draga-chat {\n    --draga-primary: ${cfg.color};\n  }\n</style>`;
+      }
+      return html;
+    }
+
+    // ── Generate cURL ──
+    function genBuildCurl(cfg) {
+      const cap = CAPS[cfg.widget];
+      const protocol = cap.hasProtocol ? cfg.protocol : cap.protocols[0];
+      let url, body, headers = ['-H "Content-Type: application/json"'];
+      if (cfg.apiKey) headers.push(`-H "X-API-Key: ${cfg.apiKey}"`);
+
+      switch (protocol) {
+        case 'openai': {
+          url = `${cfg.baseUrl}/chat/completions`;
+          body = {
+            model: cfg.model,
+            messages: [{ role: 'system', content: cfg.systemPrompt || '(system prompt)' }, { role: 'user', content: '¿Cuál es tu pregunta de ejemplo?' }],
+            stream: cfg.streaming, top_k: cfg.topK, temperature: cfg.temperature,
+          };
+          if (cap.hasAgent || cfg.agent) body.tenant_id = cfg.agent;
+          if (cfg.maxTokens && cfg.maxTokens !== 2048) body.max_tokens = cfg.maxTokens;
+          body.similarity_threshold = cfg.similarity;
+          body.include_sources = cfg.sources;
+          break;
         }
+        case 'mcp': {
+          url = `${cfg.baseUrl}/mcp/tools/call`;
+          body = { tool_name: cfg.toolName, arguments: { query: '¿Cuál es tu pregunta de ejemplo?', include_sources: cfg.sources }, session_id: cfg.sessionId };
+          if (cfg.agent) body.arguments.tenant_id = cfg.agent;
+          break;
+        }
+      }
+      return `curl -X POST "${url}" \\\n  ${headers.join(' \\\n  ')} \\\n  -d '${JSON.stringify(body, null, 2)}'`;
+    }
+
+    // ── Endpoint summary ──
+    function genBuildEpSummary(cfg) {
+      const cap = CAPS[cfg.widget];
+      const protocol = cap.hasProtocol ? cfg.protocol : cap.protocols[0];
+      const epMap = {
+        openai: { method: 'POST', path: '/chat/completions', label: 'Chat Completions' },
+        mcp: { method: 'POST', path: '/mcp/tools/call', label: 'MCP Tool Call' },
+      };
+      const ep = epMap[protocol];
+      const params = [];
+      if (protocol === 'openai') {
+        params.push({ n: 'model', v: cfg.model, d: 'eod-rag' });
+        params.push({ n: 'messages', v: `[...${cfg.maxHistory} turns]`, d: '—' });
+        params.push({ n: 'stream', v: String(cfg.streaming), d: 'true' });
+        params.push({ n: 'top_k', v: String(cfg.topK), d: '5' });
+        params.push({ n: 'temperature', v: String(cfg.temperature), d: '0.3' });
+        params.push({ n: 'similarity_threshold', v: cfg.similarity.toFixed(2), d: '0.30' });
+        params.push({ n: 'max_tokens', v: String(cfg.maxTokens), d: '2048' });
+        params.push({ n: 'include_sources', v: String(cfg.sources), d: 'true' });
+        params.push({ n: 'tenant_id', v: cfg.agent || '—', d: '—' });
+      } else {
+        params.push({ n: 'tool_name', v: cfg.toolName, d: 'generate_rag_answer' });
+        params.push({ n: 'arguments.query', v: '(user input)', d: '—' });
+        params.push({ n: 'arguments.include_sources', v: String(cfg.sources), d: 'true' });
+        params.push({ n: 'session_id', v: cfg.sessionId, d: 'web' });
+      }
+      const rows = params.map(p => {
+        const changed = p.v !== p.d;
+        return `<tr><td><code>${p.n}</code></td><td class="${changed?'gen-val-active':'gen-val-default'}">${escHtml(p.v)}</td><td class="gen-val-default">${escHtml(p.d)}</td></tr>`;
+      }).join('');
+      return `<div class="gen-ep-card"><div class="gen-ep-hdr"><span class="gen-method">POST</span><h5>${cfg.baseUrl}${ep.path}</h5><span class="gen-proto-badge ${protocol}">${protocol}</span></div><table class="gen-ep-table"><thead><tr><th>Parámetro</th><th>Valor</th><th>Default</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    // ── Preview tabs ──
+    function genSwitchTab(name, el) {
+      document.querySelectorAll('.gen-prev-tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      ['live','html','api'].forEach(t => {
+        const pane = $('gen-tab-' + t);
+        pane.classList.toggle('active', t === name);
       });
     }
 
-    // ── Eval widget config ──
-    function onEvalWidgetChange() {
-      const widget = document.getElementById('eval-widget').value;
-      const cap = CAPS[widget];
-
-      // Update protocol selector
-      const protSel = document.getElementById('eval-protocol');
-      protSel.querySelectorAll('option').forEach(o => {
-        o.disabled = !cap.protocols.includes(o.value);
-      });
-      if (!cap.protocols.includes(protSel.value)) protSel.value = cap.protocols[0];
-
-      // Show/hide fields
-      const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; };
-      show('eval-field-agent', cap.hasAgent);
-      show('eval-field-model', cap.hasModel);
-      show('eval-field-toolname', cap.hasToolName);
-      show('eval-field-topk', cap.hasTopK);
-      show('eval-field-temperature', cap.hasTemperature);
-      show('eval-field-maxhistory', cap.hasMaxHistory);
-      show('eval-field-sources', cap.hasSources);
-      show('eval-field-confidence', cap.hasConfidence);
-      show('eval-field-feedback', cap.hasFeedback);
-
-      onEvalConfigChange();
+    // ── Copy ──
+    function genCopy(id) {
+      const el = $(id);
+      const text = el.textContent;
+      const done = () => {
+        const btn = el.closest('.gen-code-block').querySelector('.gen-copy-btn');
+        btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); done();
+      }
     }
 
-    function onEvalConfigChange() {
-      // Update range displays
-      document.getElementById('eval-val-topk').textContent = document.getElementById('eval-topk').value;
-      document.getElementById('eval-val-temperature').textContent = (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1);
-      document.getElementById('eval-val-maxhistory').textContent = document.getElementById('eval-maxhistory').value;
+    // ── Main update ──
+    function genUpdate() {
+      $('gv-topk').textContent = $('gen-topk').value;
+      $('gv-temperature').textContent = (parseInt($('gen-temperature').value) / 100).toFixed(1);
+      $('gv-similarity').textContent = (parseInt($('gen-similarity').value) / 100).toFixed(2);
+      $('gv-maxtokens').textContent = $('gen-maxtokens').value;
+      $('gv-maxhistory').textContent = $('gen-maxhistory').value;
 
-      // Update stats bar
-      document.getElementById('stat-widget').textContent = document.getElementById('eval-widget').value;
-      document.getElementById('stat-protocol').textContent = document.getElementById('eval-protocol').value;
-      document.getElementById('stat-streaming').textContent = document.getElementById('eval-streaming').checked;
-      document.getElementById('stat-topk').textContent = document.getElementById('eval-topk').value;
-      document.getElementById('stat-temp').textContent = (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1);
+      const cfg = genGetConfig();
+      const cap = CAPS[cfg.widget];
+      const protocol = cap.hasProtocol ? cfg.protocol : cap.protocols[0];
+
+      // HTML embed
+      $('gen-code-embed').textContent = genBuildEmbed(cfg);
+      // cURL
+      $('gen-code-curl').textContent = genBuildCurl(cfg);
+      // Endpoint summary
+      $('gen-ep-summary').innerHTML = genBuildEpSummary(cfg);
+      // Footer
+      $('gen-footer-widget').textContent = cap.tag;
+      $('gen-footer-proto').textContent = protocol;
+      $('gen-footer-stream').textContent = String(cfg.streaming);
+
+      genUpdatePreview();
     }
 
-    function applyEvalConfig() {
-      const mount = document.getElementById('eval-widget-mount');
-      mount.innerHTML = ''; // clear previous widget
-
-      const widgetName = document.getElementById('eval-widget').value;
-      const cap = CAPS[widgetName];
+    function genUpdatePreview() {
+      const host = $('gen-preview-host');
+      host.innerHTML = '';
+      const cfg = genGetConfig();
+      const cap = CAPS[cfg.widget];
       const el = document.createElement(cap.tag);
 
-      const baseUrl = document.getElementById('eval-baseurl').value.replace(/\/+$/, '');
-
-      // Base URL
       if (cap.endpointSuffix) {
-        el.setAttribute(cap.baseUrlAttr, baseUrl + cap.endpointSuffix);
+        el.setAttribute(cap.baseUrlAttr, cfg.baseUrl + cap.endpointSuffix);
       } else {
-        el.setAttribute(cap.baseUrlAttr, baseUrl);
+        el.setAttribute(cap.baseUrlAttr, cfg.baseUrl);
       }
 
-      // Connection
-      if (cap.hasProtocol) el.setAttribute('protocol', document.getElementById('eval-protocol').value);
-      if (cap.hasAgent) el.setAttribute('agent', document.getElementById('eval-agent').value);
-      if (cap.hasModel) el.setAttribute('model', document.getElementById('eval-model').value);
-      if (cap.hasToolName) el.setAttribute('tool-name', document.getElementById('eval-toolname').value);
-
-      // Query params
-      if (cap.hasTopK) el.setAttribute('top-k', document.getElementById('eval-topk').value);
-      if (cap.hasTemperature) el.setAttribute('temperature', (parseInt(document.getElementById('eval-temperature').value) / 100).toFixed(1));
-      if (cap.hasMaxHistory) el.setAttribute('max-history', document.getElementById('eval-maxhistory').value);
-
-      // Features
-      if (cap.hasStreaming) el.setAttribute('streaming', document.getElementById('eval-streaming').checked);
-      el.setAttribute('stream', String(document.getElementById('eval-streaming').checked));
-      if (cap.hasSources) el.setAttribute('show-sources', document.getElementById('eval-sources').checked);
-      el.setAttribute('include-sources', String(document.getElementById('eval-sources').checked));
-      if (cap.hasConfidence) el.setAttribute('show-confidence', document.getElementById('eval-confidence').checked);
-      if (cap.hasFeedback) el.setAttribute('feedback', document.getElementById('eval-feedback').checked);
-
-      // Appearance — always inline for eval area
+      if (cap.hasProtocol) el.setAttribute('protocol', cfg.protocol);
+      if (cap.hasAgent) el.setAttribute('agent', cfg.agent);
+      if (cap.hasApiKey && cfg.apiKey) el.setAttribute('api-key', cfg.apiKey);
+      if (cap.hasModel) el.setAttribute('model', cfg.model);
+      if (cap.hasTopK) el.setAttribute('top-k', cfg.topK);
+      if (cap.hasTemperature) el.setAttribute('temperature', cfg.temperature);
+      if (cap.hasMaxHistory) el.setAttribute('max-history', cfg.maxHistory);
+      if (cap.hasToolName) el.setAttribute('tool-name', cfg.toolName);
+      if (cap.hasSystemPrompt && cfg.systemPrompt) el.setAttribute('system-prompt', cfg.systemPrompt);
+      if (cap.hasStreaming) el.setAttribute('streaming', cfg.streaming);
+      el.setAttribute('stream', String(cfg.streaming));
+      if (cap.hasSources) el.setAttribute('show-sources', cfg.sources);
+      el.setAttribute('include-sources', String(cfg.sources));
+      if (cap.hasConfidence) el.setAttribute('show-confidence', cfg.confidence);
+      if (cap.hasGrounding) el.setAttribute('show-grounding', cfg.grounding);
+      if (cap.hasFeedback) el.setAttribute('feedback', cfg.feedback);
+      // Force inline in preview
       el.setAttribute('position', 'inline');
-      if (cap.hasTitle) el.setAttribute('title', document.getElementById('eval-title').value);
-      if (cap.hasLocale) el.setAttribute('locale', document.getElementById('eval-locale').value);
-      el.setAttribute('session-id', 'eval-' + Date.now());
+      if (cap.hasLocale) el.setAttribute('locale', cfg.locale);
+      if (cap.hasTitle) el.setAttribute('title', cfg.title);
+      if (cap.hasPlaceholder) el.setAttribute('placeholder', cfg.placeholder);
+      if (cap.hasSessionId) el.setAttribute('session-id', cfg.sessionId);
+      if (cap.hasColor && cap.tag !== 'draga-chat') el.setAttribute('theme-color', cfg.color);
+      if (cap.hasColor && cap.tag === 'draga-chat') el.style.setProperty('--draga-primary', cfg.color);
 
-      // Apply draga-chat CSS custom property
-      if (cap.tag === 'draga-chat') {
-        el.style.setProperty('--draga-primary', '#2563eb');
-      }
-
-      mount.appendChild(el);
-      onEvalConfigChange();
+      host.appendChild(el);
     }
 
     // ── Init ──
-    onEvalWidgetChange();
+    genApplyVisibility();
+    genUpdate();
   </script>
 </body>
 </html>
