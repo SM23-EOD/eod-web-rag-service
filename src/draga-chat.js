@@ -466,9 +466,9 @@ class DragaProtocolMCP {
   async sendMessage(query, opts = {}) {
     this._abort = new AbortController();
     const body = {
-      tool: 'generate_rag_answer',
+      tool_name: 'generate_rag_answer',
       arguments: {
-        question: query,
+        query: query,
         tenant_id: opts.tenantId,
         top_k: opts.topK ?? 5,
         include_sources: opts.includeSources !== false,
@@ -508,7 +508,7 @@ class DragaProtocolMCP {
 
   /** Fetch a specific document chunk via MCP tool */
   async getDocumentChunk(chunkUri) {
-    const body = { tool: 'get_document_chunk', arguments: { chunk_uri: chunkUri } };
+    const body = { tool_name: 'get_document_chunk', arguments: { chunk_uri: chunkUri } };
     const res = await fetch(`${this.baseUrl}/mcp/tools/call`, {
       method: 'POST', headers: this._headers(), body: JSON.stringify(body),
     });
