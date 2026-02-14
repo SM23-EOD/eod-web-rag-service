@@ -1011,12 +1011,19 @@ const App = {
     async loadTenants(preselect) {
         try {
             const res = await api.listTenants(true);
-            const tenants = res.tenants || res;
+            const tenants = Array.isArray(res) ? res : (res.tenants || []);
             const sel = document.getElementById('tenantSelect');
-            sel.innerHTML = tenants.map(t =>
-                `<option value="${t.tenant_id}" ${t.tenant_id === preselect ? 'selected' : ''}>${t.name} (${t.tenant_id})</option>`
-            ).join('');
-            this.tenantId = preselect || tenants[0]?.tenant_id || 'default';
+            if (!tenants.length) {
+                sel.innerHTML = '<option value="default">default</option>';
+                this.tenantId = 'default';
+            } else {
+                sel.innerHTML = tenants.map(t =>
+                    `<option value="${t.tenant_id}" ${t.tenant_id === preselect ? 'selected' : ''}>${t.name} (${t.tenant_id})</option>`
+                ).join('');
+                // Validate preselect exists in tenant list
+                const valid = preselect && tenants.some(t => t.tenant_id === preselect);
+                this.tenantId = valid ? preselect : tenants[0].tenant_id;
+            }
             sel.value = this.tenantId;
             await this.loadTenantInfo();
         } catch (e) {
