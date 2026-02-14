@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tenant — EOD RAG</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --primary: #ec8951;
+    --primary-dark: #d97a45;
+    --primary-light: #fde8d8;
+    --primary-alpha: rgba(236,137,81,0.15);
+    --secondary: #485ff2;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --bg-dark: #131a22;
+    --bg-main: #1a2332;
+    --bg-card: #222d3a;
+    --bg-input: #2a3747;
+    --bg-hover: #2f3e50;
+    --text-primary: #f0f2f5;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #2a3747;
+    --border-light: #334155;
+    --shadow: 0 4px 24px rgba(0,0,0,0.25);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-lg: 16px;
+    --transition: 0.2s ease;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.app {
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    height: 100vh;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────── */
+.header {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+}
+.header-left { display:flex; align-items:center; gap:14px; }
+.header-logo { font-size:22px; }
+.header-title { font-size:16px; font-weight:700; }
+.header-tenant {
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg-card); border:1px solid var(--border);
+    padding:6px 14px; border-radius:var(--radius-sm);
+    font-size:13px; color:var(--text-secondary);
+}
+.header-tenant select {
+    background:transparent; border:none; color:var(--primary);
+    font-weight:700; font-family:inherit; font-size:13px;
+    cursor:pointer; outline:none;
+}
+.header-tenant select option { background:var(--bg-card); color:var(--text-primary); }
+.header-right { display:flex; align-items:center; gap:10px; }
+.header-badge {
+    padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.badge-active { background:rgba(34,197,94,0.15); color:var(--success); }
+.badge-inactive { background:rgba(239,68,68,0.15); color:var(--danger); }
+.breadcrumb {
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--text-muted);
+}
+.breadcrumb a { color:var(--text-muted); text-decoration:none; }
+.breadcrumb a:hover { color:var(--primary); }
+.breadcrumb .sep { opacity:0.4; }
+
+/* ── MAIN CONTENT ───────────────────────────────────────────── */
+.main {
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    overflow:hidden;
+}
+
+/* ── SIDEBAR NAV ────────────────────────────────────────────── */
+.sidebar {
+    background:var(--bg-main);
+    border-right:1px solid var(--border);
+    padding:16px 0;
+    overflow-y:auto;
+}
+.sidebar-section {
+    padding:6px 16px;
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    color:var(--text-muted); letter-spacing:1.2px;
+    margin-top:12px;
+}
+.sidebar-section:first-child { margin-top:0; }
+.nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 20px; cursor:pointer;
+    color:var(--text-secondary); font-size:13px; font-weight:400;
+    transition: var(--transition);
+    border-left:3px solid transparent;
+}
+.nav-item:hover { background:var(--bg-hover); color:var(--text-primary); }
+.nav-item.active {
+    background:var(--primary-alpha);
+    color:var(--primary);
+    border-left-color:var(--primary);
+    font-weight:700;
+}
+.nav-item .icon { font-size:16px; width:22px; text-align:center; }
+.nav-item .badge-sm {
+    margin-left:auto;
+    background:var(--primary-alpha);
+    color:var(--primary);
+    padding:2px 7px; border-radius:10px;
+    font-size:10px; font-weight:700;
+}
+
+/* ── CONTENT AREA ───────────────────────────────────────────── */
+.content {
+    overflow-y:auto;
+    padding:24px;
+    background:var(--bg-dark);
+}
+.module { display:none; }
+.module.active { display:block; }
+.module-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:20px;
+}
+.module-title { font-size:20px; font-weight:700; }
+.module-subtitle { font-size:13px; color:var(--text-muted); margin-top:2px; }
+
+/* ── STAT CARDS ─────────────────────────────────────────────── */
+.stats-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap:14px; margin-bottom:20px;
+}
+.stat-card {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+}
+.stat-card .label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; }
+.stat-card .value { font-size:26px; font-weight:900; margin:4px 0 0; }
+.stat-card .sub { font-size:11px; color:var(--text-secondary); }
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 16px; border-radius:var(--radius-sm);
+    font-family:inherit; font-size:13px; font-weight:600;
+    border:1px solid var(--border); cursor:pointer;
+    transition:var(--transition);
+    background:var(--bg-card); color:var(--text-primary);
+}
+.btn:hover { background:var(--bg-hover); }
+.btn-primary { background:var(--primary); border-color:var(--primary); color:#fff; }
+.btn-primary:hover { background:var(--primary-dark); }
+.btn-danger { background:var(--danger); border-color:var(--danger); color:#fff; }
+.btn-danger:hover { opacity:0.85; }
+.btn-success { background:var(--success); border-color:var(--success); color:#fff; }
+.btn-success:hover { opacity:0.85; }
+.btn-info { background:var(--info); border-color:var(--info); color:#fff; }
+.btn-info:hover { opacity:0.85; }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-group { display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ── TABLES ─────────────────────────────────────────────────── */
+.table-wrap {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden;
+}
+.table-toolbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; border-bottom:1px solid var(--border);
+    flex-wrap:wrap; gap:10px;
+}
+.table-toolbar .search-box {
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:0 12px;
+}
+.table-toolbar .search-box input {
+    background:none; border:none; color:var(--text-primary);
+    font-family:inherit; font-size:13px; padding:8px 0;
+    outline:none; width:200px;
+}
+.table-toolbar select {
+    background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-primary); border-radius:var(--radius-sm);
+    padding:8px 12px; font-family:inherit; font-size:13px;
+    cursor:pointer;
+}
+table {
+    width:100%; border-collapse:collapse; font-size:13px;
+}
+th {
+    text-align:left; padding:10px 16px;
+    background:var(--bg-input); color:var(--text-muted);
+    font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+    font-weight:600; white-space:nowrap;
+}
+td {
+    padding:10px 16px; border-top:1px solid var(--border);
+    vertical-align:middle;
+}
+tr:hover td { background:var(--bg-hover); }
+.status-dot {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:600;
+}
+.status-dot::before {
+    content:''; width:8px; height:8px; border-radius:50%;
+}
+.status-dot.indexed::before { background:var(--success); }
+.status-dot.processing::before { background:var(--warning); }
+.status-dot.pending::before { background:var(--info); }
+.status-dot.error::before { background:var(--danger); }
+.status-dot.uploaded::before { background:var(--text-muted); }
+.table-empty {
+    text-align:center; padding:40px; color:var(--text-muted);
+    font-size:14px;
+}
+.table-footer {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 16px; border-top:1px solid var(--border);
+    font-size:12px; color:var(--text-muted);
+}
+.pagination { display:flex; gap:4px; }
+.pagination button {
+    background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-secondary); padding:4px 10px; border-radius:4px;
+    cursor:pointer; font-size:12px;
+}
+.pagination button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.pagination button:hover:not(.active) { background:var(--bg-hover); }
+
+/* ── FORMS ──────────────────────────────────────────────────── */
+.form-group { margin-bottom:14px; }
+.form-group label {
+    display:block; font-size:12px; font-weight:600;
+    color:var(--text-secondary); margin-bottom:5px;
+}
+.form-group input, .form-group textarea, .form-group select {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-primary); border-radius:var(--radius-sm);
+    padding:9px 12px; font-family:inherit; font-size:13px;
+    transition:var(--transition);
+}
+.form-group input:focus, .form-group textarea:focus {
+    outline:none; border-color:var(--primary);
+}
+.form-group textarea { resize:vertical; min-height:80px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+/* ── MODALS ─────────────────────────────────────────────────── */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.65);
+    display:none; align-items:center; justify-content:center;
+    z-index:1000;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:28px;
+    width:90%; max-width:560px; max-height:85vh; overflow-y:auto;
+    box-shadow:var(--shadow);
+}
+.modal-title { font-size:18px; font-weight:700; margin-bottom:18px; }
+.modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+
+/* ── PANELS ─────────────────────────────────────────────────── */
+.panel {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-bottom:16px;
+}
+.panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    cursor:pointer;
+}
+.panel-header h3 { font-size:14px; font-weight:700; }
+.panel-header .toggle { font-size:12px; color:var(--text-muted); transition:var(--transition); }
+.panel-body { padding:18px; }
+.panel.collapsed .panel-body { display:none; }
+.panel.collapsed .toggle { transform:rotate(-90deg); }
+
+/* ── SEARCH / CHAT ──────────────────────────────────────────── */
+.search-area {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px; margin-bottom:16px;
+}
+.search-input-row {
+    display:flex; gap:10px; margin-bottom:14px;
+}
+.search-input-row input {
+    flex:1; background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-primary); border-radius:var(--radius-sm);
+    padding:10px 14px; font-family:inherit; font-size:14px;
+}
+.search-input-row input:focus { outline:none; border-color:var(--primary); }
+
+.search-tabs {
+    display:flex; gap:0; margin-bottom:16px;
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+    overflow:hidden;
+}
+.search-tab {
+    flex:1; padding:8px 14px; text-align:center;
+    font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--bg-input); color:var(--text-secondary);
+    border-right:1px solid var(--border);
+    transition:var(--transition);
+}
+.search-tab:last-child { border-right:none; }
+.search-tab.active { background:var(--primary); color:#fff; }
+.search-tab:hover:not(.active) { background:var(--bg-hover); }
+
+.results-container {
+    min-height:200px;
+}
+.result-card {
+    background:var(--bg-input);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 16px; margin-bottom:10px;
+    transition:var(--transition);
+}
+.result-card:hover { border-color:var(--primary); }
+.result-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+}
+.result-source { font-size:12px; color:var(--primary); font-weight:600; }
+.result-score {
+    font-size:11px; padding:2px 8px; border-radius:10px;
+    font-weight:700;
+}
+.score-high { background:rgba(34,197,94,0.15); color:var(--success); }
+.score-mid { background:rgba(245,158,11,0.15); color:var(--warning); }
+.score-low { background:rgba(239,68,68,0.15); color:var(--danger); }
+.result-text { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+.result-meta { font-size:11px; color:var(--text-muted); margin-top:6px; display:flex; gap:12px; }
+
+/* ── CHAT PANEL ─────────────────────────────────────────────── */
+.chat-container {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    display:flex; flex-direction:column;
+    height:500px;
+}
+.chat-messages {
+    flex:1; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:12px;
+}
+.chat-msg {
+    max-width:85%; padding:12px 16px;
+    border-radius:var(--radius); font-size:13px; line-height:1.6;
+}
+.chat-msg.user {
+    align-self:flex-end;
+    background:var(--primary); color:#fff;
+    border-bottom-right-radius:4px;
+}
+.chat-msg.assistant {
+    align-self:flex-start;
+    background:var(--bg-input); color:var(--text-primary);
+    border-bottom-left-radius:4px;
+}
+.chat-msg.assistant .sources-list {
+    margin-top:8px; padding-top:8px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--text-muted);
+}
+.chat-input-row {
+    display:flex; gap:8px; padding:12px 16px;
+    border-top:1px solid var(--border);
+}
+.chat-input-row input {
+    flex:1; background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-primary); border-radius:var(--radius-sm);
+    padding:10px 14px; font-family:inherit; font-size:13px;
+}
+.chat-input-row input:focus { outline:none; border-color:var(--primary); }
+
+/* ── WIDGET PREVIEW ─────────────────────────────────────────── */
+.widget-preview-frame {
+    background:#f8f9fa;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    min-height:500px;
+    position:relative;
+    overflow:hidden;
+}
+.widget-config-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:20px;
+}
+.color-input-row {
+    display:flex; align-items:center; gap:10px;
+}
+.color-input-row input[type=color] {
+    width:36px; height:36px; border:1px solid var(--border);
+    border-radius:var(--radius-sm); cursor:pointer;
+    background:none; padding:2px;
+}
+.code-block {
+    background:var(--bg-input);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 16px;
+    font-family:'Fira Code', 'Cascadia Code', monospace;
+    font-size:12px; line-height:1.6;
+    color:var(--success);
+    overflow-x:auto;
+    white-space:pre-wrap;
+    word-break:break-all;
+}
+.copy-btn {
+    position:absolute; top:8px; right:8px;
+    background:var(--bg-card); border:1px solid var(--border);
+    color:var(--text-secondary); padding:4px 8px;
+    border-radius:4px; cursor:pointer; font-size:11px;
+}
+.copy-btn:hover { color:var(--primary); }
+
+/* ── FILE DROP ZONE ─────────────────────────────────────────── */
+.drop-zone {
+    border:2px dashed var(--border);
+    border-radius:var(--radius);
+    padding:40px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:var(--transition);
+    background:var(--bg-input);
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color:var(--primary);
+    background:var(--primary-alpha);
+}
+.drop-zone .icon { font-size:32px; margin-bottom:8px; }
+.drop-zone .text { font-size:14px; color:var(--text-secondary); }
+.drop-zone .hint { font-size:11px; color:var(--text-muted); margin-top:4px; }
+.file-list { margin-top:12px; }
+.file-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 12px; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius-sm); margin-bottom:6px; font-size:13px;
+}
+.file-item .remove { cursor:pointer; color:var(--danger); font-size:16px; }
+
+/* ── TOASTS ─────────────────────────────────────────────────── */
+.toast-container {
+    position:fixed; top:16px; right:16px; z-index:9999;
+    display:flex; flex-direction:column; gap:8px;
+}
+.toast {
+    padding:12px 18px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; color:#fff;
+    animation:slideIn .3s ease;
+    max-width:380px;
+}
+.toast.success { background:var(--success); }
+.toast.error { background:var(--danger); }
+.toast.info { background:var(--info); }
+.toast.warning { background:var(--warning); }
+@keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:none; opacity:1; } }
+
+/* ── LOADING ────────────────────────────────────────────────── */
+.spinner {
+    display:inline-block; width:16px; height:16px;
+    border:2px solid var(--border); border-top-color:var(--primary);
+    border-radius:50%; animation:spin .6s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-overlay {
+    display:flex; align-items:center; justify-content:center;
+    padding:60px; color:var(--text-muted); gap:10px; font-size:14px;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media(max-width:900px) {
+    .main { grid-template-columns:1fr; }
+    .sidebar { display:none; }
+    .widget-config-grid { grid-template-columns:1fr; }
+    .form-row { grid-template-columns:1fr; }
+}
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- ═══ HEADER ══════════════════════════════════════════════ -->
+    <header class="header">
+        <div class="header-left">
+            <span class="header-logo">🏢</span>
+            <div>
+                <div class="header-title">Gestión de Tenant</div>
+                <nav class="breadcrumb">
+                    <a href="integration.html">Hub</a><span class="sep">›</span>
+                    <a href="dashboard.html">Dashboard</a><span class="sep">›</span>
+                    <span id="breadcrumbTenant">Tenant</span>
+                </nav>
+            </div>
+            <div class="header-tenant">
+                <span>Tenant:</span>
+                <select id="tenantSelect" onchange="App.switchTenant(this.value)"></select>
+            </div>
+            <span id="tenantBadge" class="header-badge badge-active">Activo</span>
+        </div>
+        <div class="header-right">
+            <span id="tenantModel" style="font-size:11px;color:var(--text-muted)"></span>
+            <span id="tenantDocs" style="font-size:11px;color:var(--text-secondary)"></span>
+        </div>
+    </header>
+
+    <!-- ═══ MAIN ════════════════════════════════════════════════ -->
+    <div class="main">
+        <!-- ── SIDEBAR ──────────────────────────────────────── -->
+        <nav class="sidebar">
+            <div class="sidebar-section">Ingestion</div>
+            <div class="nav-item active" onclick="App.nav('docs')" data-mod="docs">
+                <span class="icon">📄</span> Documentos
+                <span class="badge-sm" id="navDocCount">0</span>
+            </div>
+            <div class="nav-item" onclick="App.nav('upload')" data-mod="upload">
+                <span class="icon">⬆️</span> Subir Archivos
+            </div>
+            <div class="nav-item" onclick="App.nav('tasks')" data-mod="tasks">
+                <span class="icon">⚙️</span> Tareas
+                <span class="badge-sm" id="navTaskCount">0</span>
+            </div>
+
+            <div class="sidebar-section">Indexación</div>
+            <div class="nav-item" onclick="App.nav('indexing')" data-mod="indexing">
+                <span class="icon">🔗</span> Indexación Semántica
+            </div>
+
+            <div class="sidebar-section">Búsqueda</div>
+            <div class="nav-item" onclick="App.nav('search')" data-mod="search">
+                <span class="icon">🔍</span> Búsqueda Directa
+            </div>
+            <div class="nav-item" onclick="App.nav('chat')" data-mod="chat">
+                <span class="icon">💬</span> Chat con DRAGA
+            </div>
+
+            <div class="sidebar-section">Widget</div>
+            <div class="nav-item" onclick="App.nav('widget')" data-mod="widget">
+                <span class="icon">🧩</span> Configuración
+            </div>
+            <div class="nav-item" onclick="App.nav('embed')" data-mod="embed">
+                <span class="icon">📋</span> Código Embed
+            </div>
+        </nav>
+
+        <!-- ── CONTENT ──────────────────────────────────────── -->
+        <div class="content">
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: DOCUMENTOS
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-docs" class="module active">
+    <div class="module-header">
+        <div>
+            <div class="module-title">📄 Documentos del Tenant</div>
+            <div class="module-subtitle">Gestión completa del ciclo de vida de fuentes documentales</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm" onclick="Docs.refresh()">🔄 Actualizar</button>
+            <button class="btn btn-sm btn-primary" onclick="App.nav('upload')">⬆️ Subir</button>
+            <button class="btn btn-sm btn-danger" onclick="Docs.deleteAll()" title="Eliminar todos los documentos">🗑️ Eliminar Todo</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="docStats"></div>
+
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <div class="search-box">
+                <span>🔍</span>
+                <input type="text" placeholder="Buscar documentos..." id="docSearchInput" oninput="Docs.filter()">
+            </div>
+            <div style="display:flex;gap:8px">
+                <select id="docStatusFilter" onchange="Docs.filter()">
+                    <option value="">Todos los estados</option>
+                    <option value="indexed">Indexado</option>
+                    <option value="processing">Procesando</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="uploaded">Subido</option>
+                    <option value="error">Error</option>
+                </select>
+                <select id="docCategoryFilter" onchange="Docs.filter()">
+                    <option value="">Todas las categorías</option>
+                </select>
+            </div>
+        </div>
+        <div id="docTableBody"></div>
+        <div class="table-footer">
+            <span id="docPaginationInfo"></span>
+            <div class="pagination" id="docPagination"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: UPLOAD
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-upload" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">⬆️ Subir Documentos</div>
+            <div class="module-subtitle">Cargar nuevas fuentes documentales para ingestion</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <div class="drop-zone" id="dropZone">
+                <div class="icon">📁</div>
+                <div class="text">Arrastra archivos aquí o haz clic para seleccionar</div>
+                <div class="hint">Formatos: PDF, MD, TXT, DOCX, ODT, XLSX • Máx 50MB por archivo</div>
+                <input type="file" id="fileInput" multiple accept=".pdf,.md,.txt,.docx,.odt,.xlsx" style="display:none">
+            </div>
+            <div class="file-list" id="fileList"></div>
+
+            <div class="form-row" style="margin-top:16px">
+                <div class="form-group">
+                    <label>Auto-indexar tras upload</label>
+                    <select id="uploadAutoIndex">
+                        <option value="true">Sí — indexar inmediatamente</option>
+                        <option value="false">No — solo almacenar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Modo de procesamiento</label>
+                    <select id="uploadBackground">
+                        <option value="false">Síncrono — esperar resultado</option>
+                        <option value="true">Asíncrono — en segundo plano</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top:12px">
+                <button class="btn btn-primary" id="uploadBtn" onclick="Upload.submit()" disabled>📤 Subir Documentos</button>
+                <button class="btn" onclick="Upload.clear()">🗑️ Limpiar</button>
+            </div>
+
+            <div id="uploadResults" style="margin-top:16px"></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <h3>📂 Sincronizar desde Directorio (servidor)</h3>
+            <span class="toggle">▼</span>
+        </div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label>Ruta del directorio en el servidor</label>
+                <input type="text" id="syncDir" placeholder="/data/documentos/tenant/">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Recursivo</label>
+                    <select id="syncRecursive">
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Forzar reindexación</label>
+                    <select id="syncForce">
+                        <option value="false">No</option>
+                        <option value="true">Sí</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-info" onclick="Upload.syncDir()">📂 Sincronizar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: TASKS
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-tasks" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">⚙️ Tareas de Ingestion</div>
+            <div class="module-subtitle">Monitoreo de tareas de procesamiento en segundo plano</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm" onclick="Tasks.refresh()">🔄 Actualizar</button>
+            <button class="btn btn-sm btn-danger" onclick="Tasks.cleanup()">🧹 Limpiar Completadas</button>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <div style="display:flex;gap:8px">
+                <select id="taskStateFilter" onchange="Tasks.refresh()">
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="running">Ejecutando</option>
+                    <option value="completed">Completada</option>
+                    <option value="failed">Fallida</option>
+                </select>
+            </div>
+        </div>
+        <div id="taskTableBody"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: INDEXING
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-indexing" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">🔗 Indexación Semántica</div>
+            <div class="module-subtitle">Gestión del índice vectorial y procesamiento de chunks</div>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="indexStats"></div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <h3 style="font-size:14px;margin-bottom:12px">Acciones de Indexación</h3>
+            <div class="btn-group">
+                <button class="btn btn-info" onclick="Indexing.processPending(false)">
+                    ▶️ Procesar Pendientes
+                </button>
+                <button class="btn btn-warning" onclick="Indexing.processPending(true)">
+                    🔄 Procesar con Reindexación
+                </button>
+                <button class="btn btn-danger" onclick="Indexing.fullReset()">
+                    ⚠️ Reset Completo + Reindexar
+                </button>
+            </div>
+            <div id="indexActionResult" style="margin-top:14px"></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <h3>📊 Documentos por Estado de Indexación</h3>
+            <span class="toggle">▼</span>
+        </div>
+        <div class="panel-body">
+            <div id="indexDocTable"></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <h3>🔧 Configuración de Retrieval</h3>
+            <span class="toggle">▼</span>
+        </div>
+        <div class="panel-body" id="retrievalConfig"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: SEARCH
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-search" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">🔍 Búsqueda en Base de Conocimientos</div>
+            <div class="module-subtitle">Búsqueda directa en la base de datos vectorial del tenant</div>
+        </div>
+    </div>
+
+    <div class="search-area">
+        <div class="search-input-row">
+            <input type="text" id="searchQuery" placeholder="Escribe tu consulta de búsqueda semántica..."
+                   onkeydown="if(event.key==='Enter')Search.execute()">
+            <button class="btn btn-primary" onclick="Search.execute()">🔍 Buscar</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Resultados (top_k)</label>
+                <input type="number" id="searchTopK" value="5" min="1" max="20">
+            </div>
+            <div class="form-group">
+                <label>Categoría</label>
+                <select id="searchCategory">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-container" id="searchResults">
+        <div class="loading-overlay" style="display:none" id="searchLoading">
+            <div class="spinner"></div> Buscando...
+        </div>
+        <div class="table-empty" id="searchEmpty">
+            Escribe una consulta para buscar en la base de conocimientos semántica
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: CHAT
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-chat" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">💬 Chat con DRAGA</div>
+            <div class="module-subtitle">Interacción conversacional con el agente RAG del tenant</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm" onclick="Chat.clear()">🗑️ Limpiar Chat</button>
+        </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:14px">
+        <div class="form-group">
+            <label>Modelo</label>
+            <select id="chatModel">
+                <option value="eod-rag">eod-rag (default)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Top K</label>
+            <input type="number" id="chatTopK" value="5" min="1" max="20">
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg assistant">
+                ¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?
+            </div>
+        </div>
+        <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Escribe tu pregunta..."
+                   onkeydown="if(event.key==='Enter'&&!event.shiftKey)Chat.send()">
+            <button class="btn btn-primary" onclick="Chat.send()" id="chatSendBtn">Enviar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: WIDGET CONFIG
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-widget" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">🧩 Configuración del Widget DRAGA</div>
+            <div class="module-subtitle">Personaliza la apariencia y comportamiento del widget conversacional</div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-primary" onclick="Widget.save()">💾 Guardar</button>
+            <button class="btn btn-sm btn-danger" onclick="Widget.reset()">🔄 Reset a Defaults</button>
+        </div>
+    </div>
+
+    <div class="widget-config-grid">
+        <div>
+            <!-- THEME -->
+            <div class="panel">
+                <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <h3>🎨 Tema</h3><span class="toggle">▼</span>
+                </div>
+                <div class="panel-body" id="widgetThemeForm"></div>
+            </div>
+            <!-- BRANDING -->
+            <div class="panel">
+                <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <h3>🏷️ Branding</h3><span class="toggle">▼</span>
+                </div>
+                <div class="panel-body" id="widgetBrandingForm"></div>
+            </div>
+            <!-- BEHAVIOR -->
+            <div class="panel">
+                <div class="panel-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <h3>⚡ Comportamiento</h3><span class="toggle">▼</span>
+                </div>
+                <div class="panel-body" id="widgetBehaviorForm"></div>
+            </div>
+        </div>
+        <div>
+            <!-- LIVE PREVIEW -->
+            <div class="panel" style="position:sticky;top:0">
+                <div class="panel-header">
+                    <h3>👁️ Vista Previa</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="widget-preview-frame" id="widgetPreview"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODULE: EMBED CODE
+     ═══════════════════════════════════════════════════════════ -->
+<div id="mod-embed" class="module">
+    <div class="module-header">
+        <div>
+            <div class="module-title">📋 Código de Integración</div>
+            <div class="module-subtitle">Copia el código para integrar el widget DRAGA en tu web</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <h3 style="font-size:14px;margin-bottom:12px">Opción 1: Script Tag (recomendado)</h3>
+            <div style="position:relative">
+                <div class="code-block" id="embedScript"></div>
+                <button class="copy-btn" onclick="Embed.copy('embedScript')">📋 Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <h3 style="font-size:14px;margin-bottom:12px">Opción 2: Web Component directo</h3>
+            <div style="position:relative">
+                <div class="code-block" id="embedComponent"></div>
+                <button class="copy-btn" onclick="Embed.copy('embedComponent')">📋 Copiar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-body">
+            <h3 style="font-size:14px;margin-bottom:12px">Opción 3: iframe</h3>
+            <div style="position:relative">
+                <div class="code-block" id="embedIframe"></div>
+                <button class="copy-btn" onclick="Embed.copy('embedIframe')">📋 Copiar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        </div><!-- /.content -->
+    </div><!-- /.main -->
+</div><!-- /.app -->
+
+<!-- ═══ MODALS ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+        <div class="modal-title" id="confirmTitle">Confirmar</div>
+        <p id="confirmMsg" style="font-size:14px;color:var(--text-secondary);line-height:1.6"></p>
+        <div class="modal-actions">
+            <button class="btn" onclick="Modals.close('confirmModal')">Cancelar</button>
+            <button class="btn btn-danger" id="confirmAction">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+    <div class="modal" style="max-width:700px">
+        <div class="modal-title" id="detailTitle">Detalle</div>
+        <div id="detailBody"></div>
+        <div class="modal-actions">
+            <button class="btn" onclick="Modals.close('detailModal')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   APP CONTROLLER
+   ═══════════════════════════════════════════════════════════════ */
+const App = {
+    tenantId: null,
+    tenantData: null,
+
+    async init() {
+        const params = new URLSearchParams(location.search);
+        await this.loadTenants(params.get('tenant'));
+        this.nav(params.get('mod') || 'docs');
+    },
+
+    async loadTenants(preselect) {
+        try {
+            const res = await api.listTenants(true);
+            const tenants = res.tenants || res;
+            const sel = document.getElementById('tenantSelect');
+            sel.innerHTML = tenants.map(t =>
+                `<option value="${t.tenant_id}" ${t.tenant_id === preselect ? 'selected' : ''}>${t.name} (${t.tenant_id})</option>`
+            ).join('');
+            this.tenantId = preselect || tenants[0]?.tenant_id || 'default';
+            sel.value = this.tenantId;
+            await this.loadTenantInfo();
+        } catch (e) {
+            Toast.show('Error cargando tenants: ' + e.message, 'error');
+        }
+    },
+
+    async switchTenant(id) {
+        this.tenantId = id;
+        const url = new URL(location);
+        url.searchParams.set('tenant', id);
+        history.replaceState(null, '', url);
+        await this.loadTenantInfo();
+        // Reload current module
+        const active = document.querySelector('.nav-item.active');
+        if (active) this.nav(active.dataset.mod);
+    },
+
+    async loadTenantInfo() {
+        try {
+            this.tenantData = await api.getTenant(this.tenantId);
+            document.getElementById('breadcrumbTenant').textContent = this.tenantData.name || this.tenantId;
+            document.getElementById('tenantModel').textContent = '🤖 ' + (this.tenantData.default_model || 'default');
+            document.getElementById('tenantDocs').textContent = '📄 ' + (this.tenantData.document_count ?? '?') + ' docs';
+            const badge = document.getElementById('tenantBadge');
+            if (this.tenantData.is_active !== false) {
+                badge.className = 'header-badge badge-active';
+                badge.textContent = 'Activo';
+            } else {
+                badge.className = 'header-badge badge-inactive';
+                badge.textContent = 'Inactivo';
+            }
+        } catch (e) {
+            console.warn('Could not load tenant info:', e);
+        }
+    },
+
+    nav(mod) {
+        document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        const el = document.getElementById('mod-' + mod);
+        if (el) el.classList.add('active');
+        const navEl = document.querySelector(`.nav-item[data-mod="${mod}"]`);
+        if (navEl) navEl.classList.add('active');
+        // Update URL
+        const url = new URL(location);
+        url.searchParams.set('mod', mod);
+        url.searchParams.set('tenant', this.tenantId);
+        history.replaceState(null, '', url);
+        // Load module data
+        const loaders = {
+            docs: () => Docs.load(),
+            upload: () => {},
+            tasks: () => Tasks.refresh(),
+            indexing: () => Indexing.load(),
+            search: () => Search.init(),
+            chat: () => {},
+            widget: () => Widget.load(),
+            embed: () => Embed.generate(),
+        };
+        (loaders[mod] || (() => {}))();
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   DOCUMENTS MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Docs = {
+    data: [],
+    filtered: [],
+    page: 1,
+    perPage: 15,
+    categories: new Set(),
+
+    async load() {
+        try {
+            await Promise.all([this.loadDocs(), this.loadStats()]);
+        } catch (e) {
+            Toast.show('Error cargando documentos: ' + e.message, 'error');
+        }
+    },
+
+    async loadDocs() {
+        const res = await api.listDocuments(App.tenantId);
+        this.data = res.documents || [];
+        this.categories.clear();
+        this.data.forEach(d => { if(d.category) this.categories.add(d.category); });
+        // Populate category filter
+        const catSel = document.getElementById('docCategoryFilter');
+        const searchCatSel = document.getElementById('searchCategory');
+        const cats = [...this.categories].sort();
+        const catOpts = '<option value="">Todas las categorías</option>' +
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        catSel.innerHTML = catOpts;
+        if(searchCatSel) searchCatSel.innerHTML = '<option value="">Todas</option>' +
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('navDocCount').textContent = this.data.length;
+        this.filter();
+    },
+
+    async loadStats() {
+        try {
+            const stats = await api.documentStats(App.tenantId);
+            const grid = document.getElementById('docStats');
+            const statusCounts = {};
+            this.data.forEach(d => { statusCounts[d.status] = (statusCounts[d.status]||0) + 1; });
+            const totalChunks = this.data.reduce((s, d) => s + (d.chunk_count||0), 0);
+            const totalSize = this.data.reduce((s, d) => s + (d.file_size_bytes||0), 0);
+            grid.innerHTML = `
+                <div class="stat-card"><div class="label">Total Documentos</div><div class="value">${this.data.length}</div></div>
+                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${statusCounts['indexed']||0}</div></div>
+                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--warning)">${(statusCounts['pending']||0)+(statusCounts['uploaded']||0)+(statusCounts['processing']||0)}</div></div>
+                <div class="stat-card"><div class="label">Errores</div><div class="value" style="color:var(--danger)">${statusCounts['error']||0}</div></div>
+                <div class="stat-card"><div class="label">Total Chunks</div><div class="value">${totalChunks.toLocaleString()}</div></div>
+                <div class="stat-card"><div class="label">Tamaño Total</div><div class="value">${Util.fileSize(totalSize)}</div></div>
+            `;
+        } catch (e) {
+            console.warn('Stats error:', e);
+        }
+    },
+
+    filter() {
+        const q = document.getElementById('docSearchInput').value.toLowerCase();
+        const st = document.getElementById('docStatusFilter').value;
+        const cat = document.getElementById('docCategoryFilter').value;
+        this.filtered = this.data.filter(d => {
+            if (q && !d.filename.toLowerCase().includes(q) && !d.document_id.toLowerCase().includes(q)) return false;
+            if (st && d.status !== st) return false;
+            if (cat && d.category !== cat) return false;
+            return true;
+        });
+        this.page = 1;
+        this.render();
+    },
+
+    render() {
+        const start = (this.page - 1) * this.perPage;
+        const slice = this.filtered.slice(start, start + this.perPage);
+        const container = document.getElementById('docTableBody');
+
+        if (!slice.length) {
+            container.innerHTML = '<div class="table-empty">No se encontraron documentos</div>';
+        } else {
+            container.innerHTML = `<table>
+                <thead><tr>
+                    <th>Archivo</th><th>Estado</th><th>Categoría</th>
+                    <th>Chunks</th><th>Tamaño</th><th>Indexado</th><th>Acciones</th>
+                </tr></thead>
+                <tbody>${slice.map(d => `<tr>
+                    <td>
+                        <div style="font-weight:600">${Util.esc(d.filename)}</div>
+                        <div style="font-size:11px;color:var(--text-muted)">${d.document_id.slice(0,12)}…</div>
+                    </td>
+                    <td><span class="status-dot ${d.status}">${d.status}</span></td>
+                    <td><span style="font-size:12px;color:var(--text-secondary)">${d.category||'—'}</span></td>
+                    <td>${d.chunk_count||0}</td>
+                    <td>${Util.fileSize(d.file_size_bytes)}</td>
+                    <td style="font-size:11px;color:var(--text-muted)">${d.indexed_at ? Util.timeAgo(d.indexed_at) : '—'}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm" onclick="Docs.detail('${d.document_id}')" title="Ver detalle">👁️</button>
+                            <button class="btn btn-sm btn-info" onclick="Docs.reindex('${d.document_id}')" title="Reindexar">🔗</button>
+                            <button class="btn btn-sm btn-danger" onclick="Docs.delete('${d.document_id}','${Util.esc(d.filename)}')" title="Eliminar">🗑️</button>
+                        </div>
+                    </td>
+                </tr>`).join('')}</tbody></table>`;
+        }
+
+        // Pagination
+        const total = this.filtered.length;
+        const pages = Math.ceil(total / this.perPage);
+        document.getElementById('docPaginationInfo').textContent =
+            `${start+1}–${Math.min(start+this.perPage, total)} de ${total}`;
+        const pg = document.getElementById('docPagination');
+        pg.innerHTML = '';
+        for (let i = 1; i <= pages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            if (i === this.page) btn.classList.add('active');
+            btn.onclick = () => { this.page = i; this.render(); };
+            pg.appendChild(btn);
+        }
+    },
+
+    async detail(id) {
+        try {
+            const d = await api.getDocument(id, App.tenantId);
+            document.getElementById('detailTitle').textContent = d.filename;
+            document.getElementById('detailBody').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+                    <div><strong>ID:</strong><br><span style="font-size:11px;color:var(--text-muted);word-break:break-all">${d.document_id}</span></div>
+                    <div><strong>Estado:</strong><br><span class="status-dot ${d.status}">${d.status}</span></div>
+                    <div><strong>Categoría:</strong><br>${d.category||'—'}</div>
+                    <div><strong>Versión:</strong><br>${d.version}</div>
+                    <div><strong>Chunks:</strong><br>${d.chunk_count}</div>
+                    <div><strong>Tamaño:</strong><br>${Util.fileSize(d.file_size_bytes)}</div>
+                    <div><strong>Hash:</strong><br><span style="font-size:10px;color:var(--text-muted);word-break:break-all">${d.content_hash||'—'}</span></div>
+                    <div><strong>Indexado:</strong><br>${d.indexed_at || '—'}</div>
+                    ${d.error ? `<div style="grid-column:1/-1"><strong style="color:var(--danger)">Error:</strong><br>${Util.esc(d.error)}</div>` : ''}
+                </div>
+            `;
+            Modals.open('detailModal');
+        } catch (e) {
+            Toast.show('Error: ' + e.message, 'error');
+        }
+    },
+
+    async reindex(id) {
+        try {
+            await api.reindexDocument(id, App.tenantId);
+            Toast.show('Documento enviado a reindexar', 'success');
+            setTimeout(() => this.loadDocs(), 1000);
+        } catch (e) {
+            Toast.show('Error reindexando: ' + e.message, 'error');
+        }
+    },
+
+    async delete(id, name) {
+        Modals.confirm(
+            'Eliminar Documento',
+            `¿Estás seguro de eliminar <strong>${name}</strong>? Esta acción no se puede deshacer.`,
+            async () => {
+                try {
+                    await api.deleteDocument(id, App.tenantId);
+                    Toast.show('Documento eliminado', 'success');
+                    this.loadDocs();
+                } catch (e) {
+                    Toast.show('Error: ' + e.message, 'error');
+                }
+            }
+        );
+    },
+
+    async deleteAll() {
+        Modals.confirm(
+            'Eliminar TODOS los Documentos',
+            `¿Eliminar <strong>TODOS</strong> los documentos del tenant <strong>${App.tenantId}</strong>? Esta acción es irreversible.`,
+            async () => {
+                try {
+                    await api.deleteAllDocuments(App.tenantId);
+                    Toast.show('Todos los documentos eliminados', 'success');
+                    this.loadDocs();
+                } catch (e) {
+                    Toast.show('Error: ' + e.message, 'error');
+                }
+            }
+        );
+    },
+
+    refresh() { this.load(); }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   UPLOAD MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Upload = {
+    files: [],
+
+    init() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            this.addFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', () => {
+            this.addFiles(fileInput.files);
+            fileInput.value = '';
+        });
+    },
+
+    addFiles(fileList) {
+        for (const f of fileList) {
+            if (!this.files.some(x => x.name === f.name && x.size === f.size)) {
+                this.files.push(f);
+            }
+        }
+        this.renderFiles();
+    },
+
+    removeFile(idx) {
+        this.files.splice(idx, 1);
+        this.renderFiles();
+    },
+
+    renderFiles() {
+        const list = document.getElementById('fileList');
+        const btn = document.getElementById('uploadBtn');
+        btn.disabled = !this.files.length;
+        if (!this.files.length) { list.innerHTML = ''; return; }
+        list.innerHTML = this.files.map((f, i) => `
+            <div class="file-item">
+                <span>📄 ${Util.esc(f.name)} <span style="color:var(--text-muted)">(${Util.fileSize(f.size)})</span></span>
+                <span class="remove" onclick="Upload.removeFile(${i})">✕</span>
+            </div>
+        `).join('');
+    },
+
+    clear() {
+        this.files = [];
+        this.renderFiles();
+        document.getElementById('uploadResults').innerHTML = '';
+    },
+
+    async submit() {
+        if (!this.files.length) return;
+        const autoIndex = document.getElementById('uploadAutoIndex').value === 'true';
+        const background = document.getElementById('uploadBackground').value === 'true';
+        const btn = document.getElementById('uploadBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Subiendo...';
+
+        try {
+            const res = await api.uploadDocuments(this.files, App.tenantId, autoIndex, background);
+            const results = document.getElementById('uploadResults');
+
+            if (res.task_id) {
+                // Async upload
+                results.innerHTML = `
+                    <div class="stat-card" style="border-color:var(--info)">
+                        <div class="label">Tarea Creada</div>
+                        <div class="value" style="font-size:16px;color:var(--info)">${res.task_id}</div>
+                        <div class="sub">${res.message} • ${res.total_files} archivos</div>
+                        <button class="btn btn-sm btn-info" style="margin-top:8px" onclick="App.nav('tasks')">Ver Tareas</button>
+                    </div>`;
+            } else {
+                // Sync upload
+                results.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="label">Total</div><div class="value">${res.total}</div></div>
+                        <div class="stat-card"><div class="label">Exitosos</div><div class="value" style="color:var(--success)">${res.successful}</div></div>
+                        <div class="stat-card"><div class="label">Fallidos</div><div class="value" style="color:var(--danger)">${res.failed}</div></div>
+                        <div class="stat-card"><div class="label">Duplicados</div><div class="value">${res.duplicates}</div></div>
+                        <div class="stat-card"><div class="label">Chunks</div><div class="value">${res.chunks_created}</div></div>
+                    </div>
+                    ${res.results ? `<div style="margin-top:10px">${res.results.map(r => `
+                        <div class="file-item" style="border-color:${r.success?'var(--success)':'var(--danger)'}">
+                            <span>${r.success?'✅':'❌'} ${Util.esc(r.filename)} ${r.chunk_count?`(${r.chunk_count} chunks)`:''}${r.is_duplicate?' 🔄 duplicado':''}</span>
+                            ${r.error ? `<span style="color:var(--danger);font-size:11px">${Util.esc(r.error)}</span>` : ''}
+                        </div>
+                    `).join('')}</div>` : ''}
+                `;
+                Toast.show(`${res.successful} de ${res.total} archivos subidos correctamente`, 'success');
+                this.clear();
+            }
+        } catch (e) {
+            Toast.show('Error subiendo archivos: ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '📤 Subir Documentos';
+        }
+    },
+
+    async syncDir() {
+        const dir = document.getElementById('syncDir').value.trim();
+        if (!dir) { Toast.show('Ingresa una ruta de directorio', 'warning'); return; }
+        const recursive = document.getElementById('syncRecursive').value === 'true';
+        const force = document.getElementById('syncForce').value === 'true';
+        try {
+            const res = await api.syncDirectory(dir, App.tenantId, recursive, force);
+            Toast.show(`Sincronización: ${res.successful} exitosos, ${res.failed} fallidos de ${res.total}`, 'success');
+        } catch (e) {
+            Toast.show('Error sincronizando: ' + e.message, 'error');
+        }
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   TASKS MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Tasks = {
+    async refresh() {
+        const state = document.getElementById('taskStateFilter').value;
+        try {
+            const res = await api.listTasks(App.tenantId, state || null);
+            const tasks = res.tasks || res || [];
+            document.getElementById('navTaskCount').textContent = Array.isArray(tasks) ? tasks.length : 0;
+            const container = document.getElementById('taskTableBody');
+            if (!Array.isArray(tasks) || !tasks.length) {
+                container.innerHTML = '<div class="table-empty">No hay tareas registradas</div>';
+                return;
+            }
+            container.innerHTML = `<table>
+                <thead><tr>
+                    <th>ID</th><th>Estado</th><th>Tipo</th><th>Progreso</th><th>Creada</th><th>Acciones</th>
+                </tr></thead>
+                <tbody>${tasks.map(t => `<tr>
+                    <td style="font-size:11px;color:var(--text-muted)">${(t.task_id||t.id||'').slice(0,12)}…</td>
+                    <td><span class="status-dot ${t.state||t.status}">${t.state||t.status||'?'}</span></td>
+                    <td style="font-size:12px">${t.type||t.task_type||'—'}</td>
+                    <td>${t.progress != null ? t.progress + '%' : '—'}</td>
+                    <td style="font-size:11px;color:var(--text-muted)">${t.created_at ? Util.timeAgo(t.created_at) : '—'}</td>
+                    <td><button class="btn btn-sm" onclick="Tasks.detail('${t.task_id||t.id}')">👁️</button></td>
+                </tr>`).join('')}</tbody></table>`;
+        } catch (e) {
+            Toast.show('Error cargando tareas: ' + e.message, 'error');
+        }
+    },
+
+    async detail(id) {
+        try {
+            const t = await api.getTask(id);
+            document.getElementById('detailTitle').textContent = 'Tarea: ' + (id || '').slice(0,16);
+            document.getElementById('detailBody').innerHTML = `<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap;max-height:400px;overflow:auto">${JSON.stringify(t, null, 2)}</pre>`;
+            Modals.open('detailModal');
+        } catch (e) {
+            Toast.show('Error: ' + e.message, 'error');
+        }
+    },
+
+    async cleanup() {
+        Modals.confirm('Limpiar Tareas', 'Eliminar tareas completadas/fallidas del tenant.', async () => {
+            try {
+                const res = await api.cleanupTasks(App.tenantId);
+                Toast.show(res.message || 'Tareas limpiadas', 'success');
+                this.refresh();
+            } catch (e) {
+                Toast.show('Error: ' + e.message, 'error');
+            }
+        });
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   INDEXING MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Indexing = {
+    async load() {
+        await Promise.all([this.loadStats(), this.loadDocsByStatus(), this.loadRetrievalConfig()]);
+    },
+
+    async loadStats() {
+        try {
+            const docs = (await api.listDocuments(App.tenantId)).documents || [];
+            const stats = {};
+            let totalChunks = 0;
+            docs.forEach(d => {
+                stats[d.status] = (stats[d.status]||0) + 1;
+                totalChunks += d.chunk_count || 0;
+            });
+            const grid = document.getElementById('indexStats');
+            grid.innerHTML = `
+                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${stats['indexed']||0}</div></div>
+                <div class="stat-card"><div class="label">Procesando</div><div class="value" style="color:var(--warning)">${stats['processing']||0}</div></div>
+                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--info)">${(stats['pending']||0)+(stats['uploaded']||0)}</div></div>
+                <div class="stat-card"><div class="label">Con Error</div><div class="value" style="color:var(--danger)">${stats['error']||0}</div></div>
+                <div class="stat-card"><div class="label">Total Chunks en Índice</div><div class="value">${totalChunks.toLocaleString()}</div></div>
+                <div class="stat-card"><div class="label">Cobertura</div><div class="value">${docs.length ? Math.round((stats['indexed']||0)/docs.length*100) : 0}%</div></div>
+            `;
+        } catch (e) {
+            console.warn('Indexing stats error:', e);
+        }
+    },
+
+    async loadDocsByStatus() {
+        try {
+            const docs = (await api.listDocuments(App.tenantId)).documents || [];
+            const nonIndexed = docs.filter(d => d.status !== 'indexed');
+            const container = document.getElementById('indexDocTable');
+            if (!nonIndexed.length) {
+                container.innerHTML = '<div class="table-empty" style="padding:20px">✅ Todos los documentos están indexados</div>';
+                return;
+            }
+            container.innerHTML = `<table><thead><tr>
+                <th>Archivo</th><th>Estado</th><th>Chunks</th><th>Error</th><th>Acción</th>
+            </tr></thead><tbody>${nonIndexed.map(d => `<tr>
+                <td style="font-weight:600">${Util.esc(d.filename)}</td>
+                <td><span class="status-dot ${d.status}">${d.status}</span></td>
+                <td>${d.chunk_count||0}</td>
+                <td style="font-size:11px;color:var(--danger);max-width:200px;overflow:hidden;text-overflow:ellipsis">${d.error||'—'}</td>
+                <td><button class="btn btn-sm btn-info" onclick="Docs.reindex('${d.document_id}')">🔗 Reindexar</button></td>
+            </tr>`).join('')}</tbody></table>`;
+        } catch (e) {
+            console.warn('Doc status table error:', e);
+        }
+    },
+
+    async loadRetrievalConfig() {
+        try {
+            const tenant = App.tenantData || await api.getTenant(App.tenantId);
+            const rc = tenant.retrieval_config || {};
+            const container = document.getElementById('retrievalConfig');
+            container.innerHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Top K (resultados)</label>
+                        <input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Umbral de similitud</label>
+                        <input type="number" value="${rc.similarity_threshold||0.7}" id="rcThreshold" min="0" max="1" step="0.05">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tamaño de Chunk</label>
+                        <input type="number" value="${rc.chunk_size||500}" id="rcChunkSize" min="100" max="5000">
+                    </div>
+                    <div class="form-group">
+                        <label>Overlap entre Chunks</label>
+                        <input type="number" value="${rc.chunk_overlap||50}" id="rcOverlap" min="0" max="500">
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="Indexing.saveRetrievalConfig()">💾 Guardar Configuración</button>
+            `;
+        } catch (e) {
+            console.warn('Retrieval config error:', e);
+        }
+    },
+
+    async saveRetrievalConfig() {
+        try {
+            await api.updateTenant(App.tenantId, {
+                retrieval_config: {
+                    top_k: parseInt(document.getElementById('rcTopK').value),
+                    similarity_threshold: parseFloat(document.getElementById('rcThreshold').value),
+                    chunk_size: parseInt(document.getElementById('rcChunkSize').value),
+                    chunk_overlap: parseInt(document.getElementById('rcOverlap').value)
+                }
+            });
+            Toast.show('Configuración de retrieval guardada', 'success');
+            App.loadTenantInfo();
+        } catch (e) {
+            Toast.show('Error: ' + e.message, 'error');
+        }
+    },
+
+    async processPending(forceReindex) {
+        const result = document.getElementById('indexActionResult');
+        result.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Procesando...</div>';
+        try {
+            const res = await api.processPending(App.tenantId, forceReindex);
+            result.innerHTML = `<div class="stat-card" style="border-color:var(--success)">
+                <div class="label">Resultado</div>
+                <pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>
+            </div>`;
+            Toast.show('Procesamiento completado', 'success');
+            setTimeout(() => this.load(), 2000);
+        } catch (e) {
+            result.innerHTML = '';
+            Toast.show('Error: ' + e.message, 'error');
+        }
+    },
+
+    async fullReset() {
+        Modals.confirm(
+            '⚠️ Reset Completo',
+            `Esta acción eliminará <strong>todo el índice semántico</strong> del tenant <strong>${App.tenantId}</strong> y reindexará todos los documentos desde cero. Puede tomar varios minutos.`,
+            async () => {
+                const result = document.getElementById('indexActionResult');
+                result.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Reiniciando índice completo...</div>';
+                try {
+                    const res = await api.resetReindex(App.tenantId);
+                    result.innerHTML = `<div class="stat-card" style="border-color:var(--warning)">
+                        <div class="label">Reset Completado</div>
+                        <pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>
+                    </div>`;
+                    Toast.show('Reset e reindexación iniciada', 'success');
+                    setTimeout(() => this.load(), 3000);
+                } catch (e) {
+                    result.innerHTML = '';
+                    Toast.show('Error: ' + e.message, 'error');
+                }
+            }
+        );
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Search = {
+    init() {
+        // categories already populated by Docs
+    },
+
+    async execute() {
+        const query = document.getElementById('searchQuery').value.trim();
+        if (!query) { Toast.show('Escribe una consulta', 'warning'); return; }
+
+        const topK = parseInt(document.getElementById('searchTopK').value) || 5;
+        const category = document.getElementById('searchCategory').value || null;
+
+        document.getElementById('searchLoading').style.display = 'flex';
+        document.getElementById('searchEmpty').style.display = 'none';
+        document.getElementById('searchResults').querySelectorAll('.result-card').forEach(e => e.remove());
+
+        try {
+            const res = await api.query({
+                query,
+                tenant_id: App.tenantId,
+                top_k: topK,
+                category_filter: category,
+                use_cache: false
+            });
+
+            document.getElementById('searchLoading').style.display = 'none';
+            const container = document.getElementById('searchResults');
+
+            // Show answer
+            if (res.answer) {
+                const answerCard = document.createElement('div');
+                answerCard.className = 'result-card';
+                answerCard.style.borderColor = 'var(--primary)';
+                answerCard.innerHTML = `
+                    <div class="result-header">
+                        <span class="result-source">💡 Respuesta RAG</span>
+                        <span class="result-score score-high">confianza: ${(res.confidence * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="result-text" style="color:var(--text-primary)">${marked.parse(res.answer)}</div>
+                    ${res.sources?.length ? `<div class="result-meta">Fuentes: ${res.sources.join(', ')}</div>` : ''}
+                `;
+                container.appendChild(answerCard);
+            }
+
+            // Show chunks
+            if (res.retrieved_chunks?.length) {
+                res.retrieved_chunks.forEach((c, i) => {
+                    const score = c.score || c.similarity || c.distance || 0;
+                    const scoreClass = score > 0.8 ? 'score-high' : score > 0.5 ? 'score-mid' : 'score-low';
+                    const card = document.createElement('div');
+                    card.className = 'result-card';
+                    card.innerHTML = `
+                        <div class="result-header">
+                            <span class="result-source">📄 ${Util.esc(c.source || c.filename || c.document_id || 'Chunk ' + (i+1))}</span>
+                            <span class="result-score ${scoreClass}">score: ${(typeof score === 'number' ? score.toFixed(3) : score)}</span>
+                        </div>
+                        <div class="result-text">${Util.esc(c.text || c.content || c.chunk_text || '').slice(0, 500)}</div>
+                        <div class="result-meta">
+                            ${c.category ? `<span>📂 ${c.category}</span>` : ''}
+                            ${c.chunk_id ? `<span>🆔 ${c.chunk_id}</span>` : ''}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            if (!res.answer && !res.retrieved_chunks?.length) {
+                document.getElementById('searchEmpty').style.display = 'block';
+                document.getElementById('searchEmpty').textContent = 'Sin resultados para esta consulta';
+            }
+        } catch (e) {
+            document.getElementById('searchLoading').style.display = 'none';
+            Toast.show('Error en búsqueda: ' + e.message, 'error');
+        }
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Chat = {
+    messages: [],
+
+    async send() {
+        const input = document.getElementById('chatInput');
+        const query = input.value.trim();
+        if (!query) return;
+
+        input.value = '';
+        this.messages.push({ role: 'user', content: query });
+        this.addBubble('user', query);
+
+        const btn = document.getElementById('chatSendBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>';
+
+        // Add thinking indicator
+        const thinkingId = 'thinking-' + Date.now();
+        const thinkEl = document.createElement('div');
+        thinkEl.id = thinkingId;
+        thinkEl.className = 'chat-msg assistant';
+        thinkEl.innerHTML = '<span class="spinner"></span> Pensando...';
+        document.getElementById('chatMessages').appendChild(thinkEl);
+        thinkEl.scrollIntoView({ behavior: 'smooth' });
+
+        try {
+            const topK = parseInt(document.getElementById('chatTopK').value) || 5;
+            const model = document.getElementById('chatModel').value;
+
+            // Use streaming
+            let fullContent = '';
+            thinkEl.innerHTML = '';
+
+            await api.chatCompletionsStream(
+                {
+                    model,
+                    messages: this.messages,
+                    tenant_id: App.tenantId,
+                    top_k: topK,
+                    stream: true
+                },
+                (chunk) => {
+                    const delta = chunk.choices?.[0]?.delta?.content || '';
+                    if (delta) {
+                        fullContent += delta;
+                        thinkEl.innerHTML = marked.parse(fullContent);
+                        thinkEl.scrollIntoView({ behavior: 'smooth' });
+                    }
+                },
+                () => {
+                    this.messages.push({ role: 'assistant', content: fullContent });
+                    btn.disabled = false;
+                    btn.textContent = 'Enviar';
+                }
+            );
+        } catch (e) {
+            const el = document.getElementById(thinkingId);
+            if (el) el.innerHTML = `<span style="color:var(--danger)">Error: ${Util.esc(e.message)}</span>`;
+            btn.disabled = false;
+            btn.textContent = 'Enviar';
+        }
+    },
+
+    addBubble(role, content) {
+        const el = document.createElement('div');
+        el.className = `chat-msg ${role}`;
+        el.innerHTML = role === 'assistant' ? marked.parse(content) : Util.esc(content);
+        document.getElementById('chatMessages').appendChild(el);
+        el.scrollIntoView({ behavior: 'smooth' });
+    },
+
+    clear() {
+        this.messages = [];
+        document.getElementById('chatMessages').innerHTML = `
+            <div class="chat-msg assistant">
+                ¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?
+            </div>
+        `;
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   WIDGET CONFIG MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Widget = {
+    config: null,
+
+    async load() {
+        try {
+            this.config = await api.getWidgetConfig(App.tenantId);
+            this.renderThemeForm();
+            this.renderBrandingForm();
+            this.renderBehaviorForm();
+            this.renderPreview();
+        } catch (e) {
+            Toast.show('Error cargando widget config: ' + e.message, 'error');
+        }
+    },
+
+    renderThemeForm() {
+        const t = this.config.theme || {};
+        const fields = [
+            ['primary_color', 'Color Primario'],
+            ['background_color', 'Fondo'],
+            ['text_color', 'Texto'],
+            ['header_background', 'Fondo Header'],
+            ['header_text_color', 'Texto Header'],
+            ['user_bubble_color', 'Burbuja Usuario'],
+            ['user_bubble_text_color', 'Texto Burbuja Usuario'],
+            ['bot_bubble_color', 'Burbuja Bot'],
+            ['bot_bubble_text_color', 'Texto Burbuja Bot'],
+        ];
+        document.getElementById('widgetThemeForm').innerHTML = fields.map(([key, label]) => `
+            <div class="color-input-row" style="margin-bottom:10px">
+                <input type="color" value="${t[key]||'#2563eb'}" id="wt_${key}" onchange="Widget.renderPreview()">
+                <div>
+                    <div style="font-size:12px;font-weight:600">${label}</div>
+                    <div style="font-size:11px;color:var(--text-muted)" id="wt_${key}_hex">${t[key]||''}</div>
+                </div>
+            </div>
+        `).join('') + `
+            <div class="form-row" style="margin-top:12px">
+                <div class="form-group">
+                    <label>Border Radius</label>
+                    <input type="text" value="${t.border_radius||'12px'}" id="wt_border_radius">
+                </div>
+                <div class="form-group">
+                    <label>Fuente</label>
+                    <input type="text" value="${t.font_family||'system-ui, sans-serif'}" id="wt_font_family">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tamaño de Fuente</label>
+                <input type="text" value="${t.font_size||'14px'}" id="wt_font_size">
+            </div>
+        `;
+    },
+
+    renderBrandingForm() {
+        const b = this.config.branding || {};
+        document.getElementById('widgetBrandingForm').innerHTML = `
+            <div class="form-group">
+                <label>Título</label>
+                <input type="text" value="${Util.esc(b.title||'')}" id="wb_title" onchange="Widget.renderPreview()">
+            </div>
+            <div class="form-group">
+                <label>Subtítulo</label>
+                <input type="text" value="${Util.esc(b.subtitle||'')}" id="wb_subtitle">
+            </div>
+            <div class="form-group">
+                <label>URL del Logo</label>
+                <input type="text" value="${Util.esc(b.logo_url||'')}" id="wb_logo_url">
+            </div>
+            <div class="form-group">
+                <label>Placeholder del Input</label>
+                <input type="text" value="${Util.esc(b.placeholder_text||'')}" id="wb_placeholder_text">
+            </div>
+            <div class="form-group">
+                <label>Mensaje de Bienvenida</label>
+                <textarea id="wb_welcome_message">${Util.esc(b.welcome_message||'')}</textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Powered by Texto</label>
+                    <input type="text" value="${Util.esc(b.powered_by_text||'')}" id="wb_powered_by_text">
+                </div>
+                <div class="form-group">
+                    <label>Powered by URL</label>
+                    <input type="text" value="${Util.esc(b.powered_by_url||'')}" id="wb_powered_by_url">
+                </div>
+            </div>
+        `;
+    },
+
+    renderBehaviorForm() {
+        const bh = this.config.behavior || {};
+        document.getElementById('widgetBehaviorForm').innerHTML = `
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Posición</label>
+                    <select id="wbh_position">
+                        <option value="bottom-right" ${bh.position==='bottom-right'?'selected':''}>Abajo Derecha</option>
+                        <option value="bottom-left" ${bh.position==='bottom-left'?'selected':''}>Abajo Izquierda</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estado Inicial</label>
+                    <select id="wbh_initial_state">
+                        <option value="closed" ${bh.initial_state==='closed'?'selected':''}>Cerrado</option>
+                        <option value="open" ${bh.initial_state==='open'?'selected':''}>Abierto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Auto-abrir después de (ms)</label>
+                    <input type="number" value="${bh.auto_open_delay_ms||0}" id="wbh_auto_open_delay_ms" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Máx longitud mensaje</label>
+                    <input type="number" value="${bh.max_message_length||2000}" id="wbh_max_message_length" min="100">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Rate Limit (por minuto)</label>
+                    <input type="number" value="${bh.rate_limit_per_minute||30}" id="wbh_rate_limit_per_minute" min="1">
+                </div>
+            </div>
+            <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:16px">
+                ${[
+                    ['show_close_button', 'Botón cerrar', bh.show_close_button],
+                    ['enable_file_upload', 'Subida archivos', bh.enable_file_upload],
+                    ['enable_feedback', 'Feedback', bh.enable_feedback],
+                    ['enable_copy', 'Copiar', bh.enable_copy],
+                    ['enable_markdown', 'Markdown', bh.enable_markdown],
+                ].map(([key, label, val]) => `
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                        <input type="checkbox" id="wbh_${key}" ${val !== false ? 'checked' : ''}> ${label}
+                    </label>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    renderPreview() {
+        const theme = this.getThemeValues();
+        const branding = this.getBrandingValues();
+        const preview = document.getElementById('widgetPreview');
+        preview.innerHTML = `
+            <div style="
+                font-family:${theme.font_family};
+                font-size:${theme.font_size};
+                width:360px;
+                margin:20px auto;
+                border-radius:${theme.border_radius};
+                overflow:hidden;
+                box-shadow:0 8px 32px rgba(0,0,0,0.2);
+                border:1px solid #e5e7eb;
+            ">
+                <!-- Header -->
+                <div style="background:${theme.header_background};color:${theme.header_text_color};padding:16px 20px;display:flex;align-items:center;gap:10px">
+                    ${branding.logo_url ? `<img src="${branding.logo_url}" style="width:28px;height:28px;border-radius:50%" onerror="this.style.display='none'">` : '<span style="font-size:24px">💬</span>'}
+                    <div>
+                        <div style="font-weight:700;font-size:15px">${Util.esc(branding.title || 'Chat Assistant')}</div>
+                        ${branding.subtitle ? `<div style="font-size:11px;opacity:0.8">${Util.esc(branding.subtitle)}</div>` : ''}
+                    </div>
+                </div>
+                <!-- Messages -->
+                <div style="background:${theme.background_color};padding:16px;min-height:220px">
+                    <div style="background:${theme.bot_bubble_color};color:${theme.bot_bubble_text_color};padding:10px 14px;border-radius:${theme.border_radius};border-bottom-left-radius:4px;max-width:80%;font-size:13px;line-height:1.5;margin-bottom:10px">
+                        ${Util.esc(branding.welcome_message || 'Hello!')}
+                    </div>
+                    <div style="background:${theme.user_bubble_color};color:${theme.user_bubble_text_color};padding:10px 14px;border-radius:${theme.border_radius};border-bottom-right-radius:4px;max-width:80%;font-size:13px;margin-left:auto;text-align:right">
+                        ¿Cuáles son las tarifas?
+                    </div>
+                </div>
+                <!-- Input -->
+                <div style="padding:12px;border-top:1px solid #e5e7eb;background:${theme.background_color};display:flex;gap:8px">
+                    <input style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit" placeholder="${Util.esc(branding.placeholder_text || 'Type...')}" disabled>
+                    <button style="background:${theme.primary_color};color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">▶</button>
+                </div>
+                ${branding.powered_by_text ? `<div style="text-align:center;padding:6px;font-size:10px;color:#9ca3af;background:${theme.background_color}">${Util.esc(branding.powered_by_text)}</div>` : ''}
+            </div>
+        `;
+    },
+
+    getThemeValues() {
+        const keys = ['primary_color','background_color','text_color','header_background','header_text_color',
+            'user_bubble_color','user_bubble_text_color','bot_bubble_color','bot_bubble_text_color'];
+        const result = {};
+        keys.forEach(k => { result[k] = document.getElementById('wt_'+k)?.value || ''; });
+        result.border_radius = document.getElementById('wt_border_radius')?.value || '12px';
+        result.font_family = document.getElementById('wt_font_family')?.value || 'system-ui';
+        result.font_size = document.getElementById('wt_font_size')?.value || '14px';
+        return result;
+    },
+
+    getBrandingValues() {
+        const keys = ['title','subtitle','logo_url','placeholder_text','welcome_message','powered_by_text','powered_by_url'];
+        const result = {};
+        keys.forEach(k => { result[k] = document.getElementById('wb_'+k)?.value || ''; });
+        return result;
+    },
+
+    getBehaviorValues() {
+        return {
+            position: document.getElementById('wbh_position')?.value || 'bottom-right',
+            initial_state: document.getElementById('wbh_initial_state')?.value || 'closed',
+            auto_open_delay_ms: parseInt(document.getElementById('wbh_auto_open_delay_ms')?.value) || 0,
+            max_message_length: parseInt(document.getElementById('wbh_max_message_length')?.value) || 2000,
+            rate_limit_per_minute: parseInt(document.getElementById('wbh_rate_limit_per_minute')?.value) || 30,
+            show_close_button: document.getElementById('wbh_show_close_button')?.checked ?? true,
+            enable_file_upload: document.getElementById('wbh_enable_file_upload')?.checked ?? false,
+            enable_feedback: document.getElementById('wbh_enable_feedback')?.checked ?? true,
+            enable_copy: document.getElementById('wbh_enable_copy')?.checked ?? true,
+            enable_markdown: document.getElementById('wbh_enable_markdown')?.checked ?? true,
+        };
+    },
+
+    async save() {
+        try {
+            await api.updateWidgetConfig(App.tenantId, {
+                theme: this.getThemeValues(),
+                branding: this.getBrandingValues(),
+                behavior: this.getBehaviorValues(),
+            });
+            Toast.show('Widget configuración guardada', 'success');
+        } catch (e) {
+            Toast.show('Error guardando: ' + e.message, 'error');
+        }
+    },
+
+    async reset() {
+        Modals.confirm('Reset Widget', 'Restaurar la configuración del widget a los valores por defecto.', async () => {
+            try {
+                await api.resetWidgetConfig(App.tenantId);
+                Toast.show('Widget reseteado a defaults', 'success');
+                this.load();
+            } catch (e) {
+                Toast.show('Error: ' + e.message, 'error');
+            }
+        });
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   EMBED CODE MODULE
+   ═══════════════════════════════════════════════════════════════ */
+const Embed = {
+    generate() {
+        const baseUrl = location.origin;
+        const tid = App.tenantId;
+
+        document.getElementById('embedScript').textContent =
+`<!-- DRAGA Widget - ${tid} -->
+<script src="${baseUrl}/src/draga-chat.js"><\/script>
+<draga-chat
+    tenant-id="${tid}"
+    api-base="${baseUrl}/api/v2"
+    position="bottom-right"
+    initial-state="closed">
+</draga-chat>`;
+
+        document.getElementById('embedComponent').textContent =
+`<!-- Web Component directo -->
+<script type="module">
+  import '${baseUrl}/src/draga-chat.js';
+<\/script>
+<draga-chat
+    tenant-id="${tid}"
+    api-base="${baseUrl}/api/v2">
+</draga-chat>`;
+
+        document.getElementById('embedIframe').textContent =
+`<!-- iframe embed -->
+<iframe
+    src="${baseUrl}/chat-interface.html?tenant=${tid}"
+    style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"
+    allow="clipboard-write">
+</iframe>`;
+    },
+
+    copy(elementId) {
+        const text = document.getElementById(elementId).textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            Toast.show('Código copiado al portapapeles', 'success');
+        });
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+const Util = {
+    esc(s) {
+        if (!s) return '';
+        const d = document.createElement('div');
+        d.textContent = String(s);
+        return d.innerHTML;
+    },
+    fileSize(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B','KB','MB','GB'];
+        let i = 0;
+        while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+        return bytes.toFixed(i ? 1 : 0) + ' ' + units[i];
+    },
+    timeAgo(dateStr) {
+        if (!dateStr) return '';
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'ahora';
+        if (mins < 60) return mins + 'm';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h';
+        const days = Math.floor(hrs / 24);
+        return days + 'd';
+    }
+};
+
+const Toast = {
+    show(msg, type = 'info', duration = 4000) {
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.textContent = msg;
+        document.getElementById('toasts').appendChild(el);
+        setTimeout(() => el.remove(), duration);
+    }
+};
+
+const Modals = {
+    open(id) { document.getElementById(id).classList.add('open'); },
+    close(id) { document.getElementById(id).classList.remove('open'); },
+    confirm(title, msg, onConfirm) {
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMsg').innerHTML = msg;
+        const btn = document.getElementById('confirmAction');
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.onclick = () => { this.close('confirmModal'); onConfirm(); };
+        this.open('confirmModal');
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+    Upload.init();
+    App.init();
+});
+</script>
+</body>
+</html>

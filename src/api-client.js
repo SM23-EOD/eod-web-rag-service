@@ -58,6 +58,50 @@ class RAGApiClient {
     async ingestAgent(id, docs) { return this.post(`/agents/${id}/ingest`, docs); }
     async agentStats(id) { return this.get(`/agents/${id}/stats`); }
 
+    // ── Widget Config ─────────────────────────────────────────────
+
+    async getWidgetConfig(tenantId) { return this.get(`/agents/${tenantId}/widget-config`); }
+    async updateWidgetConfig(tenantId, data) { return this.put(`/agents/${tenantId}/widget-config`, data); }
+    async resetWidgetConfig(tenantId) { return this.del(`/agents/${tenantId}/widget-config`); }
+
+    // ── Tasks ─────────────────────────────────────────────────────
+
+    async listTasks(tenantId = null, state = null, limit = null) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
+        if (state) params.set('state', state);
+        if (limit) params.set('limit', limit);
+        const q = params.toString() ? `?${params}` : '';
+        return this.get(`/tasks${q}`);
+    }
+    async getTask(taskId) { return this.get(`/tasks/${taskId}`); }
+    async cleanupTasks(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.del(`/tasks${q}`);
+    }
+
+    // ── Metrics ───────────────────────────────────────────────────
+
+    async metricsDashboard(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/metrics/dashboard${q}`);
+    }
+    async metricsCoverage(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/metrics/coverage${q}`);
+    }
+    async metricsGaps(tenantId = null, unresolvedOnly = false, limit = 20) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
+        if (unresolvedOnly) params.set('unresolved_only', 'true');
+        if (limit) params.set('limit', limit);
+        return this.get(`/metrics/gaps?${params}`);
+    }
+    async metricsGrounding(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/metrics/grounding${q}`);
+    }
+
     // ── Document Management (v2 /documents/* endpoints) ──────────
 
     async uploadDocuments(files, tenantId, autoIndex = true, background = false) {
