@@ -2859,6 +2859,7 @@ async function loadTenants() {
                     <span>📄 ${t.document_count ?? 0} docs</span>
                 </div>
                 <div style="display:flex;gap:8px">
+                    <a class="btn btn-sm btn-primary" href="tenant-dashboard.html?tenant=${t.tenant_id}" style="text-decoration:none">🔧 Gestionar</a>
                     <button class="btn btn-sm" onclick="editTenant('${t.tenant_id}')">✏️ Editar</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteTenantAction('${t.tenant_id}','${t.name}')">🗑️</button>
                 </div>
