@@ -12,6 +12,9 @@ class RAGApiClient {
     // ── HTTP helpers ──────────────────────────────────────────────
 
     async _request(method, path, body = null, options = {}) {
+        const maxRetries = options.retries ?? 2;        // up to 3 total attempts
+        const retryDelay = options.retryDelay ?? 800;   // ms, doubles each retry
+
         const url = `${this.baseUrl}${path}`;
         const headers = { 'Content-Type': 'application/json' };
         if (this.apiKey) headers['X-API-Key'] = this.apiKey;
@@ -19,17 +22,41 @@ class RAGApiClient {
         const config = { method, headers };
         if (body && method !== 'GET') config.body = JSON.stringify(body);
 
-        try {
-            const res = await fetch(url, config);
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({ detail: res.statusText }));
-                throw new ApiError(res.status, err.detail || err.message || res.statusText, err);
+        let lastError;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const res = await fetch(url, config);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: res.statusText }));
+                    const apiErr = new ApiError(res.status, err.detail || err.message || res.statusText, err);
+                    // Retry only on 5xx (server) errors
+                    if (res.status >= 500 && attempt < maxRetries) {
+                        lastError = apiErr;
+                        await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt)));
+                        continue;
+                    }
+                    throw apiErr;
+                }
+                return await res.json();
+            } catch (e) {
+                if (e instanceof ApiError) {
+                    if (e.status >= 500 && attempt < maxRetries) {
+                        lastError = e;
+                        await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt)));
+                        continue;
+                    }
+                    throw e;
+                }
+                // Network errors — also retry
+                lastError = new ApiError(0, e.message || 'Network error', { original: e });
+                if (attempt < maxRetries) {
+                    await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt)));
+                    continue;
+                }
+                throw lastError;
             }
-            return await res.json();
-        } catch (e) {
-            if (e instanceof ApiError) throw e;
-            throw new ApiError(0, e.message || 'Network error', { original: e });
         }
+        throw lastError;
     }
 
     get(path) { return this._request('GET', path); }
@@ -175,7 +202,16 @@ class RAGApiClient {
     // ── Tenants ───────────────────────────────────────────────────
 
     async listTenants(includeInactive = false) {
-        return this.get(`/tenants?include_inactive=${includeInactive}`);
+        try {
+            return await this.get(`/tenants?include_inactive=${includeInactive}`);
+        } catch (e) {
+            // Fallback: try without include_inactive param
+            if (includeInactive) {
+                console.warn('[api] listTenants with include_inactive failed, retrying without:', e.message);
+                return await this.get('/tenants');
+            }
+            throw e;
+        }
     }
     async createTenant(data) { return this.post('/tenants', data); }
     async getTenant(id) { return this.get(`/tenants/${id}`); }

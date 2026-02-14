@@ -1226,24 +1226,44 @@ const App = {
 
     // ── Tenants ────────────────────────────────
     async loadTenants() {
-        try {
-            const r = await fetch(`${API_BASE}/tenants`);
-            const d = await r.json();
-            this.tenants = d.tenants || [];
-            const sel = document.getElementById('tenant-select');
-            sel.innerHTML = this.tenants.map(t =>
-                `<option value="${t.tenant_id}">${t.name} (${t.tenant_id}) — ${t.document_count} docs</option>`
-            ).join('');
-            if (this.tenants.length === 0) {
-                sel.innerHTML = '<option value="">No hay tenants</option>';
+        const maxRetries = 2;
+        const retryDelay = 800;
+        let lastErr;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const r = await fetch(`${API_BASE}/tenants`);
+                if (!r.ok) {
+                    if (r.status >= 500 && attempt < maxRetries) {
+                        lastErr = new Error(`HTTP ${r.status}`);
+                        await new Promise(w => setTimeout(w, retryDelay * Math.pow(2, attempt)));
+                        continue;
+                    }
+                    throw new Error(`HTTP ${r.status}`);
+                }
+                const d = await r.json();
+                this.tenants = d.tenants || [];
+                const sel = document.getElementById('tenant-select');
+                sel.innerHTML = this.tenants.map(t =>
+                    `<option value="${t.tenant_id}">${t.name} (${t.tenant_id}) — ${t.document_count} docs</option>`
+                ).join('');
+                if (this.tenants.length === 0) {
+                    sel.innerHTML = '<option value="">No hay tenants</option>';
+                    return;
+                }
+                sel.addEventListener('change', () => this.selectTenant(sel.value));
+                this.selectTenant(this.tenants[0].tenant_id);
                 return;
+            } catch (e) {
+                lastErr = e;
+                if (attempt < maxRetries) {
+                    await new Promise(w => setTimeout(w, retryDelay * Math.pow(2, attempt)));
+                    continue;
+                }
             }
-            sel.addEventListener('change', () => this.selectTenant(sel.value));
-            this.selectTenant(this.tenants[0].tenant_id);
-        } catch (e) {
-            console.error('Error loading tenants:', e);
-            this.toast('Error cargando tenants', 'error');
         }
+        console.error('Error loading tenants:', lastErr);
+        this.toast('Error cargando tenants', 'error');
     },
 
     async selectTenant(tenantId) {
