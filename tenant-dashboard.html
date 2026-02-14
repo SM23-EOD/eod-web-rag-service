@@ -243,7 +243,33 @@ tr:hover td { background:var(--bg-hover); }
 .status-dot.processing::before { background:var(--warning); }
 .status-dot.pending::before { background:var(--info); }
 .status-dot.error::before { background:var(--danger); }
+.status-dot.failed::before { background:var(--danger); }
 .status-dot.uploaded::before { background:var(--text-muted); }
+.status-dot.deleted::before { background:#6b7280; }
+.status-dot.completed::before { background:var(--success); }
+.status-dot.running::before { background:var(--warning); }
+
+/* ── PROGRESS BAR ───────────────────────────────────────────── */
+.progress-bar {
+    width:100%; height:6px; background:var(--bg-input);
+    border-radius:3px; overflow:hidden;
+}
+.progress-bar .fill {
+    height:100%; border-radius:3px;
+    background:var(--primary);
+    transition: width 0.3s ease;
+}
+.progress-bar .fill.complete { background:var(--success); }
+.progress-bar .fill.failed { background:var(--danger); }
+
+/* ── CACHED BADGE ───────────────────────────────────────────── */
+.badge-cached {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 8px; border-radius:10px;
+    font-size:10px; font-weight:700;
+}
+.badge-cached.hit { background:rgba(34,197,94,0.15); color:var(--success); }
+.badge-cached.miss { background:rgba(245,158,11,0.15); color:var(--warning); }
 .table-empty {
     text-align:center; padding:40px; color:var(--text-muted);
     font-size:14px;
@@ -617,6 +643,8 @@ tr:hover td { background:var(--bg-hover); }
                     <option value="pending">Pendiente</option>
                     <option value="uploaded">Subido</option>
                     <option value="error">Error</option>
+                    <option value="failed">Fallido</option>
+                    <option value="deleted">Eliminado</option>
                 </select>
                 <select id="docCategoryFilter" onchange="Docs.filter()">
                     <option value="">Todas las categorías</option>
@@ -1110,7 +1138,13 @@ const Docs = {
         const res = await api.listDocuments(App.tenantId);
         this.data = res.documents || [];
         this.categories.clear();
-        this.data.forEach(d => { if(d.category) this.categories.add(d.category); });
+        this.data.forEach(d => {
+            // Normalize category (backend may return 'DocumentCategory.FAQ' instead of 'faq')
+            if (d.category) {
+                d.category = d.category.replace(/^DocumentCategory\./i, '').toLowerCase();
+            }
+            if (d.category) this.categories.add(d.category);
+        });
         // Populate category filter
         const catSel = document.getElementById('docCategoryFilter');
         const searchCatSel = document.getElementById('searchCategory');
@@ -1128,17 +1162,19 @@ const Docs = {
         try {
             const stats = await api.documentStats(App.tenantId);
             const grid = document.getElementById('docStats');
-            const statusCounts = {};
-            this.data.forEach(d => { statusCounts[d.status] = (statusCounts[d.status]||0) + 1; });
-            const totalChunks = this.data.reduce((s, d) => s + (d.chunk_count||0), 0);
-            const totalSize = this.data.reduce((s, d) => s + (d.file_size_bytes||0), 0);
+            const bs = stats.by_status || {};
+            const bc = stats.by_category || {};
+            const pending = (bs.pending||0) + (bs.uploaded||0) + (bs.processing||0);
+            const errors = (bs.error||0) + (bs.failed||0);
             grid.innerHTML = `
-                <div class="stat-card"><div class="label">Total Documentos</div><div class="value">${this.data.length}</div></div>
-                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${statusCounts['indexed']||0}</div></div>
-                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--warning)">${(statusCounts['pending']||0)+(statusCounts['uploaded']||0)+(statusCounts['processing']||0)}</div></div>
-                <div class="stat-card"><div class="label">Errores</div><div class="value" style="color:var(--danger)">${statusCounts['error']||0}</div></div>
-                <div class="stat-card"><div class="label">Total Chunks</div><div class="value">${totalChunks.toLocaleString()}</div></div>
-                <div class="stat-card"><div class="label">Tamaño Total</div><div class="value">${Util.fileSize(totalSize)}</div></div>
+                <div class="stat-card"><div class="label">Total Documentos</div><div class="value">${stats.total_documents||0}</div></div>
+                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${bs.indexed||0}</div></div>
+                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--warning)">${pending}</div></div>
+                <div class="stat-card"><div class="label">Errores</div><div class="value" style="color:var(--danger)">${errors}</div></div>
+                <div class="stat-card"><div class="label">Eliminados</div><div class="value" style="color:var(--text-muted)">${bs.deleted||0}</div></div>
+                <div class="stat-card"><div class="label">Total Chunks</div><div class="value">${(stats.total_chunks||0).toLocaleString()}</div></div>
+                <div class="stat-card"><div class="label">Tamaño Total</div><div class="value">${Util.fileSize(stats.total_size_bytes)}</div></div>
+                ${stats.storage_path ? `<div class="stat-card"><div class="label">Directorio</div><div class="value" style="font-size:12px;word-break:break-all">${Util.esc(stats.storage_path)}</div></div>` : ''}
             `;
         } catch (e) {
             console.warn('Stats error:', e);
@@ -1233,8 +1269,11 @@ const Docs = {
 
     async reindex(id) {
         try {
-            await api.reindexDocument(id, App.tenantId);
-            Toast.show('Documento enviado a reindexar', 'success');
+            const res = await api.reindexDocument(id, App.tenantId);
+            const msg = res.success
+                ? `✅ Reindexado: ${res.filename || ''} — ${res.chunk_count||0} chunks${res.is_duplicate ? ' (duplicado)' : ''}`
+                : `❌ Error reindexando: ${res.error || res.message || 'desconocido'}`;
+            Toast.show(res.message || msg, res.success !== false ? 'success' : 'error');
             setTimeout(() => this.loadDocs(), 1000);
         } catch (e) {
             Toast.show('Error reindexando: ' + e.message, 'error');
@@ -1405,7 +1444,8 @@ const Tasks = {
         try {
             const res = await api.listTasks(App.tenantId, state || null);
             const tasks = res.tasks || res || [];
-            document.getElementById('navTaskCount').textContent = Array.isArray(tasks) ? tasks.length : 0;
+            const total = res.total ?? (Array.isArray(tasks) ? tasks.length : 0);
+            document.getElementById('navTaskCount').textContent = total;
             const container = document.getElementById('taskTableBody');
             if (!Array.isArray(tasks) || !tasks.length) {
                 container.innerHTML = '<div class="table-empty">No hay tareas registradas</div>';
@@ -1413,16 +1453,36 @@ const Tasks = {
             }
             container.innerHTML = `<table>
                 <thead><tr>
-                    <th>ID</th><th>Estado</th><th>Tipo</th><th>Progreso</th><th>Creada</th><th>Acciones</th>
+                    <th>ID</th><th>Estado</th><th>Progreso</th><th>Archivos</th><th>Resultado</th><th>Tiempo</th><th>Creada</th><th>Acciones</th>
                 </tr></thead>
-                <tbody>${tasks.map(t => `<tr>
+                <tbody>${tasks.map(t => {
+                    const pct = t.progress_pct ?? t.progress ?? null;
+                    const pctClass = t.state === 'completed' ? 'complete' : t.state === 'failed' ? 'failed' : '';
+                    const fileInfo = t.total_files ? `${t.processed_files||0}/${t.total_files}` : '—';
+                    const resultInfo = [];
+                    if (t.successful != null) resultInfo.push(`✅${t.successful}`);
+                    if (t.failed != null && t.failed > 0) resultInfo.push(`❌${t.failed}`);
+                    if (t.duplicates != null && t.duplicates > 0) resultInfo.push(`🔄${t.duplicates}`);
+                    if (t.chunks_created != null) resultInfo.push(`📦${t.chunks_created}`);
+                    const elapsed = t.elapsed_seconds != null ? `${t.elapsed_seconds.toFixed(1)}s` : '—';
+                    return `<tr>
                     <td style="font-size:11px;color:var(--text-muted)">${(t.task_id||t.id||'').slice(0,12)}…</td>
                     <td><span class="status-dot ${t.state||t.status}">${t.state||t.status||'?'}</span></td>
-                    <td style="font-size:12px">${t.type||t.task_type||'—'}</td>
-                    <td>${t.progress != null ? t.progress + '%' : '—'}</td>
+                    <td style="min-width:100px">
+                        ${pct != null ? `
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <div class="progress-bar" style="flex:1"><div class="fill ${pctClass}" style="width:${pct}%"></div></div>
+                                <span style="font-size:11px;font-weight:700">${Math.round(pct)}%</span>
+                            </div>
+                        ` : '—'}
+                    </td>
+                    <td style="font-size:12px">${fileInfo}</td>
+                    <td style="font-size:11px">${resultInfo.join(' ') || '—'}</td>
+                    <td style="font-size:11px;color:var(--text-muted)">${elapsed}</td>
                     <td style="font-size:11px;color:var(--text-muted)">${t.created_at ? Util.timeAgo(t.created_at) : '—'}</td>
                     <td><button class="btn btn-sm" onclick="Tasks.detail('${t.task_id||t.id}')">👁️</button></td>
-                </tr>`).join('')}</tbody></table>`;
+                </tr>`;
+                }).join('')}</tbody></table>`;
         } catch (e) {
             Toast.show('Error cargando tareas: ' + e.message, 'error');
         }
@@ -1432,7 +1492,54 @@ const Tasks = {
         try {
             const t = await api.getTask(id);
             document.getElementById('detailTitle').textContent = 'Tarea: ' + (id || '').slice(0,16);
-            document.getElementById('detailBody').innerHTML = `<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap;max-height:400px;overflow:auto">${JSON.stringify(t, null, 2)}</pre>`;
+            const pct = t.progress_pct ?? t.progress ?? null;
+            const pctClass = t.state === 'completed' ? 'complete' : t.state === 'failed' ? 'failed' : '';
+
+            let filesHtml = '';
+            if (t.files && Array.isArray(t.files) && t.files.length) {
+                filesHtml = `
+                    <div style="margin-top:14px">
+                        <strong style="font-size:13px">Archivos procesados:</strong>
+                        <div style="margin-top:6px;max-height:250px;overflow-y:auto">
+                            ${t.files.map(f => `
+                                <div class="file-item" style="border-color:${f.state==='indexed'||f.state==='completed'?'var(--success)':f.state==='failed'?'var(--danger)':'var(--border)'}">
+                                    <span>${f.state==='indexed'||f.state==='completed'?'✅':f.state==='failed'?'❌':'⏳'} ${Util.esc(f.filename)}
+                                        ${f.chunk_count ? ` (${f.chunk_count} chunks)` : ''}
+                                        ${f.is_duplicate ? ' 🔄 duplicado' : ''}
+                                    </span>
+                                    ${f.error ? `<span style="color:var(--danger);font-size:11px">${Util.esc(f.error)}</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            document.getElementById('detailBody').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+                    <div><strong>ID:</strong><br><span style="font-size:11px;color:var(--text-muted);word-break:break-all">${t.task_id||t.id||'—'}</span></div>
+                    <div><strong>Estado:</strong><br><span class="status-dot ${t.state||t.status}">${t.state||t.status||'—'}</span></div>
+                    <div><strong>Tenant:</strong><br>${t.tenant_id||'—'}</div>
+                    <div><strong>Auto-index:</strong><br>${t.auto_index != null ? (t.auto_index ? 'Sí' : 'No') : '—'}</div>
+                    <div><strong>Total archivos:</strong><br>${t.total_files??'—'}</div>
+                    <div><strong>Procesados:</strong><br>${t.processed_files??'—'}</div>
+                    <div><strong>Exitosos:</strong><br><span style="color:var(--success)">${t.successful??'—'}</span></div>
+                    <div><strong>Fallidos:</strong><br><span style="color:var(--danger)">${t.failed??'—'}</span></div>
+                    <div><strong>Duplicados:</strong><br>${t.duplicates??'—'}</div>
+                    <div><strong>Chunks creados:</strong><br>${t.chunks_created??'—'}</div>
+                    <div><strong>Creada:</strong><br>${t.created_at||'—'}</div>
+                    <div><strong>Iniciada:</strong><br>${t.started_at||'—'}</div>
+                    <div><strong>Completada:</strong><br>${t.completed_at||'—'}</div>
+                    <div><strong>Tiempo:</strong><br>${t.elapsed_seconds != null ? t.elapsed_seconds.toFixed(1)+'s' : '—'}</div>
+                    ${pct != null ? `<div style="grid-column:1/-1"><strong>Progreso:</strong><br>
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                            <div class="progress-bar" style="flex:1"><div class="fill ${pctClass}" style="width:${pct}%"></div></div>
+                            <span style="font-weight:700">${Math.round(pct)}%</span>
+                        </div>
+                    </div>` : ''}
+                    ${t.error ? `<div style="grid-column:1/-1"><strong style="color:var(--danger)">Error:</strong><br>${Util.esc(t.error)}</div>` : ''}
+                </div>
+                ${filesHtml}
+            `;
             Modals.open('detailModal');
         } catch (e) {
             Toast.show('Error: ' + e.message, 'error');
@@ -1462,21 +1569,21 @@ const Indexing = {
 
     async loadStats() {
         try {
-            const docs = (await api.listDocuments(App.tenantId)).documents || [];
-            const stats = {};
-            let totalChunks = 0;
-            docs.forEach(d => {
-                stats[d.status] = (stats[d.status]||0) + 1;
-                totalChunks += d.chunk_count || 0;
-            });
+            const stats = await api.documentStats(App.tenantId);
+            const bs = stats.by_status || {};
             const grid = document.getElementById('indexStats');
+            const totalDocs = stats.total_documents || 0;
+            const indexed = bs.indexed || 0;
+            const coverage = totalDocs ? Math.round(indexed / totalDocs * 100) : 0;
             grid.innerHTML = `
-                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${stats['indexed']||0}</div></div>
-                <div class="stat-card"><div class="label">Procesando</div><div class="value" style="color:var(--warning)">${stats['processing']||0}</div></div>
-                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--info)">${(stats['pending']||0)+(stats['uploaded']||0)}</div></div>
-                <div class="stat-card"><div class="label">Con Error</div><div class="value" style="color:var(--danger)">${stats['error']||0}</div></div>
-                <div class="stat-card"><div class="label">Total Chunks en Índice</div><div class="value">${totalChunks.toLocaleString()}</div></div>
-                <div class="stat-card"><div class="label">Cobertura</div><div class="value">${docs.length ? Math.round((stats['indexed']||0)/docs.length*100) : 0}%</div></div>
+                <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)">${indexed}</div></div>
+                <div class="stat-card"><div class="label">Procesando</div><div class="value" style="color:var(--warning)">${bs.processing||0}</div></div>
+                <div class="stat-card"><div class="label">Pendientes</div><div class="value" style="color:var(--info)">${(bs.pending||0)+(bs.uploaded||0)}</div></div>
+                <div class="stat-card"><div class="label">Con Error</div><div class="value" style="color:var(--danger)">${(bs.error||0)+(bs.failed||0)}</div></div>
+                <div class="stat-card"><div class="label">Total Chunks en Índice</div><div class="value">${(stats.total_chunks||0).toLocaleString()}</div></div>
+                <div class="stat-card"><div class="label">Cobertura</div><div class="value">${coverage}%</div>
+                    <div class="progress-bar" style="margin-top:6px"><div class="fill ${coverage===100?'complete':''}" style="width:${coverage}%"></div></div>
+                </div>
             `;
         } catch (e) {
             console.warn('Indexing stats error:', e);
@@ -1561,9 +1668,20 @@ const Indexing = {
         result.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Procesando...</div>';
         try {
             const res = await api.processPending(App.tenantId, forceReindex);
+            const hasDetail = res.total != null;
             result.innerHTML = `<div class="stat-card" style="border-color:var(--success)">
-                <div class="label">Resultado</div>
-                <pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>
+                <div class="label">Resultado del Procesamiento</div>
+                ${hasDetail ? `
+                    <div class="stats-grid" style="margin-top:10px">
+                        <div class="stat-card"><div class="label">Total</div><div class="value">${res.total||0}</div></div>
+                        <div class="stat-card"><div class="label">Exitosos</div><div class="value" style="color:var(--success)">${res.successful||0}</div></div>
+                        <div class="stat-card"><div class="label">Fallidos</div><div class="value" style="color:var(--danger)">${res.failed||0}</div></div>
+                        <div class="stat-card"><div class="label">Duplicados</div><div class="value">${res.duplicates||0}</div></div>
+                        <div class="stat-card"><div class="label">Chunks</div><div class="value">${res.chunks_created||0}</div></div>
+                        ${res.elapsed_seconds != null ? `<div class="stat-card"><div class="label">Tiempo</div><div class="value">${res.elapsed_seconds.toFixed(1)}s</div></div>` : ''}
+                    </div>
+                    ${res.message ? `<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">${Util.esc(res.message)}</div>` : ''}
+                ` : `<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>`}
             </div>`;
             Toast.show('Procesamiento completado', 'success');
             setTimeout(() => this.load(), 2000);
@@ -1582,11 +1700,22 @@ const Indexing = {
                 result.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Reiniciando índice completo...</div>';
                 try {
                     const res = await api.resetReindex(App.tenantId);
+                    const hasDetail = res.cleared_records != null || res.total != null;
                     result.innerHTML = `<div class="stat-card" style="border-color:var(--warning)">
                         <div class="label">Reset Completado</div>
-                        <pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>
+                        ${hasDetail ? `
+                            <div class="stats-grid" style="margin-top:10px">
+                                ${res.cleared_records != null ? `<div class="stat-card"><div class="label">Registros Limpiados</div><div class="value">${res.cleared_records}</div></div>` : ''}
+                                ${res.total != null ? `<div class="stat-card"><div class="label">Total</div><div class="value">${res.total}</div></div>` : ''}
+                                ${res.successful != null ? `<div class="stat-card"><div class="label">Exitosos</div><div class="value" style="color:var(--success)">${res.successful}</div></div>` : ''}
+                                ${res.failed != null ? `<div class="stat-card"><div class="label">Fallidos</div><div class="value" style="color:var(--danger)">${res.failed}</div></div>` : ''}
+                                ${res.chunks_created != null ? `<div class="stat-card"><div class="label">Chunks</div><div class="value">${res.chunks_created}</div></div>` : ''}
+                                ${res.elapsed_seconds != null ? `<div class="stat-card"><div class="label">Tiempo</div><div class="value">${res.elapsed_seconds.toFixed(1)}s</div></div>` : ''}
+                            </div>
+                            ${res.message ? `<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">${Util.esc(res.message)}</div>` : ''}
+                        ` : `<pre style="font-size:12px;color:var(--text-secondary);white-space:pre-wrap">${JSON.stringify(res, null, 2)}</pre>`}
                     </div>`;
-                    Toast.show('Reset e reindexación iniciada', 'success');
+                    Toast.show('Reset e reindexación completada', 'success');
                     setTimeout(() => this.load(), 3000);
                 } catch (e) {
                     result.innerHTML = '';
@@ -1636,7 +1765,10 @@ const Search = {
                 answerCard.innerHTML = `
                     <div class="result-header">
                         <span class="result-source">💡 Respuesta RAG</span>
-                        <span class="result-score score-high">confianza: ${(res.confidence * 100).toFixed(0)}%</span>
+                        <div style="display:flex;gap:6px;align-items:center">
+                            ${res.cached != null ? `<span class="badge-cached ${res.cached?'hit':'miss'}">${res.cached?'⚡ Cache':'🔄 Live'}</span>` : ''}
+                            <span class="result-score score-high">confianza: ${(res.confidence * 100).toFixed(0)}%</span>
+                        </div>
                     </div>
                     <div class="result-text" style="color:var(--text-primary)">${marked.parse(res.answer)}</div>
                     ${res.sources?.length ? `<div class="result-meta">Fuentes: ${res.sources.join(', ')}</div>` : ''}

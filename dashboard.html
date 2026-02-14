@@ -1529,6 +1529,7 @@ select.form-control { cursor: pointer; }
             <button class="filter-pill" data-f="indexed" onclick="DocMgr.setFilter('indexed', this)">✅ Indexados</button>
             <button class="filter-pill" data-f="pending" onclick="DocMgr.setFilter('pending', this)">⏳ Pendientes</button>
             <button class="filter-pill" data-f="error" onclick="DocMgr.setFilter('error', this)">❌ Errores</button>
+            <button class="filter-pill" data-f="failed" onclick="DocMgr.setFilter('failed', this)">⛔ Fallidos</button>
             <button class="filter-pill" data-f="deleted" onclick="DocMgr.setFilter('deleted', this)">🗑️ Eliminados</button>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;">
@@ -1988,7 +1989,7 @@ function formatBytes(b) {
 }
 
 function statusBadge(status) {
-    const map = { active: 'success', indexed: 'success', inactive: 'muted', processing: 'warning', error: 'danger', failed: 'danger' };
+    const map = { active: 'success', indexed: 'success', inactive: 'muted', processing: 'warning', error: 'danger', failed: 'danger', deleted: 'muted' };
     return `<span class="badge badge-${map[status] || 'info'}">${status}</span>`;
 }
 
@@ -2229,6 +2230,10 @@ const DocMgr = {
         try {
             const data = await api.listDocuments(this.currentTenant.tenant_id);
             this.docs = data.documents || data || [];
+            // Normalize category (backend may return 'DocumentCategory.FAQ' instead of 'faq')
+            this.docs.forEach(d => {
+                if (d.category) d.category = d.category.replace(/^DocumentCategory\./i, '').toLowerCase();
+            });
             this.selected.clear();
             this.applyFilter();
             SrcMgr.refresh();
@@ -2244,7 +2249,7 @@ const DocMgr = {
             document.getElementById('docChunks').textContent = s.total_chunks ?? 0;
             document.getElementById('docSize').textContent = formatBytes(s.total_size_bytes || 0);
             document.getElementById('docIndexed').textContent = s.by_status?.indexed ?? 0;
-            document.getElementById('docErrors').textContent = (s.by_status?.error ?? 0) + (s.by_status?.deleted ?? 0);
+            document.getElementById('docErrors').textContent = (s.by_status?.error ?? 0) + (s.by_status?.failed ?? 0);
             document.getElementById('docCategories').textContent = s.by_category ? Object.keys(s.by_category).length : 0;
         } catch (e) {
             console.warn('Stats error:', e.message);
