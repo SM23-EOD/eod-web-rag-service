@@ -263,9 +263,9 @@ class RAGApiClient {
         if (filters.low_confidence) params.set('low_confidence', true);
         if (filters.limit) params.set('limit', filters.limit);
         const q = params.toString() ? `?${params}` : '';
-        return this.get(`/feedback${q}`);
+        return this._request('GET', `/feedback${q}`, null, { retries: 0 });
     }
-    async feedbackStats() { return this.get('/feedback/stats'); }
+    async feedbackStats() { return this._request('GET', '/feedback/stats', null, { retries: 0 }); }
     async markReviewed(id, action = null) {
         const q = action ? `?action_taken=${encodeURIComponent(action)}` : '';
         return this.post(`/feedback/${id}/review${q}`);

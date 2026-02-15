@@ -3102,7 +3102,11 @@ async function loadFeedbackStats() {
         `;
     } catch (e) {
         document.getElementById('feedbackPanel').innerHTML = 
-            `<div style="color:var(--danger)">❌ ${e.message}</div>`;
+            `<div style="color:var(--text-muted);text-align:center;padding:16px">
+                <div style="font-size:24px;margin-bottom:8px">📊</div>
+                <div style="font-size:13px">Feedback service no disponible</div>
+                <div style="font-size:11px;opacity:0.6;margin-top:4px">Backend degradado — se reintentará automáticamente</div>
+            </div>`;
     }
 }
 
@@ -3152,7 +3156,10 @@ async function loadFeedbackList() {
         `).join('');
     } catch (e) {
         document.getElementById('feedbackTableBody').innerHTML = 
-            `<tr><td colspan="6" style="color:var(--danger);padding:20px">❌ ${e.message}</td></tr>`;
+            `<tr><td colspan="6" style="color:var(--text-muted);padding:30px;text-align:center">
+                <div style="font-size:24px;margin-bottom:8px">💬</div>
+                Feedback service no disponible — backend degradado
+            </td></tr>`;
     }
 }
 
