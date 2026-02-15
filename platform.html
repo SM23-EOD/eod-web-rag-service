@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA Platform — Console</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DRAGA PLATFORM — DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --draga-accent: #7c3aed;
+    --draga-accent-light: #a78bfa;
+    --draga-accent-alpha: rgba(124,58,237,0.15);
+    --draga-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+    --draga-glow: 0 0 40px rgba(124,58,237,0.25);
+    --primary: #ec8951;
+    --primary-dark: #d97a45;
+    --primary-alpha: rgba(236,137,81,0.15);
+    --secondary: #485ff2;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --bg-dark: #0c0f1a;
+    --bg-main: #131a2b;
+    --bg-card: #1a2236;
+    --bg-card-hover: #212b42;
+    --bg-input: #242e44;
+    --text-primary: #f0f2f5;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #243049;
+    --border-light: #334155;
+    --shadow: 0 4px 24px rgba(0,0,0,0.35);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+    --transition: 0.25s ease;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════ */
+.platform-header {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-brand .logo {
+    width: 36px; height: 36px;
+    background: var(--draga-gradient);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--draga-glow);
+}
+
+.header-brand .name {
+    font-size: 20px;
+    font-weight: 900;
+    background: var(--draga-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+}
+
+.header-brand .subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-top: -2px;
+}
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.header-nav a {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.header-nav a:hover, .header-nav a.active {
+    color: var(--text-primary);
+    background: var(--draga-accent-alpha);
+}
+
+.header-nav a.active {
+    color: var(--draga-accent-light);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.health-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.health-indicator.online { background: rgba(34,197,94,0.12); color: var(--success); }
+.health-indicator.offline { background: rgba(239,68,68,0.12); color: var(--danger); }
+.health-indicator.degraded { background: rgba(245,158,11,0.12); color: var(--warning); }
+
+.health-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HERO SECTION
+   ═══════════════════════════════════════════════════════════════ */
+.hero {
+    padding: 60px 32px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.hero h1 {
+    font-size: 36px;
+    font-weight: 900;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.hero h1 .accent {
+    background: var(--draga-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero .tagline {
+    font-size: 16px;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto 32px;
+    line-height: 1.6;
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    margin-bottom: 32px;
+}
+
+.hero-stat {
+    text-align: center;
+}
+
+.hero-stat .number {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--draga-accent-light);
+}
+
+.hero-stat .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 32px 48px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title .icon {
+    font-size: 22px;
+}
+
+.section-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: var(--draga-accent-alpha);
+    color: var(--draga-accent-light);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DRAGA INSTANCE CARDS
+   ═══════════════════════════════════════════════════════════════ */
+.draga-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 20px;
+}
+
+.draga-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.draga-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--draga-gradient);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.draga-card:hover {
+    border-color: var(--draga-accent);
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--draga-glow);
+}
+
+.draga-card:hover::before { opacity: 1; }
+
+.draga-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.draga-name {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.draga-id {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+    margin-top: 4px;
+}
+
+.draga-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.draga-status.active { background: rgba(34,197,94,0.15); color: var(--success); }
+.draga-status.inactive { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+.draga-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+/* Anatomy mini-visualization */
+.draga-anatomy {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.anatomy-part {
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    transition: var(--transition);
+}
+
+.anatomy-part .part-icon { font-size: 18px; margin-bottom: 4px; }
+.anatomy-part .part-label { text-transform: uppercase; letter-spacing: 0.5px; }
+.anatomy-part .part-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2px;
+}
+
+.anatomy-part.healthy { border-color: rgba(34,197,94,0.3); }
+.anatomy-part.warning { border-color: rgba(245,158,11,0.3); }
+.anatomy-part.error { border-color: rgba(239,68,68,0.3); }
+
+/* Protocols */
+.draga-protocols {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.protocol-badge {
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: var(--bg-input);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.protocol-badge.rest { color: var(--info); border-color: rgba(59,130,246,0.3); }
+.protocol-badge.openai { color: var(--success); border-color: rgba(34,197,94,0.3); }
+.protocol-badge.mcp { color: var(--warning); border-color: rgba(245,158,11,0.3); }
+
+/* Metrics row */
+.draga-metrics {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.draga-metrics span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Actions */
+.draga-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ARCHITECTURE OVERVIEW
+   ═══════════════════════════════════════════════════════════════ */
+.arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.arch-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: var(--transition);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.arch-card:hover {
+    border-color: var(--draga-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.arch-card .card-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 14px;
+}
+
+.arch-card .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.arch-card .card-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.arch-card .card-tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PIPELINE PREVIEW
+   ═══════════════════════════════════════════════════════════════ */
+.pipeline-preview {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    padding: 8px 0;
+}
+
+.pipeline-step {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    position: relative;
+    transition: var(--transition);
+}
+
+.pipeline-step .step-num {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--draga-accent-light);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.pipeline-step::after {
+    content: '→';
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.pipeline-step:last-child::after { display: none; }
+
+.pipeline-step:hover {
+    border-color: var(--draga-accent);
+    background: var(--draga-accent-alpha);
+}
+
+.pipeline-step.pre { border-left: 2px solid var(--info); }
+.pipeline-step.retrieval { border-left: 2px solid var(--warning); }
+.pipeline-step.post { border-left: 2px solid var(--success); }
+.pipeline-step.gen { border-left: 2px solid var(--danger); }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUICK NAV GRID
+   ═══════════════════════════════════════════════════════════════ */
+.nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.nav-tile {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: var(--transition);
+}
+
+.nav-tile:hover {
+    border-color: var(--draga-accent);
+    background: var(--bg-card-hover);
+    transform: translateY(-1px);
+}
+
+.nav-tile .tile-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.nav-tile .tile-label {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.nav-tile .tile-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.nav-tile .tile-badge {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--draga-accent-alpha);
+    color: var(--draga-accent-light);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANTI-HALLUCINATION BANNER
+   ═══════════════════════════════════════════════════════════════ */
+.anti-halluc {
+    background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(124,58,237,0.08) 100%);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 48px;
+}
+
+.anti-halluc .score-ring {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success) 0% 98%, var(--bg-input) 98% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.anti-halluc .score-ring::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: var(--bg-dark);
+}
+
+.anti-halluc .score-value {
+    position: relative;
+    z-index: 1;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--success);
+}
+
+.anti-halluc .score-info h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.anti-halluc .score-info p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.anti-halluc .layers {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.anti-halluc .layer {
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+.btn {
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+
+.btn-primary {
+    background: var(--draga-gradient);
+    border: none;
+    color: white;
+}
+
+.btn-primary:hover { opacity: 0.9; box-shadow: var(--draga-glow); }
+
+.btn-warning {
+    background: var(--primary);
+    border-color: var(--primary-dark);
+    color: white;
+}
+
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════════ */
+.toast-container {
+    position: fixed;
+    top: 72px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    animation: slideIn 0.3s ease;
+    max-width: 400px;
+}
+
+.toast-success { background: #166534; color: #bbf7d0; }
+.toast-error { background: #991b1b; color: #fecaca; }
+.toast-info { background: #1e3a5f; color: #93c5fd; }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .hero-stats { flex-wrap: wrap; gap: 24px; }
+    .draga-grid { grid-template-columns: 1fr; }
+    .draga-anatomy { grid-template-columns: repeat(2, 1fr); }
+    .anti-halluc { flex-direction: column; text-align: center; }
+    .header-nav { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOADING
+   ═══════════════════════════════════════════════════════════════ */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--text-muted);
+    font-size: 14px;
+    gap: 10px;
+}
+
+.spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--draga-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text-secondary); }
+.empty-state p { font-size: 13px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ HEADER ═══════════════════════════════════ -->
+<header class="platform-header">
+    <div class="header-brand">
+        <div class="logo">🐉</div>
+        <div>
+            <div class="name">DRAGA</div>
+            <div class="subtitle">Document Grounded RAG Agent</div>
+        </div>
+    </div>
+    <nav class="header-nav">
+        <a href="platform.html" class="active">🏠 Console</a>
+        <a href="draga-agents.html">🤖 Agents</a>
+        <a href="pipeline-monitor.html">⚙️ Pipeline</a>
+        <a href="quality-dashboard.html">🛡️ Quality</a>
+        <a href="roadmap.html">🗺️ Roadmap</a>
+        <a href="dashboard.html">📊 Admin</a>
+    </nav>
+    <div class="header-right">
+        <div class="health-indicator" id="healthBadge">
+            <div class="health-dot"></div>
+            <span id="healthText">Checking...</span>
+        </div>
+    </div>
+</header>
+
+<!-- ═══════════════════════════════════ HERO ═══════════════════════════════════ -->
+<div class="hero">
+    <h1>Welcome to <span class="accent">DRAGA Platform</span></h1>
+    <p class="tagline">
+        Plataforma multi-tenant de Document Grounded RAG Agents con framework anti-alucinación al 98%, 
+        triple protocolo (REST + OpenAI + MCP), y pipeline composable de 14 pasos.
+    </p>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="number" id="statAgents">—</div>
+            <div class="label">DRAGAs Activos</div>
+        </div>
+        <div class="hero-stat">
+            <div class="number" id="statDocs">—</div>
+            <div class="label">Documentos</div>
+        </div>
+        <div class="hero-stat">
+            <div class="number" id="statPipeline">14</div>
+            <div class="label">Pipeline Steps</div>
+        </div>
+        <div class="hero-stat">
+            <div class="number" id="statGrounding">98%</div>
+            <div class="label">Anti-Hallucination</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ ANTI-HALLUCINATION ═══════════════════════════════════ -->
+<div class="section">
+    <div class="anti-halluc">
+        <div class="score-ring">
+            <span class="score-value">98%</span>
+        </div>
+        <div class="score-info">
+            <h3>🛡️ Framework Anti-Alucinación — 3 Capas</h3>
+            <p>Cada respuesta es verificada por NLI + token overlap + grounding evaluation. 
+               Benchmark GaRAGe (2025): mejores LLMs alcanzan solo 60% factuality — DRAGA alcanza 98%.</p>
+            <div class="layers">
+                <span class="layer">📥 Ingestión (98%)</span>
+                <span class="layer">🧠 Prompt Engineering (95%)</span>
+                <span class="layer">🔍 Verificación Agente (98%)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ DRAGA INSTANCES ═══════════════════════════════════ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <span class="icon">🐉</span> DRAGAs Activos
+        </div>
+        <a href="dashboard.html#tenants" class="btn btn-sm btn-primary">+ Nuevo DRAGA</a>
+    </div>
+    <div class="draga-grid" id="dragaGrid">
+        <div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ PIPELINE PREVIEW ═══════════════════════════════════ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <span class="icon">⚙️</span> RAG Pipeline — 14 Steps Composable
+        </div>
+        <a href="pipeline-monitor.html" class="btn btn-sm">Ver Monitor →</a>
+    </div>
+    <div class="pipeline-preview">
+        <div class="pipeline-step pre"><span class="step-num">01</span>translate_query</div>
+        <div class="pipeline-step pre"><span class="step-num">02</span>enrich_feedback</div>
+        <div class="pipeline-step pre"><span class="step-num">03</span>normalize_query</div>
+        <div class="pipeline-step pre"><span class="step-num">04</span>decompose_query</div>
+        <div class="pipeline-step retrieval"><span class="step-num">05</span>embed_query</div>
+        <div class="pipeline-step retrieval"><span class="step-num">06</span>cache_lookup</div>
+        <div class="pipeline-step retrieval"><span class="step-num">07</span>retrieve_chunks</div>
+        <div class="pipeline-step post"><span class="step-num">08</span>deduplicate</div>
+        <div class="pipeline-step post"><span class="step-num">09</span>rerank_chunks</div>
+        <div class="pipeline-step post"><span class="step-num">10</span>evaluate_context</div>
+        <div class="pipeline-step post"><span class="step-num">11</span>record_gap</div>
+        <div class="pipeline-step gen"><span class="step-num">12</span>generate_response</div>
+        <div class="pipeline-step gen"><span class="step-num">13</span>verify_grounding</div>
+        <div class="pipeline-step gen"><span class="step-num">14</span>validate_response</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ ARCHITECTURE ═══════════════════════════════════ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <span class="icon">🏗️</span> Arquitectura de la Plataforma
+        </div>
+    </div>
+    <div class="arch-grid">
+        <a href="draga-agents.html" class="arch-card">
+            <div class="card-icon" style="background:rgba(124,58,237,0.15)">🤖</div>
+            <div class="card-title">Agent Crew</div>
+            <div class="card-desc">6 agentes especializados: Retrieval, Grounding, Language, Ingestion, Feedback, Quality</div>
+            <span class="card-tag" style="background:var(--draga-accent-alpha);color:var(--draga-accent-light)">6 Agentes</span>
+        </a>
+        <a href="pipeline-monitor.html" class="arch-card">
+            <div class="card-icon" style="background:rgba(59,130,246,0.15)">⚙️</div>
+            <div class="card-title">Orchestrator Pipeline</div>
+            <div class="card-desc">Pipeline composable de 14 pasos: pre-retrieval → retrieval → post-retrieval → generation + verification</div>
+            <span class="card-tag" style="background:rgba(59,130,246,0.15);color:var(--info)">14 Steps</span>
+        </a>
+        <a href="quality-dashboard.html" class="arch-card">
+            <div class="card-icon" style="background:rgba(34,197,94,0.15)">🛡️</div>
+            <div class="card-title">Anti-Alucinación</div>
+            <div class="card-desc">Framework de 3 capas: ingestión semántica, prompt engineering defensivo, verificación NLI</div>
+            <span class="card-tag" style="background:rgba(34,197,94,0.15);color:var(--success)">98% Cobertura</span>
+        </a>
+        <div class="arch-card">
+            <div class="card-icon" style="background:rgba(245,158,11,0.15)">🔌</div>
+            <div class="card-title">Triple Protocolo</div>
+            <div class="card-desc">REST API v2, OpenAI-Compatible (/v1/chat/completions), MCP Server (stdio/SSE)</div>
+            <span class="card-tag" style="background:rgba(245,158,11,0.15);color:var(--warning)">3 Protocolos</span>
+        </div>
+        <div class="arch-card">
+            <div class="card-icon" style="background:rgba(236,137,81,0.15)">🏢</div>
+            <div class="card-title">Multi-Tenancy</div>
+            <div class="card-desc">Aislamiento completo: KB vectorial, cache, config, API keys, conversations, feedback por tenant</div>
+            <span class="card-tag" style="background:var(--primary-alpha);color:var(--primary)">Aislamiento Total</span>
+        </div>
+        <div class="arch-card">
+            <div class="card-icon" style="background:rgba(139,92,246,0.15)">🧬</div>
+            <div class="card-title">Arquitectura Hexagonal</div>
+            <div class="card-desc">30+ outbound ports, domain layer con zero external dependencies, adaptadores swap-able</div>
+            <span class="card-tag" style="background:rgba(139,92,246,0.15);color:#a78bfa">30+ Ports</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ QUICK NAV ═══════════════════════════════════ -->
+<div class="section">
+    <div class="section-header">
+        <div class="section-title">
+            <span class="icon">🚀</span> Acceso Rápido
+        </div>
+    </div>
+    <div class="nav-grid">
+        <a href="dashboard.html" class="nav-tile">
+            <span class="tile-icon">📊</span>
+            <div>
+                <div class="tile-label">Admin Dashboard</div>
+                <div class="tile-desc">Chat, documentos, tenants, analytics</div>
+            </div>
+        </a>
+        <a href="document-management.html" class="nav-tile">
+            <span class="tile-icon">📄</span>
+            <div>
+                <div class="tile-label">Gestión Documental</div>
+                <div class="tile-desc">Upload, indexación, gestión de KB</div>
+            </div>
+        </a>
+        <a href="chat-interface.html" class="nav-tile">
+            <span class="tile-icon">💬</span>
+            <div>
+                <div class="tile-label">Chat Interface</div>
+                <div class="tile-desc">Probar queries contra DRAGAs</div>
+            </div>
+        </a>
+        <a href="evaluation-dashboard.html" class="nav-tile">
+            <span class="tile-icon">📈</span>
+            <div>
+                <div class="tile-label">Evaluación</div>
+                <div class="tile-desc">Métricas de calidad y cobertura</div>
+            </div>
+        </a>
+        <a href="ab-test.html" class="nav-tile">
+            <span class="tile-icon">🔬</span>
+            <div>
+                <div class="tile-label">A/B Testing</div>
+                <div class="tile-desc">Experimentos de pipeline</div>
+            </div>
+        </a>
+        <a href="roadmap.html" class="nav-tile">
+            <span class="tile-icon">🗺️</span>
+            <div>
+                <div class="tile-label">SaaS Roadmap</div>
+                <div class="tile-desc">3 fases, 8 sprints, 57 tareas</div>
+            </div>
+            <span class="tile-badge">Nuevo</span>
+        </a>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════ TOAST ═══════════════════════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DRAGA PLATFORM — CONSOLE CONTROLLER
+   ═══════════════════════════════════════════════════════════════ */
+
+function toast(msg, type = 'info') {
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `${icons[type] || ''} ${msg}`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
+}
+
+// ── Health Check ──────────────────────────────────────────────
+async function checkHealth() {
+    const badge = document.getElementById('healthBadge');
+    const text = document.getElementById('healthText');
+    try {
+        const h = await api.health();
+        if (h.status === 'healthy') {
+            badge.className = 'health-indicator online';
+            text.textContent = 'All Systems Online';
+        } else {
+            badge.className = 'health-indicator degraded';
+            text.textContent = 'Degraded';
+        }
+    } catch {
+        badge.className = 'health-indicator offline';
+        text.textContent = 'Backend Offline';
+    }
+}
+
+// ── Load DRAGAs (tenants + agents) ───────────────────────────
+async function loadDragas() {
+    const grid = document.getElementById('dragaGrid');
+    try {
+        const [tenantData, agentData] = await Promise.allSettled([
+            api.listTenants(true),
+            api.listAgents()
+        ]);
+
+        const tenants = tenantData.status === 'fulfilled' 
+            ? (tenantData.value.tenants || []) 
+            : [];
+        const agents = agentData.status === 'fulfilled'
+            ? (Array.isArray(agentData.value) ? agentData.value : (agentData.value.agents || []))
+            : [];
+
+        // Update hero stats
+        document.getElementById('statAgents').textContent = tenants.filter(t => t.is_active !== false).length;
+        const totalDocs = tenants.reduce((sum, t) => sum + (t.document_count || 0), 0);
+        document.getElementById('statDocs').textContent = totalDocs.toLocaleString();
+
+        if (tenants.length === 0) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                <div class="icon">🐉</div>
+                <h3>Sin DRAGAs configurados</h3>
+                <p>Crea tu primer DRAGA desde el Admin Dashboard para comenzar.</p>
+                <a href="dashboard.html#tenants" class="btn btn-primary" style="margin-top:16px">+ Crear DRAGA</a>
+            </div>`;
+            return;
+        }
+
+        grid.innerHTML = tenants.map(t => {
+            const tenantAgents = agents.filter(a => a.tenant_id === t.tenant_id);
+            const isActive = t.is_active !== false;
+            
+            // Determine anatomy health based on available data
+            const kbHealth = (t.document_count || 0) > 0 ? 'healthy' : 'warning';
+            const orchestratorHealth = isActive ? 'healthy' : 'error';
+            
+            return `
+            <div class="draga-card">
+                <div class="draga-header">
+                    <div>
+                        <div class="draga-name">🐉 ${t.name}</div>
+                        <div class="draga-id">${t.tenant_id}</div>
+                    </div>
+                    <span class="draga-status ${isActive ? 'active' : 'inactive'}">
+                        ${isActive ? '● Activo' : '● Inactivo'}
+                    </span>
+                </div>
+                ${t.description ? `<div class="draga-desc">${t.description}</div>` : ''}
+                
+                <div class="draga-anatomy">
+                    <div class="anatomy-part healthy">
+                        <div class="part-icon">🏢</div>
+                        <div class="part-label">Tenant</div>
+                        <div class="part-value">${t.tenant_id}</div>
+                    </div>
+                    <div class="anatomy-part ${kbHealth}">
+                        <div class="part-icon">📚</div>
+                        <div class="part-label">Knowledge Base</div>
+                        <div class="part-value">${t.document_count || 0} docs</div>
+                    </div>
+                    <div class="anatomy-part ${orchestratorHealth}">
+                        <div class="part-icon">⚙️</div>
+                        <div class="part-label">Orchestrator</div>
+                        <div class="part-value">14 steps</div>
+                    </div>
+                    <div class="anatomy-part healthy">
+                        <div class="part-icon">🤖</div>
+                        <div class="part-label">Agent Crew</div>
+                        <div class="part-value">6 agents</div>
+                    </div>
+                </div>
+
+                <div class="draga-protocols">
+                    <span class="protocol-badge rest">REST v2</span>
+                    <span class="protocol-badge openai">OpenAI</span>
+                    <span class="protocol-badge mcp">MCP</span>
+                </div>
+
+                <div class="draga-metrics">
+                    <span>🧠 ${t.default_model?.split('/').pop() || '—'}</span>
+                    <span>🌐 ${t.response_language || 'es'}</span>
+                    <span>📦 ${t.collection_name || '—'}</span>
+                    ${t.created_at ? `<span>📅 ${new Date(t.created_at).toLocaleDateString('es')}</span>` : ''}
+                </div>
+
+                <div class="draga-actions">
+                    <a href="tenant-dashboard.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary">🔧 Gestionar</a>
+                    <a href="chat-interface.html?tenant=${t.tenant_id}" class="btn btn-sm">💬 Chat</a>
+                    <a href="draga-agents.html?tenant=${t.tenant_id}" class="btn btn-sm">🤖 Agentes</a>
+                    <a href="quality-dashboard.html?tenant=${t.tenant_id}" class="btn btn-sm">🛡️ Calidad</a>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+            <div class="icon">⚠️</div>
+            <h3>Error cargando DRAGAs</h3>
+            <p>${e.message}</p>
+            <button class="btn btn-primary" onclick="loadDragas()" style="margin-top:16px">🔄 Reintentar</button>
+        </div>`;
+    }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    checkHealth();
+    loadDragas();
+    // Refresh health every 30s
+    setInterval(checkHealth, 30000);
+});
+</script>
+</body>
+</html>

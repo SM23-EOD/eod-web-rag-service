@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA Agents — Anatomía y Crew</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/api-client.js"></script>
+    <style>
+:root {
+    --draga-accent: #7c3aed;
+    --draga-accent-light: #a78bfa;
+    --draga-accent-alpha: rgba(124,58,237,0.15);
+    --draga-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+    --draga-glow: 0 0 40px rgba(124,58,237,0.25);
+    --primary: #ec8951;
+    --primary-alpha: rgba(236,137,81,0.15);
+    --secondary: #485ff2;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --bg-dark: #0c0f1a;
+    --bg-main: #131a2b;
+    --bg-card: #1a2236;
+    --bg-card-hover: #212b42;
+    --bg-input: #242e44;
+    --text-primary: #f0f2f5;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border: #243049;
+    --border-light: #334155;
+    --shadow: 0 4px 24px rgba(0,0,0,0.35);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+    --transition: 0.25s ease;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.platform-header {
+    background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+}
+.header-brand { display:flex; align-items:center; gap:12px; }
+.header-brand .logo {
+    width:36px; height:36px; background:var(--draga-gradient);
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; box-shadow:var(--draga-glow);
+}
+.header-brand .name {
+    font-size:20px; font-weight:900;
+    background:var(--draga-gradient); -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:1px;
+}
+.header-brand .subtitle { font-size:11px; color:var(--text-muted); margin-top:-2px; }
+.header-nav { display:flex; align-items:center; gap:4px; }
+.header-nav a {
+    padding:8px 16px; font-size:13px; font-weight:600; color:var(--text-secondary);
+    text-decoration:none; border-radius:var(--radius-sm); transition:var(--transition);
+}
+.header-nav a:hover,.header-nav a.active { color:var(--text-primary); background:var(--draga-accent-alpha); }
+.header-nav a.active { color:var(--draga-accent-light); }
+
+.breadcrumb {
+    padding: 10px 32px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.breadcrumb a { color: var(--text-muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--draga-accent-light); }
+.breadcrumb .sep { opacity: 0.4; }
+
+/* ── TENANT SELECTOR ── */
+.tenant-bar {
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-main);
+}
+.tenant-bar label { font-size: 13px; color: var(--text-muted); }
+.tenant-bar select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--draga-accent-light);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+}
+.tenant-bar select option { background: var(--bg-card); color: var(--text-primary); }
+
+/* ── PAGE LAYOUT ── */
+.page { max-width: 1280px; margin: 0 auto; padding: 32px; }
+.section { margin-bottom: 48px; }
+.section-title {
+    font-size: 18px; font-weight: 700; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+}
+
+/* ── DRAGA ANATOMY DIAGRAM ── */
+.anatomy-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+}
+
+.anatomy-label {
+    text-align: center;
+    margin-bottom: 24px;
+}
+.anatomy-label h2 {
+    font-size: 24px;
+    font-weight: 900;
+    background: var(--draga-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.anatomy-label p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.anatomy-row {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.anatomy-row.top { grid-template-columns: 1fr 2fr; }
+.anatomy-row.mid { grid-template-columns: 1fr; }
+.anatomy-row.bot { grid-template-columns: 1fr; }
+
+.anatomy-box {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.anatomy-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+}
+
+.anatomy-box.tenant::before { background: var(--primary); }
+.anatomy-box.kb::before { background: var(--success); }
+.anatomy-box.orchestrator::before { background: var(--info); }
+.anatomy-box.crew::before { background: var(--draga-accent); }
+
+.anatomy-box .box-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.anatomy-box .box-icon { font-size: 24px; }
+.anatomy-box .box-title { font-size: 16px; font-weight: 700; }
+.anatomy-box .box-subtitle { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+.anatomy-box .box-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── CREW GRID ── */
+.crew-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.crew-agent {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+}
+
+.crew-agent:hover {
+    border-color: var(--draga-accent);
+    transform: translateY(-2px);
+    box-shadow: var(--draga-glow);
+}
+
+.crew-agent.roadmap {
+    opacity: 0.6;
+    border-style: dashed;
+}
+
+.crew-agent .agent-icon { font-size: 28px; margin-bottom: 8px; }
+.crew-agent .agent-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.crew-agent .agent-role { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.crew-agent .agent-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ── SPECTRUM TABLE ── */
+.spectrum-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.spectrum-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 10px 16px;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border);
+}
+
+.spectrum-table td {
+    padding: 14px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+
+.spectrum-table tr:hover td { background: var(--bg-card-hover); }
+
+.spectrum-table .level-num {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 900;
+    color: white;
+}
+
+.level-1 { background: rgba(34,197,94,0.3); color: var(--success)!important; }
+.level-2 { background: rgba(59,130,246,0.3); color: var(--info)!important; }
+.level-3 { background: rgba(245,158,11,0.3); color: var(--warning)!important; }
+.level-4 { background: rgba(236,137,81,0.3); color: var(--primary)!important; }
+.level-5 { background: rgba(124,58,237,0.3); color: var(--draga-accent-light)!important; }
+
+/* ── AGENT INSTANCES ── */
+.agent-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: var(--transition);
+}
+
+.agent-card:hover {
+    border-color: var(--draga-accent);
+    transform: translateY(-1px);
+}
+
+.agent-card .agent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.agent-card .agent-title { font-size: 15px; font-weight: 700; }
+.agent-card .agent-id { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+.agent-card .agent-status {
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.agent-card .agent-status.active { background:rgba(34,197,94,0.15); color:var(--success); }
+.agent-card .agent-status.inactive { background:rgba(239,68,68,0.15); color:var(--danger); }
+
+.agent-card .agent-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.agent-card .agent-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── PROTOCOLS COMPARISON ── */
+.protocols-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.protocol-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.protocol-card:hover {
+    border-color: var(--draga-accent);
+    transform: translateY(-2px);
+}
+
+.protocol-card .proto-icon { font-size: 36px; margin-bottom: 12px; }
+.protocol-card .proto-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.protocol-card .proto-endpoint {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--draga-accent-light);
+    background: var(--bg-input);
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+.protocol-card .proto-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.protocol-card .proto-status {
+    margin-top: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+/* ── TENANT INFO CARDS ── */
+.tenant-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+}
+.info-card .info-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+.info-card .info-value { font-size: 18px; font-weight: 900; }
+.info-card .info-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ── BUTTONS ── */
+.btn {
+    padding:8px 18px; border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+    font-family:inherit; border:1px solid var(--border); background:var(--bg-input);
+    color:var(--text-primary); cursor:pointer; transition:var(--transition);
+    text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+}
+.btn:hover { background:var(--bg-card-hover); }
+.btn-primary { background:var(--draga-gradient); border:none; color:white; }
+.btn-primary:hover { opacity:0.9; box-shadow:var(--draga-glow); }
+.btn-sm { padding:5px 12px; font-size:12px; }
+
+.loading { display:flex; align-items:center; justify-content:center; padding:60px; color:var(--text-muted); gap:10px; }
+.spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--draga-accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.toast-container { position:fixed; top:72px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+.toast { padding:12px 20px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; animation:slideIn .3s ease; max-width:400px; }
+.toast-error { background:#991b1b; color:#fecaca; }
+.toast-info { background:#1e3a5f; color:#93c5fd; }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+@media (max-width:768px) {
+    .anatomy-row.top { grid-template-columns:1fr; }
+    .protocols-grid { grid-template-columns:1fr; }
+    .crew-grid { grid-template-columns:repeat(2,1fr); }
+}
+    </style>
+</head>
+<body>
+
+<header class="platform-header">
+    <div class="header-brand">
+        <div class="logo">🐉</div>
+        <div>
+            <div class="name">DRAGA</div>
+            <div class="subtitle">Document Grounded RAG Agent</div>
+        </div>
+    </div>
+    <nav class="header-nav">
+        <a href="platform.html">🏠 Console</a>
+        <a href="draga-agents.html" class="active">🤖 Agents</a>
+        <a href="pipeline-monitor.html">⚙️ Pipeline</a>
+        <a href="quality-dashboard.html">🛡️ Quality</a>
+        <a href="roadmap.html">🗺️ Roadmap</a>
+        <a href="dashboard.html">📊 Admin</a>
+    </nav>
+    <div style="width:100px"></div>
+</header>
+
+<nav class="breadcrumb">
+    <a href="platform.html">🐉 DRAGA Platform</a>
+    <span class="sep">›</span>
+    <span style="color:var(--text-secondary)">Agents & Anatomía</span>
+</nav>
+
+<div class="tenant-bar">
+    <label>🏢 Tenant:</label>
+    <select id="tenantSelect"><option>Cargando...</option></select>
+</div>
+
+<div class="page">
+
+    <!-- ════════════ DRAGA ANATOMY DIAGRAM ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>🧬</span> Anatomía de un DRAGA</div>
+        <div class="anatomy-diagram">
+            <div class="anatomy-label">
+                <h2>🐉 DRAGA</h2>
+                <p>Document Grounded RAG Agent — Instancia completa</p>
+            </div>
+            <div class="anatomy-row top">
+                <div class="anatomy-box tenant">
+                    <div class="box-header">
+                        <span class="box-icon">🏢</span>
+                        <span class="box-title">Tenant</span>
+                        <span class="box-subtitle" id="tenantName">—</span>
+                    </div>
+                    <div class="box-desc">Organización operadora. Define usuarios, plan, API keys, configuración general.</div>
+                    <div class="tenant-info-grid" style="margin-top:14px">
+                        <div class="info-card"><div class="info-label">Modelo</div><div class="info-value" id="tenantModel" style="font-size:13px">—</div></div>
+                        <div class="info-card"><div class="info-label">Idioma</div><div class="info-value" id="tenantLang" style="font-size:13px">—</div></div>
+                        <div class="info-card"><div class="info-label">Collection</div><div class="info-value" id="tenantColl" style="font-size:13px">—</div></div>
+                    </div>
+                </div>
+                <div class="anatomy-box kb">
+                    <div class="box-header">
+                        <span class="box-icon">📚</span>
+                        <span class="box-title">Knowledge Base</span>
+                        <span class="box-subtitle" id="kbDocCount">0 documentos</span>
+                    </div>
+                    <div class="box-desc">Corpus documental que fundamenta las respuestas. Colección vectorial aislada por tenant. Evolución: taxonomías SKOS + vocabularios controlados.</div>
+                    <div class="tenant-info-grid" style="margin-top:14px">
+                        <div class="info-card"><div class="info-label">Documentos</div><div class="info-value" id="kbDocs">—</div></div>
+                        <div class="info-card"><div class="info-label">Chunks</div><div class="info-value" id="kbChunks">—</div></div>
+                        <div class="info-card"><div class="info-label">Tamaño</div><div class="info-value" id="kbSize">—</div></div>
+                        <div class="info-card"><div class="info-label">Estado</div><div class="info-value" id="kbStatus" style="font-size:13px">—</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="anatomy-row mid">
+                <div class="anatomy-box orchestrator">
+                    <div class="box-header">
+                        <span class="box-icon">⚙️</span>
+                        <span class="box-title">Orchestrator Agent</span>
+                        <span class="box-subtitle">Pipeline de 14 pasos</span>
+                    </div>
+                    <div class="box-desc">Agente central que ejecuta el pipeline composable. Cada paso es <code>(PipelineContext) → PipelineContext</code>. Sustituible, desactivable por feature flags.</div>
+                    <div style="display:flex;gap:4px;margin-top:14px;overflow-x:auto;padding:4px 0">
+                        <span class="pipeline-mini pre">1 translate</span>
+                        <span class="pipeline-mini pre">2 enrich</span>
+                        <span class="pipeline-mini pre">3 normalize</span>
+                        <span class="pipeline-mini pre">4 decompose</span>
+                        <span class="pipeline-mini ret">5 embed</span>
+                        <span class="pipeline-mini ret">6 cache</span>
+                        <span class="pipeline-mini ret">7 retrieve</span>
+                        <span class="pipeline-mini post">8 dedup</span>
+                        <span class="pipeline-mini post">9 rerank</span>
+                        <span class="pipeline-mini post">10 eval</span>
+                        <span class="pipeline-mini post">11 gap</span>
+                        <span class="pipeline-mini gen">12 generate</span>
+                        <span class="pipeline-mini gen">13 verify</span>
+                        <span class="pipeline-mini gen">14 validate</span>
+                    </div>
+                </div>
+            </div>
+            <div class="anatomy-row bot">
+                <div class="anatomy-box crew">
+                    <div class="box-header">
+                        <span class="box-icon">🤖</span>
+                        <span class="box-title">Agent Crew</span>
+                        <span class="box-subtitle">6 activos + 1 roadmap</span>
+                    </div>
+                    <div class="box-desc">Equipo de agentes especializados al servicio del Orchestrator.</div>
+                    <div class="crew-grid">
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(59,130,246,0.2);color:var(--info)">Activo</span>
+                            <div class="agent-icon">🔍</div>
+                            <div class="agent-name">Retrieval Agent</div>
+                            <div class="agent-role">Búsqueda vectorial + adaptive top_k + dedup + cross-encoder reranking</div>
+                        </div>
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(34,197,94,0.2);color:var(--success)">Activo</span>
+                            <div class="agent-icon">🛡️</div>
+                            <div class="agent-name">Grounding Agent</div>
+                            <div class="agent-role">NLI verification + token overlap + evaluación de suficiencia (Self-RAG)</div>
+                        </div>
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(139,92,246,0.2);color:#a78bfa">Activo</span>
+                            <div class="agent-icon">🌐</div>
+                            <div class="agent-name">Language Agent</div>
+                            <div class="agent-role">Detección de idioma + traducción + normalización de queries</div>
+                        </div>
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(236,137,81,0.2);color:var(--primary)">Activo</span>
+                            <div class="agent-icon">📥</div>
+                            <div class="agent-name">Ingestion Agent</div>
+                            <div class="agent-role">Procesamiento de docs + chunking + enriquecimiento + NER</div>
+                        </div>
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(245,158,11,0.2);color:var(--warning)">Activo</span>
+                            <div class="agent-icon">💬</div>
+                            <div class="agent-name">Feedback Agent</div>
+                            <div class="agent-role">Aprendizaje del feedback de usuarios + enriquecimiento de queries</div>
+                        </div>
+                        <div class="crew-agent">
+                            <span class="agent-badge" style="background:rgba(34,197,94,0.2);color:var(--success)">Activo</span>
+                            <div class="agent-icon">📊</div>
+                            <div class="agent-name">Quality Agent</div>
+                            <div class="agent-role">Gap logging + coverage audit + métricas de grounding</div>
+                        </div>
+                        <div class="crew-agent roadmap">
+                            <span class="agent-badge" style="background:rgba(100,116,139,0.2);color:var(--text-muted)">Roadmap</span>
+                            <div class="agent-icon">🏷️</div>
+                            <div class="agent-name">Taxonomy Agent</div>
+                            <div class="agent-role">Resolución de sinónimos, navegación jerárquica SKOS, validación de clasificaciones</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ COMPLEXITY SPECTRUM ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>📊</span> Espectro de Complejidad</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+            <table class="spectrum-table">
+                <thead>
+                    <tr>
+                        <th>Nivel</th>
+                        <th>Rol</th>
+                        <th>KB Típica</th>
+                        <th>Ejemplo</th>
+                        <th>Grounding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><div class="level-num level-1">1</div></td>
+                        <td style="font-weight:700;color:var(--text-primary)">FAQ Resolver</td>
+                        <td>1-50 docs</td>
+                        <td>"¿Cuánto cuesta un envío a Cuba?"</td>
+                        <td style="color:var(--success);font-weight:700">98%</td>
+                    </tr>
+                    <tr>
+                        <td><div class="level-num level-2">2</div></td>
+                        <td style="font-weight:700;color:var(--text-primary)">Soporte Técnico</td>
+                        <td>10-200 docs</td>
+                        <td>"¿Cómo configuro el webhook de notificaciones?"</td>
+                        <td style="color:var(--success);font-weight:700">98%</td>
+                    </tr>
+                    <tr>
+                        <td><div class="level-num level-3">3</div></td>
+                        <td style="font-weight:700;color:var(--text-primary)">Asesor Especializado</td>
+                        <td>50-500 docs</td>
+                        <td>"¿Qué normativa aplica a este producto en MX y BR?"</td>
+                        <td style="color:var(--success);font-weight:700">98%</td>
+                    </tr>
+                    <tr>
+                        <td><div class="level-num level-4">4</div></td>
+                        <td style="font-weight:700;color:var(--text-primary)">Analista de Cadena</td>
+                        <td>200-1000 docs</td>
+                        <td>"¿Dónde están los cuellos de botella en mi logística?"</td>
+                        <td style="color:var(--success);font-weight:700">98%</td>
+                    </tr>
+                    <tr>
+                        <td><div class="level-num level-5">5</div></td>
+                        <td style="font-weight:700;color:var(--text-primary)">Estratega de Negocio</td>
+                        <td>1000+ docs</td>
+                        <td>"¿Cómo debería ajustar la estrategia para Q3?"</td>
+                        <td style="color:var(--success);font-weight:700">98%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:12px;text-align:center">
+            La confianza no disminuye con la complejidad. Todos los niveles ofrecen la misma verificabilidad: fuentes citadas, grounding rate, confidence score, y deflection cuando no hay información suficiente.
+        </p>
+    </div>
+
+    <!-- ════════════ TRIPLE PROTOCOL ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>🔌</span> Triple Protocolo de Acceso</div>
+        <div class="protocols-grid">
+            <div class="protocol-card">
+                <div class="proto-icon">🌐</div>
+                <div class="proto-name">REST API v2</div>
+                <div class="proto-endpoint">/api/v2/*</div>
+                <div class="proto-desc">API nativa para integración custom, operaciones de admin, ingestión de documentos, gestión de tenants</div>
+                <div class="proto-status" style="background:rgba(59,130,246,0.15);color:var(--info)" id="protoRest">Verificando...</div>
+            </div>
+            <div class="protocol-card">
+                <div class="proto-icon">🤖</div>
+                <div class="proto-name">OpenAI Compatible</div>
+                <div class="proto-endpoint">/v2/chat/completions</div>
+                <div class="proto-desc">Drop-in con cualquier frontend que soporte OpenAI: Chatbot UI, Open WebUI, custom clients</div>
+                <div class="proto-status" style="background:rgba(34,197,94,0.15);color:var(--success)" id="protoOpenai">Verificando...</div>
+            </div>
+            <div class="protocol-card">
+                <div class="proto-icon">🔗</div>
+                <div class="proto-name">MCP Server</div>
+                <div class="proto-endpoint">stdio / SSE</div>
+                <div class="proto-desc">Integración con Claude Desktop, agentes MCP, ecosistemas AI-native</div>
+                <div class="proto-status" style="background:rgba(245,158,11,0.15);color:var(--warning)" id="protoMcp">Verificando...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ AGENT INSTANCES ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>🤖</span> Instancias de Agentes <span style="font-size:12px;color:var(--text-muted);font-weight:400" id="agentCount"></span></div>
+        <div class="agent-list" id="agentList">
+            <div class="loading"><div class="spinner"></div> Cargando agentes...</div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.pipeline-mini {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+}
+.pipeline-mini.pre { color: var(--info); background: rgba(59,130,246,0.1); }
+.pipeline-mini.ret { color: var(--warning); background: rgba(245,158,11,0.1); }
+.pipeline-mini.post { color: var(--success); background: rgba(34,197,94,0.1); }
+.pipeline-mini.gen { color: var(--danger); background: rgba(239,68,68,0.1); }
+code { background:var(--bg-input); padding:2px 8px; border-radius:4px; font-size:12px; color:var(--draga-accent-light); }
+</style>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function toast(msg, type='info') {
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = msg;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 4000);
+}
+
+const App = {
+    tenantId: null,
+
+    async init() {
+        const params = new URLSearchParams(location.search);
+        await this.loadTenants(params.get('tenant'));
+        this.loadTenantDetails();
+        this.loadAgents();
+        this.checkProtocols();
+    },
+
+    async loadTenants(preselect) {
+        try {
+            const res = await api.listTenants(true);
+            const tenants = Array.isArray(res) ? res : (res.tenants || []);
+            const sel = document.getElementById('tenantSelect');
+            if (!tenants.length) {
+                sel.innerHTML = '<option value="default">default</option>';
+                this.tenantId = 'default';
+            } else {
+                sel.innerHTML = tenants.map(t =>
+                    `<option value="${t.tenant_id}" ${t.tenant_id === preselect ? 'selected' : ''}>${t.name} (${t.tenant_id})</option>`
+                ).join('');
+                const valid = preselect && tenants.some(t => t.tenant_id === preselect);
+                this.tenantId = valid ? preselect : tenants[0].tenant_id;
+            }
+            sel.value = this.tenantId;
+            sel.addEventListener('change', () => {
+                this.tenantId = sel.value;
+                this.loadTenantDetails();
+                this.loadAgents();
+            });
+        } catch (e) {
+            toast('Error cargando tenants: ' + e.message, 'error');
+        }
+    },
+
+    async loadTenantDetails() {
+        try {
+            const t = await api.getTenant(this.tenantId);
+            document.getElementById('tenantName').textContent = t.name;
+            document.getElementById('tenantModel').textContent = t.default_model?.split('/').pop() || '—';
+            document.getElementById('tenantLang').textContent = t.response_language || '—';
+            document.getElementById('tenantColl').textContent = t.collection_name || '—';
+            document.getElementById('kbDocCount').textContent = `${t.document_count || 0} documentos`;
+        } catch {}
+        try {
+            const s = await api.getStats(this.tenantId);
+            document.getElementById('kbDocs').textContent = s.total_documents ?? s.documents ?? '—';
+            document.getElementById('kbChunks').textContent = s.total_chunks ?? s.chunks ?? '—';
+            const bytes = s.total_size_bytes || 0;
+            document.getElementById('kbSize').textContent = bytes > 0 ? `${(bytes/1024/1024).toFixed(1)} MB` : '—';
+            // Status from by_status if available
+            if (s.by_status) {
+                const keys = Object.keys(s.by_status);
+                document.getElementById('kbStatus').innerHTML = keys.map(k => 
+                    `<span style="font-size:11px">${k}: ${s.by_status[k]}</span>`
+                ).join('<br>');
+            }
+        } catch {}
+    },
+
+    async loadAgents() {
+        const list = document.getElementById('agentList');
+        try {
+            const data = await api.listAgents();
+            const agents = Array.isArray(data) ? data : (data.agents || []);
+            const filtered = agents.filter(a => !this.tenantId || a.tenant_id === this.tenantId);
+            
+            document.getElementById('agentCount').textContent = `(${filtered.length} instancias)`;
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">
+                    <div style="font-size:36px;margin-bottom:12px">🤖</div>
+                    <p>No hay agentes para este tenant</p>
+                    <a href="dashboard.html#agents" class="btn btn-primary btn-sm" style="margin-top:12px">+ Crear Agente</a>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(a => `
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div>
+                            <div class="agent-title">🤖 ${a.name || a.agent_id}</div>
+                            <div class="agent-id">${a.agent_id}</div>
+                        </div>
+                        <span class="agent-status ${a.status === 'active' ? 'active' : 'inactive'}">
+                            ${a.status || 'active'}
+                        </span>
+                    </div>
+                    ${a.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${a.description}</div>` : ''}
+                    <div class="agent-meta">
+                        <span>🏢 ${a.tenant_id}</span>
+                        <span>📄 ${a.document_count ?? '—'} docs</span>
+                        ${a.created_at ? `<span>📅 ${new Date(a.created_at).toLocaleDateString('es')}</span>` : ''}
+                    </div>
+                    <div class="agent-actions">
+                        <a href="tenant-dashboard.html?tenant=${a.tenant_id}" class="btn btn-sm btn-primary">🔧 Gestionar</a>
+                        <a href="chat-interface.html?agent=${a.agent_id}" class="btn btn-sm">💬 Query</a>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            list.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--danger)">❌ ${e.message}</div>`;
+        }
+    },
+
+    async checkProtocols() {
+        // REST
+        try {
+            await api.health();
+            document.getElementById('protoRest').textContent = '✅ Operativo';
+        } catch {
+            document.getElementById('protoRest').textContent = '❌ Offline';
+            document.getElementById('protoRest').style.background = 'rgba(239,68,68,0.15)';
+            document.getElementById('protoRest').style.color = 'var(--danger)';
+        }
+        // OpenAI
+        try {
+            await api.listModels();
+            document.getElementById('protoOpenai').textContent = '✅ Operativo';
+        } catch {
+            document.getElementById('protoOpenai').textContent = '⚠️ Sin verificar';
+        }
+        // MCP
+        try {
+            await api.mcpHealth();
+            document.getElementById('protoMcp').textContent = '✅ Operativo';
+        } catch {
+            document.getElementById('protoMcp').textContent = '⚠️ Sin verificar';
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>

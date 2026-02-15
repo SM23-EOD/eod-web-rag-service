@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA Quality Dashboard — Anti-Alucinación</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/api-client.js"></script>
+    <style>
+:root {
+    --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;--draga-accent-alpha:rgba(124,58,237,0.15);
+    --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+    --draga-glow:0 0 40px rgba(124,58,237,0.25);
+    --primary:#ec8951;--primary-alpha:rgba(236,137,81,0.15);
+    --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+    --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;--bg-input:#242e44;
+    --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+    --border:#243049;--border-light:#334155;
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;}
+
+.platform-header{background:var(--bg-main);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-brand{display:flex;align-items:center;gap:12px;}
+.header-brand .logo{width:36px;height:36px;background:var(--draga-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:var(--draga-glow);}
+.header-brand .name{font-size:20px;font-weight:900;background:var(--draga-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px;}
+.header-brand .subtitle{font-size:11px;color:var(--text-muted);margin-top:-2px;}
+.header-nav{display:flex;gap:4px;}
+.header-nav a{padding:8px 16px;font-size:13px;font-weight:600;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);transition:var(--transition);}
+.header-nav a:hover,.header-nav a.active{color:var(--text-primary);background:var(--draga-accent-alpha);}
+.header-nav a.active{color:var(--draga-accent-light);}
+
+.breadcrumb{padding:10px 32px;font-size:12px;color:var(--text-muted);background:rgba(0,0,0,0.2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;}
+.breadcrumb a:hover{color:var(--draga-accent-light);}
+.breadcrumb .sep{opacity:0.4;}
+
+.tenant-bar{padding:16px 32px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border);background:var(--bg-main);}
+.tenant-bar label{font-size:13px;color:var(--text-muted);}
+.tenant-bar select{background:var(--bg-input);border:1px solid var(--border);color:var(--draga-accent-light);padding:8px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;outline:none;}
+.tenant-bar select option{background:var(--bg-card);color:var(--text-primary);}
+
+.page{max-width:1280px;margin:0 auto;padding:32px;}
+.section{margin-bottom:48px;}
+.section-title{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+
+/* ── SCORE HERO ── */
+.score-hero {
+    display:grid; grid-template-columns:260px 1fr; gap:32px;
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:32px;
+    margin-bottom:32px;
+}
+
+.score-center { text-align:center; }
+.score-ring-large {
+    width:180px; height:180px; border-radius:50%;
+    margin:0 auto 16px;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+}
+.score-ring-large .ring-bg {
+    position:absolute; inset:0; border-radius:50%;
+    background:conic-gradient(var(--success) 0% var(--coverage-pct,98%), var(--bg-input) var(--coverage-pct,98%) 100%);
+}
+.score-ring-large .ring-inner {
+    position:absolute; inset:12px; border-radius:50%; background:var(--bg-card);
+}
+.score-ring-large .ring-value {
+    position:relative; z-index:1;
+    font-size:42px; font-weight:900; color:var(--success);
+}
+.score-center .score-label {
+    font-size:14px; font-weight:700; color:var(--text-secondary);
+}
+
+.score-details { display:flex; flex-direction:column; justify-content:center; gap:20px; }
+.score-layer {
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius); padding:16px 20px;
+}
+.score-layer .layer-header {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:8px;
+}
+.score-layer .layer-name { font-size:14px; font-weight:700; }
+.score-layer .layer-pct { font-size:16px; font-weight:900; }
+.score-layer .layer-bar {
+    height:6px; border-radius:3px; background:var(--bg-card);
+    overflow:hidden;
+}
+.score-layer .layer-fill { height:100%; border-radius:3px; transition:width 1s ease; }
+.score-layer .layer-desc { font-size:11px; color:var(--text-muted); margin-top:8px; }
+
+/* ── METRICS GRID ── */
+.metrics-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px;
+}
+.metric-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px;
+    transition:var(--transition);
+}
+.metric-card:hover { border-color:var(--draga-accent); transform:translateY(-1px); }
+.metric-card .m-icon { font-size:24px; margin-bottom:10px; }
+.metric-card .m-label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:6px; }
+.metric-card .m-value { font-size:28px; font-weight:900; }
+.metric-card .m-sub { font-size:11px; color:var(--text-muted); margin-top:4px; }
+
+/* ── GROUNDING TECHNIQUES ── */
+.techniques-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;
+}
+.technique-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px;
+    border-left:3px solid;
+}
+.technique-card .tech-icon { font-size:28px; margin-bottom:10px; }
+.technique-card .tech-name { font-size:15px; font-weight:700; margin-bottom:6px; }
+.technique-card .tech-desc { font-size:12px; color:var(--text-muted); line-height:1.5; }
+.technique-card .tech-layer {
+    display:inline-block; margin-top:10px; padding:3px 10px;
+    border-radius:8px; font-size:10px; font-weight:700; text-transform:uppercase;
+}
+
+/* ── FEEDBACK TABLE ── */
+.feedback-table {
+    width:100%; border-collapse:collapse;
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); overflow:hidden;
+}
+.feedback-table th {
+    text-align:left; padding:12px 16px; font-size:11px; text-transform:uppercase;
+    letter-spacing:1px; color:var(--text-muted); background:var(--bg-input);
+    border-bottom:1px solid var(--border);
+}
+.feedback-table td {
+    padding:12px 16px; font-size:13px; border-bottom:1px solid var(--border);
+    color:var(--text-secondary);
+}
+.feedback-table tr:hover td { background:var(--bg-card-hover); }
+.rating-star { color:var(--warning); }
+
+/* ── GAPS TABLE ── */
+.gap-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px 18px;
+    margin-bottom:8px; transition:var(--transition);
+}
+.gap-card:hover { border-color:var(--warning); }
+.gap-card .gap-query { font-size:13px; font-weight:600; margin-bottom:4px; }
+.gap-card .gap-meta { font-size:11px; color:var(--text-muted); display:flex; gap:12px; }
+
+/* ── DESIGN PRINCIPLES ── */
+.principles-list { display:flex; flex-direction:column; gap:8px; }
+.principle {
+    display:flex; align-items:flex-start; gap:16px;
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:16px 20px;
+}
+.principle .p-num {
+    width:32px; height:32px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:900; color:white;
+    background:var(--draga-gradient);
+}
+.principle .p-title { font-size:14px; font-weight:700; margin-bottom:4px; }
+.principle .p-desc { font-size:12px; color:var(--text-muted); }
+
+.btn{padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:inherit;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;transition:var(--transition);text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--bg-card-hover);}
+.btn-primary{background:var(--draga-gradient);border:none;color:white;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text-muted);gap:10px;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--draga-accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast-container{position:fixed;top:72px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;animation:slideIn .3s ease;max-width:400px;}
+.toast-error{background:#991b1b;color:#fecaca;}.toast-info{background:#1e3a5f;color:#93c5fd;}.toast-success{background:#166534;color:#bbf7d0;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+@media(max-width:900px){
+    .score-hero{grid-template-columns:1fr;}
+    .metrics-grid{grid-template-columns:repeat(2,1fr);}
+}
+    </style>
+</head>
+<body>
+
+<header class="platform-header">
+    <div class="header-brand">
+        <div class="logo">🐉</div>
+        <div><div class="name">DRAGA</div><div class="subtitle">Document Grounded RAG Agent</div></div>
+    </div>
+    <nav class="header-nav">
+        <a href="platform.html">🏠 Console</a>
+        <a href="draga-agents.html">🤖 Agents</a>
+        <a href="pipeline-monitor.html">⚙️ Pipeline</a>
+        <a href="quality-dashboard.html" class="active">🛡️ Quality</a>
+        <a href="roadmap.html">🗺️ Roadmap</a>
+        <a href="dashboard.html">📊 Admin</a>
+    </nav>
+    <div style="width:100px"></div>
+</header>
+
+<nav class="breadcrumb">
+    <a href="platform.html">🐉 DRAGA Platform</a><span class="sep">›</span>
+    <span style="color:var(--text-secondary)">Quality Dashboard</span>
+</nav>
+
+<div class="tenant-bar">
+    <label>🏢 Tenant:</label>
+    <select id="tenantSelect"><option>Cargando...</option></select>
+    <button class="btn btn-sm" onclick="loadAll()">🔄 Refresh</button>
+</div>
+
+<div class="page">
+
+    <!-- ════════════ ANTI-HALLUCINATION SCORE ════════════ -->
+    <div class="score-hero">
+        <div class="score-center">
+            <div class="score-ring-large" style="--coverage-pct:98%">
+                <div class="ring-bg"></div>
+                <div class="ring-inner"></div>
+                <span class="ring-value">98%</span>
+            </div>
+            <div class="score-label">Framework Anti-Alucinación</div>
+        </div>
+        <div class="score-details">
+            <div class="score-layer">
+                <div class="layer-header">
+                    <span class="layer-name">📥 Capa 1 — Ingestión</span>
+                    <span class="layer-pct" style="color:var(--success)">98%</span>
+                </div>
+                <div class="layer-bar"><div class="layer-fill" style="width:98%;background:var(--success)"></div></div>
+                <div class="layer-desc">Chunking semántico, enriquecimiento LLM, NER, dedup por hash, validación de tablas, auto-sizing</div>
+            </div>
+            <div class="score-layer">
+                <div class="layer-header">
+                    <span class="layer-name">🧠 Capa 2 — Prompt Engineering</span>
+                    <span class="layer-pct" style="color:var(--info)">95%</span>
+                </div>
+                <div class="layer-bar"><div class="layer-fill" style="width:95%;background:var(--info)"></div></div>
+                <div class="layer-desc">Prompts v1.3.0, 5 patrones defensivos, instrucción de deflection, response policy por tenant</div>
+            </div>
+            <div class="score-layer">
+                <div class="layer-header">
+                    <span class="layer-name">🔍 Capa 3 — Verificación del Agente</span>
+                    <span class="layer-pct" style="color:var(--draga-accent-light)">98%</span>
+                </div>
+                <div class="layer-bar"><div class="layer-fill" style="width:98%;background:var(--draga-accent)"></div></div>
+                <div class="layer-desc">NLI hallucination detection + token overlap + Self-RAG + gap logging + feedback loop</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ LIVE METRICS ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>📊</span> Métricas en Vivo</div>
+        <div class="metrics-grid" id="metricsGrid">
+            <div class="metric-card">
+                <div class="m-icon">📄</div>
+                <div class="m-label">Documentos Indexados</div>
+                <div class="m-value" id="mDocs">—</div>
+                <div class="m-sub">Knowledge Base</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">🧩</div>
+                <div class="m-label">Chunks Totales</div>
+                <div class="m-value" id="mChunks">—</div>
+                <div class="m-sub">Fragmentos vectorizados</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">🎯</div>
+                <div class="m-label">Confidence Promedio</div>
+                <div class="m-value" id="mConfidence">—</div>
+                <div class="m-sub">Últimas queries</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">🛡️</div>
+                <div class="m-label">Grounding Rate</div>
+                <div class="m-value" id="mGrounding">—</div>
+                <div class="m-sub">Verificación NLI</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">📈</div>
+                <div class="m-label">Cobertura KB</div>
+                <div class="m-value" id="mCoverage">—</div>
+                <div class="m-sub">Queries con respuesta</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">⚠️</div>
+                <div class="m-label">Gaps Detectados</div>
+                <div class="m-value" id="mGaps">—</div>
+                <div class="m-sub">Preguntas sin respuesta</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">💬</div>
+                <div class="m-label">Feedback Recibido</div>
+                <div class="m-value" id="mFeedback">—</div>
+                <div class="m-sub">Valoraciones de usuarios</div>
+            </div>
+            <div class="metric-card">
+                <div class="m-icon">⚡</div>
+                <div class="m-label">Cache Hit Rate</div>
+                <div class="m-value" id="mCache">—</div>
+                <div class="m-sub">Consultas desde cache</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ GROUNDING TECHNIQUES ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>🔬</span> Técnicas de Grounding</div>
+        <div class="techniques-grid">
+            <div class="technique-card" style="border-left-color:var(--success)">
+                <div class="tech-icon">📐</div>
+                <div class="tech-name">Chunking Semántico</div>
+                <div class="tech-desc">División por headers Markdown con merge de chunks pequeños. Estrategias por tipo: legislation (1000), FAQ (600).</div>
+                <span class="tech-layer" style="background:rgba(34,197,94,0.15);color:var(--success)">Capa 1 — Ingestión</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--success)">
+                <div class="tech-icon">🏷️</div>
+                <div class="tech-name">Enriquecimiento LLM</div>
+                <div class="tech-desc">Keywords, audience, topic, summary, intent extraídos por LLM para cada chunk ingestado.</div>
+                <span class="tech-layer" style="background:rgba(34,197,94,0.15);color:var(--success)">Capa 1 — Ingestión</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--success)">
+                <div class="tech-icon">🆔</div>
+                <div class="tech-name">NER (Named Entities)</div>
+                <div class="tech-desc">Extracción de entidades nombradas para mejorar la precisión del retrieval.</div>
+                <span class="tech-layer" style="background:rgba(34,197,94,0.15);color:var(--success)">Capa 1 — Ingestión</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--info)">
+                <div class="tech-icon">🛡️</div>
+                <div class="tech-name">Patrones Defensivos</div>
+                <div class="tech-desc">5 patrones documentados con ejemplos negativos (❌) y positivos (✅). Deflection explícito cuando no hay info.</div>
+                <span class="tech-layer" style="background:rgba(59,130,246,0.15);color:var(--info)">Capa 2 — Prompt</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--draga-accent)">
+                <div class="tech-icon">🧪</div>
+                <div class="tech-name">NLI Verification</div>
+                <div class="tech-desc">Natural Language Inference entre claims generados y chunks fuente. Detecta contradicciones y fabricaciones.</div>
+                <span class="tech-layer" style="background:var(--draga-accent-alpha);color:var(--draga-accent-light)">Capa 3 — Verificación</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--draga-accent)">
+                <div class="tech-icon">🔍</div>
+                <div class="tech-name">Token Overlap</div>
+                <div class="tech-desc">Cálculo de solapamiento entre tokens de la respuesta y tokens de los chunks fuente.</div>
+                <span class="tech-layer" style="background:var(--draga-accent-alpha);color:var(--draga-accent-light)">Capa 3 — Verificación</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--draga-accent)">
+                <div class="tech-icon">🤔</div>
+                <div class="tech-name">Self-RAG (Suficiencia)</div>
+                <div class="tech-desc">Evaluación automática de si el contexto recuperado es suficiente para responder con confianza.</div>
+                <span class="tech-layer" style="background:var(--draga-accent-alpha);color:var(--draga-accent-light)">Capa 3 — Verificación</span>
+            </div>
+            <div class="technique-card" style="border-left-color:var(--warning)">
+                <div class="tech-icon">📋</div>
+                <div class="tech-name">Gap Logging</div>
+                <div class="tech-desc">Registro automático de queries sin respuesta para mejora continua de la Knowledge Base.</div>
+                <span class="tech-layer" style="background:rgba(245,158,11,0.15);color:var(--warning)">Quality Agent</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ GAPS ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>⚠️</span> Gaps en Knowledge Base</div>
+        <div id="gapsContainer">
+            <div class="loading"><div class="spinner"></div> Cargando gaps...</div>
+        </div>
+    </div>
+
+    <!-- ════════════ FEEDBACK ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>💬</span> Feedback Reciente</div>
+        <div id="feedbackContainer">
+            <div class="loading"><div class="spinner"></div> Cargando feedback...</div>
+        </div>
+    </div>
+
+    <!-- ════════════ DESIGN PRINCIPLES ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>📐</span> Principios de Diseño (por prioridad)</div>
+        <div class="principles-list">
+            <div class="principle">
+                <div class="p-num">1</div>
+                <div>
+                    <div class="p-title">Grounding sobre Fluency</div>
+                    <div class="p-desc">Respuesta correcta pero torpe > respuesta elocuente pero inventada. La calidad se mide por grounding rate.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">2</div>
+                <div>
+                    <div class="p-title">Seguridad sobre Conveniencia</div>
+                    <div class="p-desc">Default seguro. CORS cerrado, auth obligatorio, aislamiento verificado. Relajación es opt-in.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">3</div>
+                <div>
+                    <div class="p-title">Aislamiento sobre Performance</div>
+                    <div class="p-desc">Si una optimización compromete el aislamiento de tenant, no se implementa.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">4</div>
+                <div>
+                    <div class="p-title">Composabilidad sobre Completitud</div>
+                    <div class="p-desc">N pasos simples y sustituibles > 1 paso monolítico. Pipeline de 14 steps.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">5</div>
+                <div>
+                    <div class="p-title">Verificabilidad sobre Velocidad</div>
+                    <div class="p-desc">Cada feature tiene tests. Cada cambio al pipeline se valida contra golden sets.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">6</div>
+                <div>
+                    <div class="p-title">Self-hosted First</div>
+                    <div class="p-desc">Funciona en VPS + Docker Compose antes que en cloud managed. Diferenciador de mercado.</div>
+                </div>
+            </div>
+            <div class="principle">
+                <div class="p-num">7</div>
+                <div>
+                    <div class="p-title">Convention over Configuration</div>
+                    <div class="p-desc">Defaults producen un DRAGA funcional y seguro. Solo cambiar system prompt y subir docs.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function toast(msg,type='info'){const el=document.createElement('div');el.className=`toast toast-${type}`;el.textContent=msg;document.getElementById('toastContainer').appendChild(el);setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300);},4000);}
+
+let tenantId = null;
+
+async function loadTenants() {
+    try {
+        const res = await api.listTenants(true);
+        const tenants = res.tenants || [];
+        const sel = document.getElementById('tenantSelect');
+        const params = new URLSearchParams(location.search);
+        const preselect = params.get('tenant');
+
+        sel.innerHTML = tenants.map(t =>
+            `<option value="${t.tenant_id}" ${t.tenant_id===preselect?'selected':''}>${t.name} (${t.tenant_id})</option>`
+        ).join('');
+
+        tenantId = preselect && tenants.some(t=>t.tenant_id===preselect) ? preselect : (tenants[0]?.tenant_id || 'default');
+        sel.value = tenantId;
+        sel.addEventListener('change', () => { tenantId = sel.value; loadAll(); });
+    } catch(e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+async function loadAll() {
+    loadMetrics();
+    loadGaps();
+    loadFeedback();
+}
+
+async function loadMetrics() {
+    try {
+        const [stats, coverage, grounding, fbStats] = await Promise.allSettled([
+            api.getStats(tenantId),
+            api.metricsCoverage(tenantId),
+            api.metricsGrounding(tenantId),
+            api.feedbackStats()
+        ]);
+
+        if (stats.status === 'fulfilled') {
+            const s = stats.value;
+            document.getElementById('mDocs').textContent = s.total_documents ?? s.documents ?? '—';
+            document.getElementById('mChunks').textContent = s.total_chunks ?? s.chunks ?? '—';
+        }
+        if (coverage.status === 'fulfilled') {
+            const c = coverage.value;
+            const pct = c.coverage_rate ?? c.coverage_percentage;
+            document.getElementById('mCoverage').textContent = pct != null ? (pct * 100).toFixed(0) + '%' : '—';
+        }
+        if (grounding.status === 'fulfilled') {
+            const g = grounding.value;
+            const rate = g.avg_grounding_rate ?? g.grounding_rate;
+            document.getElementById('mGrounding').textContent = rate != null ? (rate * 100).toFixed(0) + '%' : '—';
+            const conf = g.avg_confidence ?? g.confidence;
+            document.getElementById('mConfidence').textContent = conf != null ? (conf * 100).toFixed(0) + '%' : '—';
+            document.getElementById('mCache').textContent = g.cache_hit_rate != null ? (g.cache_hit_rate * 100).toFixed(0) + '%' : '—';
+        }
+        if (fbStats.status === 'fulfilled') {
+            const f = fbStats.value;
+            document.getElementById('mFeedback').textContent = f.total ?? f.count ?? '—';
+        }
+    } catch {}
+}
+
+async function loadGaps() {
+    const container = document.getElementById('gapsContainer');
+    try {
+        const gaps = await api.metricsGaps(tenantId, false, 10);
+        const items = gaps.gaps || gaps.items || [];
+        document.getElementById('mGaps').textContent = gaps.total ?? items.length;
+
+        if (items.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)">✅ Sin gaps detectados — excelente cobertura de KB</div>';
+            return;
+        }
+        container.innerHTML = items.map(g => `
+            <div class="gap-card">
+                <div class="gap-query">❓ ${g.query || g.question}</div>
+                <div class="gap-meta">
+                    <span>📅 ${g.timestamp ? new Date(g.timestamp).toLocaleDateString('es') : '—'}</span>
+                    <span>🎯 Confidence: ${g.confidence != null ? (g.confidence*100).toFixed(0)+'%' : '—'}</span>
+                    ${g.resolved ? '<span style="color:var(--success)">✅ Resuelto</span>' : '<span style="color:var(--warning)">⏳ Pendiente</span>'}
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        container.innerHTML = `<div style="color:var(--text-muted);text-align:center;padding:20px">No se pudieron cargar gaps</div>`;
+    }
+}
+
+async function loadFeedback() {
+    const container = document.getElementById('feedbackContainer');
+    try {
+        const data = await api.listFeedback({ limit: 10 });
+        const items = data.feedback || data.items || (Array.isArray(data) ? data : []);
+
+        if (items.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)">Sin feedback recibido aún</div>';
+            return;
+        }
+
+        container.innerHTML = `<table class="feedback-table">
+            <thead><tr><th>Fecha</th><th>Query</th><th>Rating</th><th>Comentario</th><th>Estado</th></tr></thead>
+            <tbody>${items.map(f => `
+                <tr>
+                    <td>${f.created_at ? new Date(f.created_at).toLocaleDateString('es') : '—'}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.query || f.question || '—'}</td>
+                    <td>${'⭐'.repeat(f.rating || 0)}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.comment || '—'}</td>
+                    <td>${f.reviewed ? '<span style="color:var(--success)">✅</span>' : '<span style="color:var(--text-muted)">⏳</span>'}</td>
+                </tr>
+            `).join('')}</tbody></table>`;
+    } catch {
+        container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No se pudo cargar feedback</div>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadTenants();
+    loadAll();
+});
+</script>
+</body>
+</html>

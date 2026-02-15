@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA Roadmap — Plan de Acción SaaS</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+:root {
+    --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;--draga-accent-alpha:rgba(124,58,237,0.15);
+    --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+    --draga-glow:0 0 40px rgba(124,58,237,0.25);
+    --primary:#ec8951;--primary-alpha:rgba(236,137,81,0.15);
+    --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+    --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;--bg-input:#242e44;
+    --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+    --border:#243049;--border-light:#334155;
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+    --phase1:#3b82f6;--phase2:#f59e0b;--phase3:#22c55e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;}
+
+.platform-header{background:var(--bg-main);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-brand{display:flex;align-items:center;gap:12px;}
+.header-brand .logo{width:36px;height:36px;background:var(--draga-gradient);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:var(--draga-glow);}
+.header-brand .name{font-size:20px;font-weight:900;background:var(--draga-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px;}
+.header-brand .subtitle{font-size:11px;color:var(--text-muted);margin-top:-2px;}
+.header-nav{display:flex;gap:4px;}
+.header-nav a{padding:8px 16px;font-size:13px;font-weight:600;color:var(--text-secondary);text-decoration:none;border-radius:var(--radius-sm);transition:var(--transition);}
+.header-nav a:hover,.header-nav a.active{color:var(--text-primary);background:var(--draga-accent-alpha);}
+.header-nav a.active{color:var(--draga-accent-light);}
+
+.breadcrumb{padding:10px 32px;font-size:12px;color:var(--text-muted);background:rgba(0,0,0,0.2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;}
+.breadcrumb a:hover{color:var(--draga-accent-light);}
+.breadcrumb .sep{opacity:0.4;}
+
+.page{max-width:1280px;margin:0 auto;padding:32px;}
+.section{margin-bottom:48px;}
+.section-title{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+
+/* ── PHASE HEADER ── */
+.phase-banner {
+    border-radius:var(--radius-lg);padding:32px;margin-bottom:40px;position:relative;overflow:hidden;
+}
+.phase-banner::before {
+    content:'';position:absolute;inset:0;opacity:0.12;
+}
+.phase-banner .phase-num {
+    font-size:11px;text-transform:uppercase;letter-spacing:2px;font-weight:700;opacity:0.7;margin-bottom:4px;
+}
+.phase-banner .phase-title {
+    font-size:28px;font-weight:900;margin-bottom:6px;
+}
+.phase-banner .phase-desc {
+    font-size:14px;opacity:0.8;max-width:700px;
+}
+.phase-banner .phase-sprints {
+    font-size:12px;opacity:0.6;margin-top:8px;
+}
+
+/* ── HERO STATS ── */
+.hero-stats {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:16px;
+    margin-bottom:40px;
+}
+.hero-stat {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; text-align:center;
+}
+.hero-stat .hs-value { font-size:32px; font-weight:900; }
+.hero-stat .hs-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-top:4px; }
+
+/* ── TIMELINE ── */
+.timeline { position:relative; padding-left:40px; }
+.timeline::before {
+    content:''; position:absolute; left:15px; top:0; bottom:0;
+    width:2px; background:var(--border);
+}
+.timeline-node {
+    position:relative; margin-bottom:40px;
+}
+.timeline-node::before {
+    content:''; position:absolute; left:-33px; top:4px;
+    width:18px; height:18px; border-radius:50%;
+    border:3px solid var(--border); background:var(--bg-dark);
+    z-index:1;
+}
+.timeline-node.done::before { background:var(--success); border-color:var(--success); }
+.timeline-node.active::before { background:var(--draga-accent); border-color:var(--draga-accent); box-shadow:0 0 12px rgba(124,58,237,0.5); }
+.timeline-node.upcoming::before { background:var(--bg-input); }
+
+.sprint-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); overflow:hidden;
+}
+.sprint-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; cursor:pointer; transition:var(--transition);
+}
+.sprint-header:hover { background:var(--bg-card-hover); }
+.sprint-header .s-name { font-size:16px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.sprint-header .s-badge {
+    padding:3px 10px; border-radius:12px; font-size:10px; font-weight:700; text-transform:uppercase;
+}
+.sprint-header .s-milestone {
+    font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;
+}
+.sprint-header .s-toggle { font-size:14px; color:var(--text-muted); transition:transform 0.2s; }
+
+.sprint-body { display:none; padding:0 20px 20px; border-top:1px solid var(--border); }
+.sprint-body.open { display:block; padding-top:16px; }
+
+.task-list { list-style:none; }
+.task-list li {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.03);
+    font-size:13px;
+}
+.task-list li:last-child { border:none; }
+.task-check { flex-shrink:0; width:20px; text-align:center; }
+.task-text { flex:1; color:var(--text-secondary); }
+.task-actor {
+    flex-shrink:0; padding:2px 8px; border-radius:6px;
+    font-size:10px; font-weight:700; text-transform:uppercase;
+}
+.actor-copilot { background:rgba(124,58,237,0.15); color:var(--draga-accent-light); }
+.actor-human { background:rgba(236,137,81,0.15); color:var(--primary); }
+.actor-hybrid { background:rgba(59,130,246,0.15); color:var(--info); }
+
+/* ── MILESTONE BAR ── */
+.milestone-bar {
+    display:grid; grid-template-columns:repeat(8,1fr); gap:2px;
+    margin-bottom:40px; padding:0;
+}
+.milestone-item {
+    padding:10px 8px; text-align:center; border-radius:var(--radius-sm);
+    font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
+    position:relative; cursor:pointer; transition:var(--transition);
+}
+.milestone-item:hover { opacity:0.8; transform:translateY(-2px); }
+.milestone-item .ms-sprint { font-size:9px; opacity:0.7; margin-bottom:3px; }
+
+/* ── PROGRESS BAR ── */
+.progress-container {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; margin-bottom:40px;
+}
+.progress-header {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;
+}
+.progress-header .ph-title { font-size:14px; font-weight:700; }
+.progress-header .ph-pct { font-size:18px; font-weight:900; color:var(--draga-accent-light); }
+.progress-bar-bg {
+    height:12px; border-radius:6px; background:var(--bg-input); overflow:hidden;
+}
+.progress-bar-fill {
+    height:100%; border-radius:6px; transition:width 1.5s ease;
+    background:var(--draga-gradient);
+}
+.progress-phases {
+    display:flex; justify-content:space-between; margin-top:8px;
+    font-size:10px; color:var(--text-muted);
+}
+
+/* ── ACTOR LEGEND ── */
+.actor-legend {
+    display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;
+}
+.actor-legend .al-item {
+    display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-muted);
+}
+.actor-legend .al-dot { width:10px; height:10px; border-radius:3px; }
+
+.toast-container{position:fixed;top:72px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;animation:slideIn .3s ease;max-width:400px;}
+.toast-error{background:#991b1b;color:#fecaca;}.toast-info{background:#1e3a5f;color:#93c5fd;}.toast-success{background:#166534;color:#bbf7d0;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+@media(max-width:900px){
+    .hero-stats{grid-template-columns:repeat(2,1fr);}
+    .milestone-bar{grid-template-columns:repeat(4,1fr);}
+}
+    </style>
+</head>
+<body>
+
+<header class="platform-header">
+    <div class="header-brand">
+        <div class="logo">🐉</div>
+        <div><div class="name">DRAGA</div><div class="subtitle">Document Grounded RAG Agent</div></div>
+    </div>
+    <nav class="header-nav">
+        <a href="platform.html">🏠 Console</a>
+        <a href="draga-agents.html">🤖 Agents</a>
+        <a href="pipeline-monitor.html">⚙️ Pipeline</a>
+        <a href="quality-dashboard.html">🛡️ Quality</a>
+        <a href="roadmap.html" class="active">🗺️ Roadmap</a>
+        <a href="dashboard.html">📊 Admin</a>
+    </nav>
+    <div style="width:100px"></div>
+</header>
+
+<nav class="breadcrumb">
+    <a href="platform.html">🐉 DRAGA Platform</a><span class="sep">›</span>
+    <span style="color:var(--text-secondary)">Roadmap SaaS</span>
+</nav>
+
+<div class="page">
+
+    <!-- ════════════ HERO STATS ════════════ -->
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <div class="hs-value" style="color:var(--draga-accent-light)">3</div>
+            <div class="hs-label">Fases</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hs-value" style="color:var(--info)">8</div>
+            <div class="hs-label">Sprints</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hs-value" style="color:var(--warning)">57</div>
+            <div class="hs-label">Tareas</div>
+        </div>
+        <div class="hero-stat">
+            <div class="hs-value" style="color:var(--success)">8</div>
+            <div class="hs-label">Milestones</div>
+        </div>
+    </div>
+
+    <!-- ════════════ OVERALL PROGRESS ════════════ -->
+    <div class="progress-container">
+        <div class="progress-header">
+            <span class="ph-title">🚀 Progreso General</span>
+            <span class="ph-pct" id="overallPct">12%</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="overallBar" style="width:12%"></div>
+        </div>
+        <div class="progress-phases">
+            <span>Fase 1 — SaaS Interno</span>
+            <span>Fase 2 — Beta Cerrada</span>
+            <span>Fase 3 — GA</span>
+        </div>
+    </div>
+
+    <!-- ════════════ MILESTONE BAR ════════════ -->
+    <div class="section">
+        <div class="section-title"><span>🏁</span> Milestones</div>
+        <div class="milestone-bar">
+            <div class="milestone-item" style="background:rgba(59,130,246,0.2); color:var(--info);" onclick="scrollToSprint(1)">
+                <div class="ms-sprint">Sprint 1</div>
+                DATA FOUNDATION
+            </div>
+            <div class="milestone-item" style="background:rgba(59,130,246,0.2); color:var(--info);" onclick="scrollToSprint(2)">
+                <div class="ms-sprint">Sprint 2</div>
+                QUALITY GATE
+            </div>
+            <div class="milestone-item" style="background:rgba(59,130,246,0.2); color:var(--info);" onclick="scrollToSprint(3)">
+                <div class="ms-sprint">Sprint 3</div>
+                SECURITY
+            </div>
+            <div class="milestone-item" style="background:rgba(59,130,246,0.2); color:var(--info);" onclick="scrollToSprint(4)">
+                <div class="ms-sprint">Sprint 4</div>
+                PRODUCCIÓN INTERNA
+            </div>
+            <div class="milestone-item" style="background:rgba(245,158,11,0.2); color:var(--warning);" onclick="scrollToSprint(5)">
+                <div class="ms-sprint">Sprint 5</div>
+                BETA CERRADA
+            </div>
+            <div class="milestone-item" style="background:rgba(245,158,11,0.2); color:var(--warning);" onclick="scrollToSprint(6)">
+                <div class="ms-sprint">Sprint 6</div>
+                DEVELOPER READY
+            </div>
+            <div class="milestone-item" style="background:rgba(34,197,94,0.2); color:var(--success);" onclick="scrollToSprint(7)">
+                <div class="ms-sprint">Sprint 7</div>
+                SLA READY
+            </div>
+            <div class="milestone-item" style="background:rgba(34,197,94,0.2); color:var(--success);" onclick="scrollToSprint(8)">
+                <div class="ms-sprint">Sprint 8</div>
+                GA 🎉
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════ ACTOR LEGEND ════════════ -->
+    <div class="actor-legend">
+        <div class="al-item"><div class="al-dot" style="background:var(--draga-accent)"></div> Copilot</div>
+        <div class="al-item"><div class="al-dot" style="background:var(--primary)"></div> Human</div>
+        <div class="al-item"><div class="al-dot" style="background:var(--info)"></div> Hybrid</div>
+        <div class="al-item" style="margin-left:auto; font-size:11px">☑️ Completado ⬜ Pendiente 🔄 En progreso</div>
+    </div>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- FASE 1: SaaS Interno (Sprints 1-4)      -->
+    <!-- ════════════════════════════════════════ -->
+    <div class="phase-banner" style="background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(124,58,237,0.1)); border:1px solid rgba(59,130,246,0.3);">
+        <div class="phase-num" style="color:var(--info)">Fase 1</div>
+        <div class="phase-title">🏗️ SaaS Interno</div>
+        <div class="phase-desc">Migración a PostgreSQL, búsqueda híbrida, CI/CD con evaluación automatizada, autenticación JWT+RBAC, observabilidad completa.</div>
+        <div class="phase-sprints">Sprints 1–4 · 32 tareas · Resultado: Plataforma interna estable en producción</div>
+    </div>
+
+    <div class="timeline">
+
+        <!-- Sprint 1 -->
+        <div class="timeline-node active" id="sprint-1">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🗄️ Sprint 1 — PostgreSQL Único <span class="s-badge" style="background:rgba(59,130,246,0.15);color:var(--info)">En Progreso</span></div>
+                    <div>
+                        <span class="s-milestone">🏁 DATA FOUNDATION</span>
+                        <span class="s-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="sprint-body open">
+                    <ul class="task-list">
+                        <li><span class="task-check">☑️</span><span class="task-text">Levantar PG 16 en Docker Compose</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">☑️</span><span class="task-text">Crear modelos SQLAlchemy (tenants, documents, chunks, cache, feedback, gaps, evals)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Implementar PGRepository que cumpla RepositoryPort</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">pgvector: crear índice HNSW en columna embedding</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Script migración: ChromaDB → PG en vivo</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Smoke test: query e2e contra PG</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Eliminar Chroma como dependencia</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Alembic: setup de migraciones con baseline</span><span class="task-actor actor-copilot">Copilot</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sprint 2 -->
+        <div class="timeline-node upcoming" id="sprint-2">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🔍 Sprint 2 — Hybrid Search + CI Eval</div>
+                    <div>
+                        <span class="s-milestone">🏁 QUALITY GATE</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">ts_vector + GIN index sobre content enriquecido</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">RRF combiner: pgvector (0.6) + BM25 (0.4)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Crear golden set ≥ 30 pares (query, expected_chunks, expected_answer)</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">CLI: python -m evaluate --golden golden.json</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">GitHub Action: evalúa en cada PR, fail si Recall@5 < 0.85</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Dashboard de resultados: eval → PG → frontend</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Test A/B comparando Chroma-only vs Hybrid</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sprint 3 -->
+        <div class="timeline-node upcoming" id="sprint-3">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🔐 Sprint 3 — JWT + RBAC</div>
+                    <div>
+                        <span class="s-milestone">🏁 SECURITY</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Auth middleware: valida JWT HS256, extrae tenant_id + role</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">RBAC: roles admin | editor | viewer con permisos granulares</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Endpoint login /auth/token (email + password)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Rate limiting con Redis: key = tenant_id + IP</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">API keys: CRUD + hash almacenado, nunca plaintext</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Test de seguridad: tenant A no puede leer datos de B</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Actualizar frontend: login flow + token management</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sprint 4 -->
+        <div class="timeline-node upcoming" id="sprint-4">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">📡 Sprint 4 — Observability + Resilience</div>
+                    <div>
+                        <span class="s-milestone">🏁 PRODUCCIÓN INTERNA</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">OpenTelemetry SDK: traces por cada paso del pipeline</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Métricas Prometheus: latencia p50/p95/p99, hit rate</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Structured logging JSON (correlation_id por request)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Health check compuesto: /health con sub-checks DB, LLM, Embedding</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Circuit breaker para LLM provider</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Retry pattern con exponential backoff (configurables)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Graceful degradation: cache-only mode cuando LLM falla</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Alertas: PagerDuty o Telegram si p95 > 5s o error rate > 5%</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Runbook: playbook documentado para incidentes comunes</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">📍 Milestone: habilitar primer tenant real (envios23)</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- FASE 2: Beta Cerrada (Sprints 5-6)       -->
+    <!-- ════════════════════════════════════════ -->
+    <div class="phase-banner" style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(234,88,12,0.08)); border:1px solid rgba(245,158,11,0.3);">
+        <div class="phase-num" style="color:var(--warning)">Fase 2</div>
+        <div class="phase-title">🧪 Beta Cerrada</div>
+        <div class="phase-desc">Self-service onboarding, billing con Stripe, SDK Python/JS, portal de tenants, documentación pública.</div>
+        <div class="phase-sprints">Sprints 5–6 · 15 tareas · Resultado: 3-5 tenants externos pagando</div>
+    </div>
+
+    <div class="timeline">
+
+        <!-- Sprint 5 -->
+        <div class="timeline-node upcoming" id="sprint-5">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🏪 Sprint 5 — Self-Service + Billing</div>
+                    <div>
+                        <span class="s-milestone">🏁 BETA CERRADA</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Tenant self-registration: formulario → provisión automática</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Wizard onboarding: 1) crear tenant, 2) subir docs, 3) probar chat</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Portal tenant: dashboard propio con stats, docs, config</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Stripe integration: checkout → webhook → tenant.plan = 'pro'</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Usage metering: tracking de queries, docs, tokens por tenant</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Quotas & limits: enforcement por plan (free/pro/enterprise)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Landing page pública con pricing y demo</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sprint 6 -->
+        <div class="timeline-node upcoming" id="sprint-6">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🔧 Sprint 6 — SDK + DX</div>
+                    <div>
+                        <span class="s-milestone">🏁 DEVELOPER READY</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">SDK Python: pip install draga-sdk → DragaClient(...)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">SDK JavaScript: npm install @draga/sdk → new Draga(...)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Embed widget: <script src="draga.js" tenant="X"> → listo</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Documentación OpenAPI publicada + Redoc/Swagger UI</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Guías de integración: REST, OpenAI-compatible, MCP</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Changelog automatizado: conventional commits → CHANGELOG.md</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Developer portal con playground interactivo</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">📍 Milestone: 3 tenants externos usando SDK</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- FASE 3: GA (Sprints 7-8)                  -->
+    <!-- ════════════════════════════════════════ -->
+    <div class="phase-banner" style="background:linear-gradient(135deg,rgba(34,197,94,0.12),rgba(16,185,129,0.08)); border:1px solid rgba(34,197,94,0.3);">
+        <div class="phase-num" style="color:var(--success)">Fase 3</div>
+        <div class="phase-title">🚀 General Availability</div>
+        <div class="phase-desc">Escalabilidad horizontal, disaster recovery, taxonomías de mercado, diferenciadores competitivos.</div>
+        <div class="phase-sprints">Sprints 7–8 · 10 tareas · Resultado: Producto listo para escalar</div>
+    </div>
+
+    <div class="timeline">
+
+        <!-- Sprint 7 -->
+        <div class="timeline-node upcoming" id="sprint-7">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">📈 Sprint 7 — Scale + DR</div>
+                    <div>
+                        <span class="s-milestone">🏁 SLA READY</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Connection pooling PG: PgBouncer o built-in pool</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Redis Cluster o Sentinel para HA</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Backup automático PG: pg_dump diario + WAL archiving</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Load test: k6 con 50 concurrent users, p95 < 3s</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">SLA dashboard público: 99.9% uptime target</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sprint 8 -->
+        <div class="timeline-node upcoming" id="sprint-8">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <div class="s-name">🎯 Sprint 8 — Taxonomies + Differentiators</div>
+                    <div>
+                        <span class="s-milestone">🏁 GA 🎉</span>
+                        <span class="s-toggle">▶</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Taxonomía Gartner: posicionamiento en RAG market + AI assistants</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Comparativa: DRAGA vs Mendable vs CustomGPT vs Inkeep</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Diferenciador: "98% anti-hallucination" verificado con benchmark público</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Case studies: envios23 + 2 tenants beta con métricas reales</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">📍 Milestone: GA launch — anuncio público + producthunt</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function toggleSprint(header) {
+    const body = header.nextElementSibling;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open');
+    const toggle = header.querySelector('.s-toggle');
+    toggle.textContent = isOpen ? '▶' : '▼';
+}
+
+function scrollToSprint(num) {
+    const el = document.getElementById('sprint-' + num);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.querySelector('.sprint-card').style.boxShadow = '0 0 20px rgba(124,58,237,0.3)';
+        setTimeout(() => el.querySelector('.sprint-card').style.boxShadow = '', 2000);
+        // Open sprint body if closed
+        const body = el.querySelector('.sprint-body');
+        if (!body.classList.contains('open')) {
+            body.classList.add('open');
+            el.querySelector('.s-toggle').textContent = '▼';
+        }
+    }
+}
+
+// Calculate progress from checked items
+function calcProgress() {
+    const checks = document.querySelectorAll('.task-check');
+    let done = 0, total = checks.length;
+    checks.forEach(c => { if (c.textContent.trim() === '☑️') done++; });
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    document.getElementById('overallPct').textContent = pct + '%';
+    document.getElementById('overallBar').style.width = pct + '%';
+}
+document.addEventListener('DOMContentLoaded', calcProgress);
+</script>
+</body>
+</html>
