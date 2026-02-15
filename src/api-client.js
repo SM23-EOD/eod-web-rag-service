@@ -194,16 +194,17 @@ class RAGApiClient {
      * Retrieve chunks for a specific document by querying with a broad query
      * and filtering retrieved_chunks by document_id on the client side.
      * This is a workaround since the backend has no /documents/{id}/chunks endpoint.
+     * Note: backend top_k max is 20.
      */
-    async getDocumentChunks(documentId, tenantId = null, topK = 100, filenameHint = null) {
+    async getDocumentChunks(documentId, tenantId = null, topK = 20, filenameHint = null) {
         const queryText = filenameHint
             ? filenameHint.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
             : 'contenido completo del documento';
         const res = await this.query({
             query: queryText,
             tenant_id: tenantId,
-            top_k: topK,
-            include_metadata: true
+            top_k: Math.min(topK, 20),
+            use_cache: false
         });
         const all = res.retrieved_chunks || [];
         // Filter to only chunks from this document

@@ -671,7 +671,7 @@ const DocViewer = {
                 document.getElementById('dvSize').textContent = fileSize(doc.file_size_bytes || 0);
             }
             // Get chunks via query
-            const chunks = await api.getDocumentChunks(docId, App.tenantId, 100, filename);
+            const chunks = await api.getDocumentChunks(docId, App.tenantId, 20, filename);
             const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
             const display = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
             this._renderChunks(body, display, docChunks.length > 0);
