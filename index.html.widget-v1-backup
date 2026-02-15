@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo - Asistente Envios23</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      margin: 0 0 16px 0;
+      color: #1e3a8a;
+      font-size: 20px;
+    }
+
+    .card p {
+      margin: 0 0 16px 0;
+      line-height: 1.7;
+      color: #475569;
+    }
+
+    code {
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #7c3aed;
+    }
+
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    .config-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+
+    .config-table th,
+    .config-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .config-table th {
+      background: #f8fafc;
+      font-weight: 600;
+      color: #1e3a8a;
+    }
+
+    .config-table code {
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.default {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    footer a {
+      color: #2563eb;
+    }
+  </style>
+</head>
+
+<body>
+  <nav id="site-breadcrumb" style="display:flex;align-items:center;gap:8px;padding:6px 20px;background:#0f172a;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;border-bottom:1px solid #1e293b;flex-wrap:wrap;"><a href="integration.html" style="color:#93c5fd;text-decoration:none;font-weight:600;">🏠 Hub</a><span style="color:#475569;">›</span><a href="integration.html" style="color:#94a3b8;text-decoration:none;">Widgets</a><span style="color:#475569;">›</span><span style="color:#cbd5e1;font-weight:500;">Widget V1</span><span style="color:#334155;margin:0 4px 0 auto;">|</span><a href="demo-draga-chat.html" style="color:#64748b;text-decoration:none;font-size:11px;padding:2px 6px;">💬 DRAGA</a><a href="demo-widget-openai.html" style="color:#64748b;text-decoration:none;font-size:11px;padding:2px 6px;">⚡ OpenAI</a><a href="demo-widget-v2.html" style="color:#64748b;text-decoration:none;font-size:11px;padding:2px 6px;">🤖 V2</a></nav>
+  <header>
+    <h1>🚀 Asistente RAG - Envios23</h1>
+    <p>Widget embebible para consultas sobre envíos a Cuba</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>📦 Instalación</h2>
+      <p>Agrega el script y el componente a tu página HTML:</p>
+      <pre><code>&lt;!-- Marked.js para renderizar markdown (opcional) --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"&gt;&lt;/script&gt;
+
+&lt;!-- Widget del asistente --&gt;
+&lt;script src="https://cdn.example.com/assistant-widget.js"&gt;&lt;/script&gt;
+
+&lt;!-- Usar el componente --&gt;
+&lt;rag-assistant
+  endpoint="https://api.envios23.com/api/v2/mcp/tools/call"
+  title="Asistente Envios23"
+&gt;&lt;/rag-assistant&gt;</code></pre>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Configuración</h2>
+      <p>El widget acepta los siguientes atributos:</p>
+      <table class="config-table">
+        <thead>
+          <tr>
+            <th>Atributo</th>
+            <th>Descripción</th>
+            <th>Default</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>endpoint</code></td>
+            <td>URL del endpoint MCP de la API RAG</td>
+            <td><code>/api/v2/mcp/tools/call</code></td>
+          </tr>
+          <tr>
+            <td><code>title</code></td>
+            <td>Título del widget</td>
+            <td><code>Asistente</code></td>
+          </tr>
+          <tr>
+            <td><code>tool-name</code></td>
+            <td>Nombre de la herramienta MCP a invocar</td>
+            <td><code>generate_rag_answer</code></td>
+          </tr>
+          <tr>
+            <td><code>session-id</code></td>
+            <td>ID de sesión para tracking</td>
+            <td><code>web</code></td>
+          </tr>
+          <tr>
+            <td><code>include-sources</code></td>
+            <td>Incluir fuentes en la respuesta</td>
+            <td><code>true</code></td>
+          </tr>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td>Texto del placeholder del input</td>
+            <td><code>Escribe tu pregunta...</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>🎨 Características</h2>
+      <ul style="line-height: 2; color: #475569;">
+        <li>✅ Web Component standalone (sin dependencias)</li>
+        <li>✅ Soporte para Markdown en respuestas</li>
+        <li>✅ Feedback de usuarios (👍/👎)</li>
+        <li>✅ Modo expandido para conversaciones largas</li>
+        <li>✅ Diseño responsive</li>
+        <li>✅ Shadow DOM para encapsulamiento de estilos</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>🔗 API Requerida</h2>
+      <p>
+        Este widget requiere el backend
+        <a href="https://github.com/envios23/eod-api-rag-service" target="_blank">eod-api-rag-service</a>
+        funcionando con el endpoint MCP habilitado.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <p>
+      © 2026 Envios23 ·
+      <a href="https://github.com/envios23/eod-web-rag-service">GitHub</a> ·
+      <a href="https://envios23.com">envios23.com</a>
+    </p>
+  </footer>
+
+  <!-- Widget conectado al API RAG -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+  <script src="./src/assistant-widget.js"></script>
+  <rag-assistant endpoint="/api/v2/mcp/tools/call" title="Asistente Envios23" session-id="demo-web"
+    placeholder="¿En qué puedo ayudarte hoy?"></rag-assistant>
+</body>
+
+</html>

@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA — Instance Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DRAGA INSTANCE DASHBOARD — DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;--draga-accent-alpha:rgba(124,58,237,0.15);
+    --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+    --draga-glow:0 0 40px rgba(124,58,237,0.25);
+    --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+    --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;--bg-input:#242e44;
+    --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+    --border:#243049;--border-light:#334155;
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:56px 1fr;height:100vh;}
+
+/* ═══ HEADER ═══ */
+.header{grid-column:1/-1;background:var(--bg-main);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;}
+.header-brand .logo{width:30px;height:30px;background:var(--draga-gradient);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:var(--draga-glow);}
+.header-brand .name{font-size:16px;font-weight:900;background:var(--draga-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header-sep{width:1px;height:28px;background:var(--border);}
+.tenant-selector{display:flex;align-items:center;gap:8px;}
+.tenant-selector select{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:6px 12px;font-size:12px;font-family:inherit;}
+.tenant-name{font-size:14px;font-weight:700;color:var(--text-primary);}
+.header-right{display:flex;align-items:center;gap:10px;}
+.health-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{background:var(--bg-main);border-right:1px solid var(--border);padding:12px 0;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:var(--transition);text-decoration:none;border-left:3px solid transparent;}
+.nav-item:hover{background:var(--bg-card-hover);color:var(--text-primary);}
+.nav-item.active{background:var(--draga-accent-alpha);color:var(--draga-accent-light);border-left-color:var(--draga-accent);}
+.nav-item .icon{font-size:16px;width:22px;text-align:center;}
+.nav-item .badge{margin-left:auto;background:var(--draga-accent-alpha);color:var(--draga-accent-light);padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;}
+.nav-sep{height:1px;background:var(--border);margin:12px 16px;}
+
+/* ═══ MAIN ═══ */
+.main{overflow-y:auto;padding:24px 28px;}
+.module{display:none;}
+.module.active{display:block;}
+.page-title{font-size:22px;font-weight:900;margin-bottom:4px;}
+.page-desc{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+.section{margin-bottom:28px;}
+.section-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+/* ═══ CARDS ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:var(--transition);}
+.stat-card:hover{border-color:var(--draga-accent);}
+.stat-card .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;}
+.stat-card .value{font-size:24px;font-weight:900;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{border-color:var(--draga-accent);color:var(--text-primary);}
+.btn-primary{background:var(--draga-gradient);color:#fff;border-color:transparent;}
+.btn-primary:hover{opacity:0.9;border-color:transparent;}
+.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.btn-icon{padding:5px 8px;font-size:14px;background:transparent;border:none;cursor:pointer;color:var(--text-muted);border-radius:var(--radius-sm);}
+.btn-icon:hover{background:var(--bg-card-hover);color:var(--text-primary);}
+
+/* ═══ BADGES ═══ */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-success{background:rgba(34,197,94,0.12);color:var(--success);}
+.badge-danger{background:rgba(239,68,68,0.12);color:var(--danger);}
+.badge-warning{background:rgba(245,158,11,0.12);color:var(--warning);}
+.badge-info{background:rgba(59,130,246,0.12);color:var(--info);}
+.badge-muted{background:rgba(100,116,139,0.12);color:var(--text-muted);}
+.badge-draga{background:var(--draga-accent-alpha);color:var(--draga-accent-light);}
+
+/* ═══ TABLES ═══ */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:700;}
+td{padding:8px 10px;border-bottom:1px solid rgba(36,48,73,0.5);}
+tr:hover td{background:var(--bg-card);}
+
+/* ═══ FORMS ═══ */
+.form-group{margin-bottom:12px;}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;font-family:inherit;transition:var(--transition);}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--draga-accent);}
+.form-group textarea{resize:vertical;min-height:70px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* ═══ MODALS ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:90%;max-width:520px;max-height:80vh;overflow-y:auto;padding:24px;}
+.modal-title{font-size:16px;font-weight:900;margin-bottom:16px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-bar{height:8px;background:var(--bg-input);border-radius:4px;overflow:hidden;}
+.progress-bar .fill{height:100%;border-radius:4px;background:var(--draga-gradient);transition:width 1s ease;}
+.progress-bar .fill.complete{background:var(--success);}
+
+/* ═══ TOAST ═══ */
+.toast-container{position:fixed;top:64px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;}
+.toast{padding:9px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;animation:slideIn .3s ease;max-width:340px;}
+.toast-error{background:#991b1b;color:#fecaca;}.toast-info{background:#1e3a5f;color:#93c5fd;}.toast-success{background:#166534;color:#bbf7d0;}.toast-warning{background:#78350f;color:#fde68a;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ═══ SPINNER ═══ */
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--draga-accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:32px;color:var(--text-muted);}
+.empty-state{text-align:center;padding:40px 16px;color:var(--text-muted);}
+.empty-state .icon{font-size:40px;margin-bottom:10px;}
+.empty-state h3{font-size:15px;margin-bottom:4px;color:var(--text-secondary);}
+
+/* ═══ PIPELINE STEPS ═══ */
+.pipeline-phases{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.phase-col{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;position:relative;}
+.phase-col::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0;}
+.phase-col:nth-child(1)::before{background:var(--info);}
+.phase-col:nth-child(2)::before{background:var(--success);}
+.phase-col:nth-child(3)::before{background:var(--warning);}
+.phase-col:nth-child(4)::before{background:var(--danger);}
+.phase-col .phase-name{font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;}
+.phase-col:nth-child(1) .phase-name{color:var(--info);}
+.phase-col:nth-child(2) .phase-name{color:var(--success);}
+.phase-col:nth-child(3) .phase-name{color:var(--warning);}
+.phase-col:nth-child(4) .phase-name{color:var(--danger);}
+.step-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius-sm);margin-bottom:4px;font-size:11px;color:var(--text-secondary);background:var(--bg-input);transition:var(--transition);}
+.step-item:hover{background:var(--bg-card-hover);color:var(--text-primary);}
+.step-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;flex-shrink:0;}
+.phase-col:nth-child(1) .step-num{background:rgba(59,130,246,0.15);color:var(--info);}
+.phase-col:nth-child(2) .step-num{background:rgba(34,197,94,0.15);color:var(--success);}
+.phase-col:nth-child(3) .step-num{background:rgba(245,158,11,0.15);color:var(--warning);}
+.phase-col:nth-child(4) .step-num{background:rgba(239,68,68,0.15);color:var(--danger);}
+
+/* ═══ DOCUMENT TABLE ═══ */
+.doc-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.doc-toolbar input[type="text"]{flex:1;min-width:200px;padding:7px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;}
+.filter-pills{display:flex;gap:4px;}
+.filter-pill{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg-input);color:var(--text-muted);border:none;cursor:pointer;transition:var(--transition);}
+.filter-pill.active{background:var(--draga-accent-alpha);color:var(--draga-accent-light);}
+.filter-pill:hover{color:var(--text-primary);}
+.pagination{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;font-size:12px;color:var(--text-muted);}
+
+/* ═══ UPLOAD ═══ */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:var(--transition);margin-bottom:14px;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--draga-accent);background:var(--draga-accent-alpha);}
+.drop-zone .dz-icon{font-size:36px;margin-bottom:8px;}
+.drop-zone .dz-text{font-size:13px;color:var(--text-muted);}
+.upload-file-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:4px;font-size:12px;}
+.upload-file-item .uf-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.upload-file-item .uf-size{color:var(--text-muted);font-size:11px;}
+.upload-file-item .uf-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px;}
+
+/* ═══ CHAT ═══ */
+.chat-container{display:flex;flex-direction:column;height:calc(100vh - 160px);max-height:700px;}
+.chat-messages{flex:1;overflow-y:auto;padding:16px 0;}
+.chat-msg{margin-bottom:14px;padding:12px 16px;border-radius:var(--radius);max-width:85%;font-size:13px;line-height:1.6;}
+.chat-msg.user{background:var(--draga-accent-alpha);margin-left:auto;border-bottom-right-radius:4px;}
+.chat-msg.assistant{background:var(--bg-card);border:1px solid var(--border);border-bottom-left-radius:4px;}
+.chat-msg.assistant pre{background:var(--bg-input);padding:10px;border-radius:var(--radius-sm);overflow-x:auto;font-size:12px;margin:8px 0;}
+.chat-msg.assistant code{background:var(--bg-input);padding:1px 5px;border-radius:3px;font-size:12px;}
+.chat-msg.assistant pre code{background:none;padding:0;}
+.chat-msg.assistant ul,.chat-msg.assistant ol{padding-left:18px;margin:6px 0;}
+.chat-input-bar{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);}
+.chat-input-bar input{flex:1;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;font-family:inherit;}
+.chat-input-bar input:focus{outline:none;border-color:var(--draga-accent);}
+
+/* ═══ QUALITY METRIC CARDS ═══ */
+.metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;}
+.metric-card .mc-value{font-size:32px;font-weight:900;margin-bottom:2px;}
+.metric-card .mc-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);}
+
+/* ═══ DETAIL PANEL ═══ */
+.detail-panel{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:var(--bg-card);border-left:1px solid var(--border);z-index:200;transition:right .3s ease;overflow-y:auto;padding:24px;}
+.detail-panel.open{right:0;}
+.dp-field{margin-bottom:10px;}
+.dp-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:2px;}
+.dp-value{font-size:13px;}
+
+/* ═══ GAP CARD ═══ */
+.gap-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;}
+.gap-card .gc-query{font-size:13px;font-weight:600;margin-bottom:6px;}
+.gap-card .gc-meta{font-size:11px;color:var(--text-muted);display:flex;gap:12px;}
+
+/* ═══ ANTI-HALLUC TECHNIQUES ═══ */
+.technique-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px;}
+.technique-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;}
+.technique-card .tc-icon{font-size:24px;margin-bottom:6px;}
+.technique-card .tc-name{font-size:12px;font-weight:700;margin-bottom:4px;}
+.technique-card .tc-desc{font-size:11px;color:var(--text-muted);line-height:1.4;}
+
+/* ═══ WIDGET PREVIEW ═══ */
+.color-input-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.color-input-row input[type="color"]{width:36px;height:28px;border:none;cursor:pointer;background:none;padding:0;}
+
+/* ═══ EMBED CODE ═══ */
+.embed-block{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px;position:relative;}
+.embed-block pre{font-size:11px;color:var(--text-secondary);white-space:pre-wrap;word-break:break-all;margin:0;}
+.embed-block .copy-btn{position:absolute;top:8px;right:8px;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:56px 44px 1fr;}
+    .sidebar{display:flex;overflow-x:auto;padding:0 8px;gap:2px;align-items:center;border-right:none;border-bottom:1px solid var(--border);}
+    .nav-item{white-space:nowrap;padding:8px 10px;border-left:none;border-bottom:3px solid transparent;font-size:12px;}
+    .nav-item.active{border-left-color:transparent;border-bottom-color:var(--draga-accent);}
+    .nav-sep{display:none;}
+    .main{padding:14px;}
+    .pipeline-phases{grid-template-columns:1fr 1fr;}
+    .form-row{grid-template-columns:1fr;}
+    .chat-container{height:calc(100vh - 180px);}
+}
+    </style>
+</head>
+<body>
+
+<div class="app">
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+    <div class="header-left">
+        <a href="index.html" class="header-brand">
+            <div class="logo">🐉</div>
+            <span class="name">DRAGA</span>
+        </a>
+        <div class="header-sep"></div>
+        <div class="tenant-selector">
+            <select id="tenantSelect" onchange="App.switchTenant(this.value)"></select>
+        </div>
+    </div>
+    <div class="header-right">
+        <span class="tenant-name" id="tenantDisplayName"></span>
+        <div class="health-dot" id="healthDot" title="API Status"></div>
+        <a href="admin.html" class="btn btn-sm">⚙️ Admin</a>
+    </div>
+</header>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+    <a class="nav-item active" onclick="App.nav('overview')" data-mod="overview"><span class="icon">🐉</span> Overview</a>
+    <a class="nav-item" onclick="App.nav('knowledge')" data-mod="knowledge"><span class="icon">📚</span> Knowledge Base <span class="badge" id="navDocCount">—</span></a>
+    <a class="nav-item" onclick="App.nav('pipeline')" data-mod="pipeline"><span class="icon">⚙️</span> Pipeline</a>
+    <a class="nav-item" onclick="App.nav('quality')" data-mod="quality"><span class="icon">🛡️</span> Quality</a>
+    <div class="nav-sep"></div>
+    <a class="nav-item" onclick="App.nav('chat')" data-mod="chat"><span class="icon">💬</span> Chat</a>
+    <a class="nav-item" onclick="App.nav('config')" data-mod="config"><span class="icon">🔧</span> Config</a>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- ── OVERVIEW ── -->
+<div class="module active" id="mod-overview">
+    <h1 class="page-title" id="overviewTitle">DRAGA Instance</h1>
+    <p class="page-desc">Anatomía, arquitectura y estado del DRAGA</p>
+
+    <div class="stats-grid" id="overviewStats">
+        <div class="stat-card"><div class="label">Documentos</div><div class="value" id="ovDocs">—</div></div>
+        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="ovChunks">—</div></div>
+        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
+        <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="ovModel">—</div></div>
+        <div class="stat-card"><div class="label">Idioma</div><div class="value" id="ovLang">—</div></div>
+        <div class="stat-card"><div class="label">Colección</div><div class="value" style="font-size:14px" id="ovCollection">—</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🧬</span> Anatomía DRAGA</div>
+        <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+            <div class="stat-card" style="text-align:center;border-top:3px solid var(--info)">
+                <div style="font-size:28px;margin-bottom:6px">🏢</div>
+                <div class="label">Tenant</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">Aislamiento, config, KB propia</div>
+            </div>
+            <div class="stat-card" style="text-align:center;border-top:3px solid var(--success)">
+                <div style="font-size:28px;margin-bottom:6px">📚</div>
+                <div class="label">Knowledge Base</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">Documentos + chunks + vectores</div>
+            </div>
+            <div class="stat-card" style="text-align:center;border-top:3px solid var(--warning)">
+                <div style="font-size:28px;margin-bottom:6px">⚙️</div>
+                <div class="label">Orchestrator</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">14 pasos en 4 fases</div>
+            </div>
+            <div class="stat-card" style="text-align:center;border-top:3px solid var(--draga-accent)">
+                <div style="font-size:28px;margin-bottom:6px">🤖</div>
+                <div class="label">Agent Crew</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">6 agentes especializados</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🤖</span> Agent Crew (6 activos + 1 roadmap)</div>
+        <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🔍</div><div style="font-size:11px;font-weight:700;margin-top:4px">Query Analyzer</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📊</div><div style="font-size:11px;font-weight:700;margin-top:4px">Retriever</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🧹</div><div style="font-size:11px;font-weight:700;margin-top:4px">Reranker</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">✍️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Generator</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🛡️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Verifier</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📝</div><div style="font-size:11px;font-weight:700;margin-top:4px">Formatter</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;opacity:0.5;border-style:dashed;"><div style="font-size:20px">🧬</div><div style="font-size:11px;font-weight:700;margin-top:4px">Taxonomy</div><div style="font-size:9px;color:var(--text-muted)">Roadmap</div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🔌</span> Triple Protocolo</div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="stat-card" id="protoRest" style="text-align:center"><div style="font-size:20px">🌐</div><div class="label" style="margin-top:6px">REST API</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="protoRestStatus">checking...</div></div>
+            <div class="stat-card" id="protoOpenai" style="text-align:center"><div style="font-size:20px">🤖</div><div class="label" style="margin-top:6px">OpenAI Compatible</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="protoOpenaiStatus">checking...</div></div>
+            <div class="stat-card" id="protoMcp" style="text-align:center"><div style="font-size:20px">🔌</div><div class="label" style="margin-top:6px">MCP Protocol</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="protoMcpStatus">checking...</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── KNOWLEDGE BASE ── -->
+<div class="module" id="mod-knowledge">
+    <h1 class="page-title">Knowledge Base</h1>
+    <p class="page-desc">Documentos, indexación y gestión de la base de conocimientos</p>
+
+    <div class="stats-grid" id="kbStats">
+        <div class="stat-card"><div class="label">Total Docs</div><div class="value" id="kbTotal">—</div></div>
+        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="kbChunks">—</div></div>
+        <div class="stat-card"><div class="label">Tamaño</div><div class="value" id="kbSize">—</div></div>
+        <div class="stat-card"><div class="label">Indexados</div><div class="value" style="color:var(--success)" id="kbIndexed">—</div></div>
+        <div class="stat-card"><div class="label">Errores</div><div class="value" style="color:var(--danger)" id="kbErrors">—</div></div>
+        <div class="stat-card"><div class="label">Cobertura</div><div class="value" id="kbCoverage">—</div></div>
+    </div>
+
+    <div class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div class="section-title" style="margin-bottom:0"><span class="icon">📄</span> Documentos</div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="KB.openUpload()">📤 Subir</button>
+                <button class="btn btn-sm" onclick="KB.syncDir()">📂 Sync Dir</button>
+                <button class="btn btn-sm" onclick="KB.processPending()">⏳ Procesar</button>
+                <button class="btn btn-sm btn-danger" onclick="KB.confirmReset()">☢️ Reset</button>
+            </div>
+        </div>
+        <div class="doc-toolbar">
+            <input type="text" id="docSearch" placeholder="🔍 Buscar documentos..." oninput="KB.filter()">
+            <div class="filter-pills">
+                <button class="filter-pill active" data-f="all" onclick="KB.setFilter('all',this)">Todos</button>
+                <button class="filter-pill" data-f="indexed" onclick="KB.setFilter('indexed',this)">Indexados</button>
+                <button class="filter-pill" data-f="pending" onclick="KB.setFilter('pending',this)">Pendientes</button>
+                <button class="filter-pill" data-f="error" onclick="KB.setFilter('error',this)">Errores</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>Archivo</th><th>Estado</th><th>Categoría</th><th>Chunks</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr></thead>
+                <tbody id="docTableBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="docPagination" style="display:none;">
+            <button class="btn btn-sm" id="docPrev" onclick="KB.prevPage()">◂</button>
+            <span id="docPagInfo">—</span>
+            <button class="btn btn-sm" id="docNext" onclick="KB.nextPage()">▸</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── PIPELINE ── -->
+<div class="module" id="mod-pipeline">
+    <h1 class="page-title">Pipeline Monitor</h1>
+    <p class="page-desc">14 pasos en 4 fases — Pre-Retrieval → Retrieval → Post-Retrieval → Generation</p>
+
+    <div class="pipeline-phases">
+        <div class="phase-col">
+            <div class="phase-name">Pre-Retrieval</div>
+            <div class="step-item"><div class="step-num">1</div>Query Reception</div>
+            <div class="step-item"><div class="step-num">2</div>Cache Check</div>
+            <div class="step-item"><div class="step-num">3</div>Query Analysis</div>
+            <div class="step-item"><div class="step-num">4</div>Query Expansion</div>
+        </div>
+        <div class="phase-col">
+            <div class="phase-name">Retrieval</div>
+            <div class="step-item"><div class="step-num">5</div>Embedding</div>
+            <div class="step-item"><div class="step-num">6</div>Vector Search</div>
+            <div class="step-item"><div class="step-num">7</div>Result Fusion</div>
+        </div>
+        <div class="phase-col">
+            <div class="phase-name">Post-Retrieval</div>
+            <div class="step-item"><div class="step-num">8</div>Reranking</div>
+            <div class="step-item"><div class="step-num">9</div>Context Assembly</div>
+            <div class="step-item"><div class="step-num">10</div>Gap Detection</div>
+            <div class="step-item"><div class="step-num">11</div>Prompt Building</div>
+        </div>
+        <div class="phase-col">
+            <div class="phase-name">Generation</div>
+            <div class="step-item"><div class="step-num">12</div>LLM Generation</div>
+            <div class="step-item"><div class="step-num">13</div>Grounding Verify</div>
+            <div class="step-item"><div class="step-num">14</div>Response Format</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🧪</span> Live Test</div>
+        <div class="card">
+            <div style="display:flex;gap:10px;margin-bottom:14px;">
+                <input type="text" id="pipelineQuery" placeholder="Escribe una consulta para probar el pipeline..." style="flex:1;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')Pipeline.run()">
+                <button class="btn btn-primary" onclick="Pipeline.run()">▶ Ejecutar</button>
+            </div>
+            <div id="pipelineResult"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🔒</span> Invariantes del Dominio</div>
+        <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Sin documentos → no_answer</strong><div style="color:var(--text-muted);margin-top:4px">Nunca inventa si no hay fuentes</div></div>
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Confidence < umbral → warning</strong><div style="color:var(--text-muted);margin-top:4px">Alerta explícita en baja confianza</div></div>
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Fuentes siempre citadas</strong><div style="color:var(--text-muted);margin-top:4px">Toda respuesta incluye sources[]</div></div>
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Tenant isolation</strong><div style="color:var(--text-muted);margin-top:4px">KB separada por tenant</div></div>
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Idempotent ingestion</strong><div style="color:var(--text-muted);margin-top:4px">Mismo doc = mismos chunks</div></div>
+            <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Cache = misma respuesta</strong><div style="color:var(--text-muted);margin-top:4px">Determinismo en cache hits</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── QUALITY ── -->
+<div class="module" id="mod-quality">
+    <h1 class="page-title">Quality Dashboard</h1>
+    <p class="page-desc">Framework anti-alucinación, métricas y gestión de gaps</p>
+
+    <div class="stats-grid" id="qualityMetrics" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+        <div class="stat-card"><div class="label">Documentos</div><div class="value" id="qmDocs">—</div></div>
+        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="qmChunks">—</div></div>
+        <div class="stat-card"><div class="label">Cobertura</div><div class="value" id="qmCoverage">—</div></div>
+        <div class="stat-card"><div class="label">Grounding</div><div class="value" id="qmGrounding">—</div></div>
+        <div class="stat-card"><div class="label">Confianza Avg</div><div class="value" id="qmConfidence">—</div></div>
+        <div class="stat-card"><div class="label">Cache Hit</div><div class="value" id="qmCacheHit">—</div></div>
+        <div class="stat-card"><div class="label">Feedback</div><div class="value" id="qmFeedback">—</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🛡️</span> Técnicas Anti-Alucinación</div>
+        <div class="technique-grid">
+            <div class="technique-card"><div class="tc-icon">🔬</div><div class="tc-name">NLI Verification</div><div class="tc-desc">Natural Language Inference para validar coherencia respuesta-fuente</div></div>
+            <div class="technique-card"><div class="tc-icon">🔢</div><div class="tc-name">Token Overlap</div><div class="tc-desc">Verificación de solapamiento token-a-token con documentos fuente</div></div>
+            <div class="technique-card"><div class="tc-icon">🔄</div><div class="tc-name">Self-RAG</div><div class="tc-desc">Auto-evaluación: ¿la respuesta está fundamentada en los chunks?</div></div>
+            <div class="technique-card"><div class="tc-icon">📊</div><div class="tc-name">Confidence Score</div><div class="tc-desc">Score compuesto de confianza en cada respuesta</div></div>
+            <div class="technique-card"><div class="tc-icon">🕳️</div><div class="tc-name">Gap Detection</div><div class="tc-desc">Identifica preguntas sin cobertura en la KB</div></div>
+            <div class="technique-card"><div class="tc-icon">⚡</div><div class="tc-name">Source Citing</div><div class="tc-desc">Cita obligatoria de fuentes en toda respuesta</div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🕳️</span> Knowledge Gaps</div>
+        <div id="gapsContainer"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">💬</span> Feedback Reciente</div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>Query</th><th>Rating</th><th>Comentario</th><th>Revisado</th></tr></thead>
+                <tbody id="qualityFeedback"><tr><td colspan="4"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── CHAT ── -->
+<div class="module" id="mod-chat">
+    <h1 class="page-title">Chat</h1>
+    <p class="page-desc">Conversación streaming con este DRAGA</p>
+
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
+        <div class="form-group" style="margin:0;flex:1;max-width:200px;">
+            <label>Modelo</label>
+            <select id="chatModel"><option value="eod-rag">eod-rag</option></select>
+        </div>
+        <div class="form-group" style="margin:0;width:80px;">
+            <label>Top K</label>
+            <input type="number" id="chatTopK" value="5" min="1" max="50">
+        </div>
+        <button class="btn btn-sm" onclick="Chat.clear()" style="align-self:flex-end;margin-bottom:2px;">🗑️ Limpiar</button>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?</div>
+        </div>
+        <div class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter')Chat.send()">
+            <button class="btn btn-primary" id="chatSendBtn" onclick="Chat.send()">▶ Enviar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── CONFIG ── -->
+<div class="module" id="mod-config">
+    <h1 class="page-title">Configuración</h1>
+    <p class="page-desc">Retrieval config, widget, embed codes y tareas</p>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">⚙️</span> Retrieval Config</div>
+        <div class="card" id="retrievalConfig"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🎨</span> Widget Config</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+                <div class="card"><h3 style="font-size:14px;margin-bottom:12px;">🎨 Tema</h3><div id="widgetThemeForm"></div></div>
+                <div class="card"><h3 style="font-size:14px;margin-bottom:12px;">📝 Branding</h3><div id="widgetBrandingForm"></div></div>
+                <div class="card"><h3 style="font-size:14px;margin-bottom:12px;">⚡ Comportamiento</h3><div id="widgetBehaviorForm"></div></div>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                    <button class="btn btn-primary" onclick="WidgetCfg.save()">💾 Guardar Widget</button>
+                    <button class="btn btn-danger" onclick="WidgetCfg.reset()">🔄 Reset</button>
+                </div>
+            </div>
+            <div>
+                <div class="card"><h3 style="font-size:14px;margin-bottom:12px;">👁️ Preview</h3><div id="widgetPreview"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">📋</span> Embed Codes</div>
+        <div id="embedCodes"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span><span class="icon">📋</span> Tareas</span>
+            <div style="display:flex;gap:8px;">
+                <select id="taskStateFilter" onchange="TasksMod.refresh()" style="padding:5px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:11px;">
+                    <option value="">Todas</option>
+                    <option value="pending">Pendientes</option>
+                    <option value="processing">Procesando</option>
+                    <option value="completed">Completadas</option>
+                    <option value="failed">Fallidas</option>
+                </select>
+                <button class="btn btn-sm" onclick="TasksMod.cleanup()">🧹 Limpiar</button>
+            </div>
+        </div>
+        <div id="taskTable"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+</div>
+
+</main>
+</div>
+
+<!-- ═══ UPLOAD MODAL ═══ -->
+<div class="modal-overlay" id="uploadModal">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-title">📤 Subir Documentos</div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <div class="dz-icon">📁</div>
+            <div class="dz-text">Arrastra archivos aquí o haz click para seleccionar<br><small>PDF, MD, TXT, DOCX, JSON, XML, XLSX</small></div>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".pdf,.md,.txt,.docx,.odt,.xlsx,.xls,.json,.xml" style="display:none" onchange="KB.addFiles([...this.files]);this.value='';">
+        <div id="uploadFileList"></div>
+        <div id="uploadOptions" style="display:none;margin-top:12px;">
+            <div class="form-row">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optAutoIdx" checked> Auto-indexar</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optBg"> En background</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('uploadModal')">Cancelar</button>
+            <button class="btn btn-primary" id="uploadBtn" onclick="KB.doUpload()">📤 Subir</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-title" id="confirmTitle">Confirmar</div>
+        <p id="confirmMsg" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;"></p>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('confirmModal')">Cancelar</button>
+            <button class="btn btn-danger" id="confirmAction">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ DETAIL PANEL ═══ -->
+<div class="detail-panel" id="detailPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-weight:700;font-size:14px">Detalle</span>
+        <button class="btn-icon" onclick="document.getElementById('detailPanel').classList.remove('open')">✕</button>
+    </div>
+    <div id="detailBody"></div>
+    <div id="detailActions" style="display:flex;gap:8px;margin-top:16px;"></div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DRAGA INSTANCE DASHBOARD — JavaScript
+// ══════════════════════════════════════════════════════════════
+
+const MODULES = ['overview','knowledge','pipeline','quality','chat','config'];
+
+// ── Utilities ──
+function toast(msg, type = 'info', dur = 4000) {
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), dur);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+function fileSize(bytes) {
+    if (!bytes) return '0 B';
+    const u = ['B','KB','MB','GB']; let i = 0;
+    while (bytes >= 1024 && i < u.length - 1) { bytes /= 1024; i++; }
+    return bytes.toFixed(i ? 1 : 0) + ' ' + u[i];
+}
+function statusBadge(s) {
+    const m = { indexed: 'badge-success', active: 'badge-success', error: 'badge-danger', failed: 'badge-danger', pending: 'badge-warning', processing: 'badge-info', uploaded: 'badge-info' };
+    return `<span class="badge ${m[s] || 'badge-muted'}">${s || '?'}</span>`;
+}
+
+function showConfirm(title, msg, action) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').innerHTML = msg;
+    const btn = document.getElementById('confirmAction');
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.onclick = () => { closeModal('confirmModal'); action(); };
+    openModal('confirmModal');
+}
+
+// ══════════════════════════════════════════════════════════════
+// APP CONTROLLER
+// ══════════════════════════════════════════════════════════════
+const App = {
+    tenantId: null,
+    tenantData: null,
+    tenants: [],
+
+    async init() {
+        // Load tenants
+        try {
+            const data = await api.listTenants(true);
+            this.tenants = data.tenants || [];
+        } catch { this.tenants = [{ tenant_id: 'default', name: 'Default' }]; }
+
+        const sel = document.getElementById('tenantSelect');
+        sel.innerHTML = this.tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('');
+
+        // Pick tenant from URL
+        const params = new URLSearchParams(window.location.search);
+        const tid = params.get('tenant') || (this.tenants[0]?.tenant_id || 'default');
+        sel.value = tid;
+        this.tenantId = tid;
+        this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };
+
+        document.getElementById('tenantDisplayName').textContent = this.tenantData.name;
+
+        // Setup drop zone
+        KB.setupDropZone();
+
+        // Nav from hash
+        const hash = window.location.hash.replace('#', '') || 'overview';
+        this.nav(hash);
+
+        // Health
+        this.checkHealth();
+        setInterval(() => this.checkHealth(), 30000);
+
+        window.addEventListener('hashchange', () => {
+            const h = window.location.hash.replace('#', '');
+            if (MODULES.includes(h)) this.nav(h);
+        });
+    },
+
+    switchTenant(tid) {
+        this.tenantId = tid;
+        this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };
+        document.getElementById('tenantDisplayName').textContent = this.tenantData.name;
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.set('tenant', tid);
+        window.history.replaceState({}, '', url);
+        // Reload current module
+        const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
+        this.nav(active);
+    },
+
+    nav(mod) {
+        if (!MODULES.includes(mod)) mod = 'overview';
+        MODULES.forEach(m => {
+            document.getElementById('mod-' + m).classList.toggle('active', m === mod);
+            document.querySelector(`[data-mod="${m}"]`)?.classList.toggle('active', m === mod);
+        });
+        window.location.hash = mod;
+
+        const loaders = {
+            overview: () => Overview.load(),
+            knowledge: () => KB.load(),
+            pipeline: () => {},
+            quality: () => Quality.load(),
+            chat: () => {},
+            config: () => Config.load()
+        };
+        loaders[mod]?.();
+    },
+
+    async checkHealth() {
+        const dot = document.getElementById('healthDot');
+        try { await api.health(); dot.style.background = 'var(--success)'; }
+        catch { dot.style.background = 'var(--danger)'; }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// OVERVIEW
+// ══════════════════════════════════════════════════════════════
+const Overview = {
+    async load() {
+        const t = App.tenantData;
+        document.getElementById('overviewTitle').textContent = `🐉 ${t.name || App.tenantId}`;
+        document.getElementById('ovDocs').textContent = t.document_count ?? '—';
+        document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
+        document.getElementById('ovLang').textContent = t.response_language || '—';
+        document.getElementById('ovCollection').textContent = t.collection_name || '—';
+
+        // Get stats
+        try {
+            const stats = await api.getStats(App.tenantId);
+            const db = stats.vector_database || {};
+            document.getElementById('ovChunks').textContent = db.total_chunks || db.documents || '—';
+        } catch { document.getElementById('ovChunks').textContent = '—'; }
+
+        // Check protocols
+        this.checkProtocols();
+    },
+
+    async checkProtocols() {
+        const checks = [
+            { id: 'protoRest', statusId: 'protoRestStatus', check: () => api.health() },
+            { id: 'protoOpenai', statusId: 'protoOpenaiStatus', check: () => api.listModels() },
+            { id: 'protoMcp', statusId: 'protoMcpStatus', check: () => api.mcpHealth() },
+        ];
+        for (const c of checks) {
+            try {
+                await c.check();
+                document.getElementById(c.id).style.borderColor = 'var(--success)';
+                document.getElementById(c.statusId).innerHTML = '<span style="color:var(--success)">✅ Online</span>';
+            } catch {
+                document.getElementById(c.id).style.borderColor = 'var(--danger)';
+                document.getElementById(c.statusId).innerHTML = '<span style="color:var(--danger)">❌ Offline</span>';
+            }
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// KNOWLEDGE BASE
+// ══════════════════════════════════════════════════════════════
+const KB = {
+    docs: [], filtered: [], statusFilter: 'all', page: 1, perPage: 25,
+    uploadFiles: [], uploading: false,
+
+    async load() {
+        await Promise.all([this.loadDocs(), this.loadStats()]);
+    },
+
+    async loadStats() {
+        try {
+            const s = await api.documentStats(App.tenantId);
+            const bs = s.by_status || {};
+            const totalDocs = s.total_documents || 0;
+            const indexed = bs.indexed || 0;
+            const coverage = totalDocs ? Math.round(indexed / totalDocs * 100) : 0;
+            document.getElementById('kbTotal').textContent = totalDocs;
+            document.getElementById('kbChunks').textContent = s.total_chunks ?? 0;
+            document.getElementById('kbSize').textContent = fileSize(s.total_size_bytes || 0);
+            document.getElementById('kbIndexed').textContent = indexed;
+            document.getElementById('kbErrors').textContent = (bs.error || 0) + (bs.failed || 0);
+            document.getElementById('kbCoverage').textContent = coverage + '%';
+            document.getElementById('navDocCount').textContent = totalDocs;
+        } catch (e) { console.warn('Stats error:', e); }
+    },
+
+    async loadDocs() {
+        const tbody = document.getElementById('docTableBody');
+        tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+        try {
+            const data = await api.listDocuments(App.tenantId);
+            this.docs = data.documents || data || [];
+            this.docs.forEach(d => { if (d.category) d.category = d.category.replace(/^DocumentCategory\./i, '').toLowerCase(); });
+            this.page = 1;
+            this.applyFilter();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);padding:16px">❌ ${e.message}</td></tr>`;
+        }
+    },
+
+    applyFilter() {
+        let list = [...this.docs];
+        if (this.statusFilter !== 'all') list = list.filter(d => d.status === this.statusFilter);
+        const q = (document.getElementById('docSearch')?.value || '').toLowerCase().trim();
+        if (q) list = list.filter(d => (d.filename || '').toLowerCase().includes(q) || (d.document_id || '').includes(q));
+        this.filtered = list;
+        const tp = Math.max(1, Math.ceil(list.length / this.perPage));
+        if (this.page > tp) this.page = tp;
+        this.render();
+    },
+
+    filter() { this.page = 1; this.applyFilter(); },
+
+    setFilter(f, btn) {
+        this.statusFilter = f;
+        document.querySelectorAll('#mod-knowledge .filter-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.filter();
+    },
+
+    prevPage() { if (this.page > 1) { this.page--; this.render(); } },
+    nextPage() { const tp = Math.ceil(this.filtered.length / this.perPage); if (this.page < tp) { this.page++; this.render(); } },
+
+    render() {
+        const tbody = document.getElementById('docTableBody');
+        const start = (this.page - 1) * this.perPage;
+        const page = this.filtered.slice(start, start + this.perPage);
+        const total = this.filtered.length;
+        const tp = Math.max(1, Math.ceil(total / this.perPage));
+
+        if (total === 0) {
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Sin documentos</h3></div></td></tr>`;
+            document.getElementById('docPagination').style.display = 'none';
+            return;
+        }
+
+        const icons = { md:'📝', pdf:'📕', txt:'📃', docx:'📘', json:'🔧', xml:'📐', xlsx:'📊', odt:'📓' };
+        tbody.innerHTML = page.map(d => {
+            const ext = (d.filename || '').split('.').pop().toLowerCase();
+            const ico = icons[ext] || '📄';
+            const dt = d.indexed_at ? new Date(d.indexed_at).toLocaleDateString('es', { day:'2-digit', month:'short' }) : '—';
+            return `<tr>
+                <td><div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:16px">${ico}</span>
+                    <div><div style="font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(d.filename)}">${esc(d.filename)}</div>
+                    <div style="font-size:10px;color:var(--text-muted)">${d.document_id}</div></div>
+                </div></td>
+                <td>${statusBadge(d.status)}</td>
+                <td><span class="badge badge-info">${d.category || '—'}</span></td>
+                <td>${d.chunk_count || 0}</td>
+                <td>${fileSize(d.file_size_bytes || 0)}</td>
+                <td style="font-size:11px">${dt}</td>
+                <td>
+                    <button class="btn-icon" onclick="KB.showDetail('${d.document_id}')" title="Detalle">🔍</button>
+                    <button class="btn-icon" onclick="KB.reindex('${d.document_id}')" title="Re-indexar">🔄</button>
+                    <button class="btn-icon" onclick="KB.confirmDelete('${d.document_id}','${esc(d.filename)}')" title="Eliminar">🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        const pag = document.getElementById('docPagination');
+        pag.style.display = total > this.perPage ? 'flex' : 'none';
+        document.getElementById('docPagInfo').textContent = `${start + 1}–${Math.min(start + this.perPage, total)} de ${total} · Pág ${this.page}/${tp}`;
+        document.getElementById('docPrev').disabled = this.page <= 1;
+        document.getElementById('docNext').disabled = this.page >= tp;
+    },
+
+    async showDetail(docId) {
+        const panel = document.getElementById('detailPanel');
+        const body = document.getElementById('detailBody');
+        const actions = document.getElementById('detailActions');
+        body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        actions.innerHTML = '';
+        panel.classList.add('open');
+        try {
+            const doc = await api.getDocument(docId, App.tenantId);
+            body.innerHTML = [
+                ['Archivo', esc(doc.filename)],
+                ['ID', `<span style="font-size:10px;font-family:monospace">${doc.document_id}</span>`],
+                ['Estado', statusBadge(doc.status)],
+                ['Categoría', doc.category || '—'],
+                ['Chunks', doc.chunk_count || 0],
+                ['Tamaño', fileSize(doc.file_size_bytes || 0)],
+                ['Versión', 'v' + (doc.version || 1)],
+                ['Hash', `<span style="font-size:10px;font-family:monospace">${doc.content_hash || '—'}</span>`],
+                ['Indexado', doc.indexed_at ? new Date(doc.indexed_at).toLocaleString('es') : '—'],
+                ...(doc.error ? [['Error', `<span style="color:var(--danger)">${esc(doc.error)}</span>`]] : [])
+            ].map(([l, v]) => `<div class="dp-field"><div class="dp-label">${l}</div><div class="dp-value">${v}</div></div>`).join('');
+            actions.innerHTML = `
+                <button class="btn btn-sm btn-primary" style="flex:1" onclick="KB.reindex('${doc.document_id}')">🔄 Re-indexar</button>
+                <button class="btn btn-sm btn-danger" style="flex:1" onclick="KB.confirmDelete('${doc.document_id}','${esc(doc.filename)}')">🗑️ Eliminar</button>`;
+        } catch (e) {
+            body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>${e.message}</p></div>`;
+        }
+    },
+
+    async reindex(id) {
+        toast('Re-indexando...', 'info');
+        try { await api.reindexDocument(id, App.tenantId); toast('Re-indexado', 'success'); this.load(); }
+        catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    confirmDelete(id, name) {
+        showConfirm('Eliminar Documento', `¿Eliminar "${name}"? Se eliminará de la KB y el vector store.`,
+            async () => { try { await api.deleteDocument(id, App.tenantId); toast('Eliminado', 'success'); document.getElementById('detailPanel').classList.remove('open'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+    },
+
+    confirmReset() {
+        showConfirm('☢️ Reset Nuclear', `Se limpiarán TODOS los chunks del tenant "${App.tenantId}" y se re-indexará. No se puede deshacer.`,
+            async () => { toast('Reseteando...', 'info'); try { await api.resetReindex(App.tenantId); toast('Reset completado', 'success'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+    },
+
+    async processPending() {
+        toast('Procesando pendientes...', 'info');
+        try { await api.processPending(App.tenantId); toast('Completado', 'success'); this.load(); }
+        catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    syncDir() {
+        const path = `/app/storage/sources/${App.tenantId || ''}`;
+        const dir = prompt('Directorio del servidor a sincronizar:', path);
+        if (!dir) return;
+        const force = confirm('¿Forzar re-indexación de existentes?');
+        toast('Sincronizando...', 'info');
+        api.syncDirectory(dir, App.tenantId, true, force)
+            .then(() => { toast('Sincronización completada', 'success'); this.load(); })
+            .catch(e => toast('Error: ' + e.message, 'error'));
+    },
+
+    // ── Upload ──
+    openUpload() {
+        this.uploadFiles = [];
+        this.renderUploadFiles();
+        openModal('uploadModal');
+    },
+
+    setupDropZone() {
+        const z = document.getElementById('dropZone');
+        if (!z) return;
+        ['dragenter','dragover'].forEach(e => z.addEventListener(e, ev => { ev.preventDefault(); z.classList.add('drag-over'); }));
+        ['dragleave','drop'].forEach(e => z.addEventListener(e, ev => { ev.preventDefault(); z.classList.remove('drag-over'); }));
+        z.addEventListener('drop', ev => this.addFiles([...ev.dataTransfer.files]));
+    },
+
+    addFiles(files) {
+        const allowed = ['.pdf','.md','.txt','.docx','.odt','.xlsx','.xls','.json','.xml'];
+        files.forEach(f => {
+            const ext = '.' + f.name.split('.').pop().toLowerCase();
+            if (!allowed.includes(ext)) { toast(`Formato no soportado: ${f.name}`, 'error'); return; }
+            if (this.uploadFiles.find(u => u.name === f.name && u.size === f.size)) return;
+            this.uploadFiles.push(f);
+        });
+        this.renderUploadFiles();
+    },
+
+    renderUploadFiles() {
+        const list = document.getElementById('uploadFileList');
+        const opts = document.getElementById('uploadOptions');
+        if (!this.uploadFiles.length) { list.innerHTML = ''; opts.style.display = 'none'; return; }
+        opts.style.display = 'flex';
+        const icons = { md:'📝', pdf:'📕', txt:'📃', docx:'📘', json:'🔧', xml:'📐', xlsx:'📊', odt:'📓' };
+        list.innerHTML = this.uploadFiles.map((f, i) => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            return `<div class="upload-file-item"><span style="font-size:16px">${icons[ext]||'📄'}</span><span class="uf-name">${f.name}</span><span class="uf-size">${fileSize(f.size)}</span><button class="uf-remove" onclick="KB.uploadFiles.splice(${i},1);KB.renderUploadFiles()">✕</button></div>`;
+        }).join('');
+    },
+
+    async doUpload() {
+        if (this.uploading || !this.uploadFiles.length) return;
+        this.uploading = true;
+        const btn = document.getElementById('uploadBtn');
+        btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Subiendo...';
+        try {
+            const autoIdx = document.getElementById('optAutoIdx').checked;
+            const bg = document.getElementById('optBg').checked;
+            await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg);
+            toast(`${this.uploadFiles.length} documento(s) subidos`, 'success');
+            setTimeout(() => { closeModal('uploadModal'); this.load(); }, 600);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+        finally { this.uploading = false; btn.disabled = false; btn.innerHTML = '📤 Subir'; }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// PIPELINE
+// ══════════════════════════════════════════════════════════════
+const Pipeline = {
+    async run() {
+        const query = document.getElementById('pipelineQuery').value.trim();
+        if (!query) { toast('Escribe una consulta', 'warning'); return; }
+
+        const result = document.getElementById('pipelineResult');
+        result.innerHTML = '<div class="loading"><div class="spinner"></div> Ejecutando pipeline...</div>';
+        const t0 = Date.now();
+
+        try {
+            const res = await api.query({ query, tenant_id: App.tenantId, include_metadata: true });
+            const latency = Date.now() - t0;
+            const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
+            const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
+
+            result.innerHTML = `
+                <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
+                    <div class="stat-card"><div class="label">Confianza</div><div class="value" style="color:${confColor}">${conf}%</div></div>
+                    <div class="stat-card"><div class="label">Fuentes</div><div class="value">${res.sources?.length || 0}</div></div>
+                    <div class="stat-card"><div class="label">Latencia</div><div class="value" style="font-size:16px">${latency}ms</div></div>
+                    <div class="stat-card"><div class="label">Cache</div><div class="value">${res.cached ? '⚡ Hit' : '🔄 Miss'}</div></div>
+                    <div class="stat-card"><div class="label">Chunks</div><div class="value">${res.retrieved_chunks?.length || 0}</div></div>
+                </div>
+                <div class="card" style="border-left:3px solid var(--draga-accent)">
+                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Respuesta</div>
+                    <div style="font-size:13px;line-height:1.7">${marked.parse(res.answer || 'Sin respuesta')}</div>
+                    ${res.sources?.length ? `<div style="font-size:11px;color:var(--text-muted);margin-top:10px">📎 Fuentes: ${res.sources.join(', ')}</div>` : ''}
+                </div>`;
+        } catch (e) {
+            result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${e.message}</div></div>`;
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// QUALITY
+// ══════════════════════════════════════════════════════════════
+const Quality = {
+    async load() {
+        await Promise.all([this.loadMetrics(), this.loadGaps(), this.loadFeedback()]);
+    },
+
+    async loadMetrics() {
+        const [statsRes, coverageRes, groundingRes, fbRes] = await Promise.allSettled([
+            api.getStats(App.tenantId),
+            api.metricsCoverage(App.tenantId),
+            api.metricsGrounding(App.tenantId),
+            api.feedbackStats()
+        ]);
+        const stats = statsRes.status === 'fulfilled' ? statsRes.value : {};
+        const coverage = coverageRes.status === 'fulfilled' ? coverageRes.value : {};
+        const grounding = groundingRes.status === 'fulfilled' ? groundingRes.value : {};
+        const fb = fbRes.status === 'fulfilled' ? fbRes.value : {};
+
+        const db = stats.vector_database || {};
+        document.getElementById('qmDocs').textContent = db.total_documents || stats.total_documents || '—';
+        document.getElementById('qmChunks').textContent = db.total_chunks || db.documents || '—';
+        document.getElementById('qmCoverage').textContent = coverage.coverage_rate != null ? (coverage.coverage_rate * 100).toFixed(0) + '%' : '—';
+        document.getElementById('qmGrounding').textContent = grounding.grounding_rate != null ? (grounding.grounding_rate * 100).toFixed(0) + '%' : '—';
+        document.getElementById('qmConfidence').textContent = grounding.avg_confidence != null ? (grounding.avg_confidence * 100).toFixed(0) + '%' : '—';
+        document.getElementById('qmCacheHit').textContent = grounding.cache_hit_rate != null ? (grounding.cache_hit_rate * 100).toFixed(0) + '%' : '—';
+        document.getElementById('qmFeedback').textContent = fb.total_feedback ?? '—';
+    },
+
+    async loadGaps() {
+        const container = document.getElementById('gapsContainer');
+        try {
+            const data = await api.metricsGaps(App.tenantId, false, 10);
+            const gaps = data.gaps || data || [];
+            if (!gaps.length) { container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>No hay gaps detectados</p></div>'; return; }
+            container.innerHTML = gaps.map(g => `<div class="gap-card">
+                <div class="gc-query">${esc(g.query || g.question || '')}</div>
+                <div class="gc-meta">
+                    <span>📅 ${g.created_at ? new Date(g.created_at).toLocaleDateString('es') : '—'}</span>
+                    <span>📊 Confianza: ${g.confidence != null ? (g.confidence * 100).toFixed(0) + '%' : '—'}</span>
+                    <span>${g.resolved ? '<span class="badge badge-success">Resuelto</span>' : '<span class="badge badge-warning">Pendiente</span>'}</span>
+                </div>
+            </div>`).join('');
+        } catch { container.innerHTML = '<div class="empty-state"><p>Gaps service no disponible</p></div>'; }
+    },
+
+    async loadFeedback() {
+        const tbody = document.getElementById('qualityFeedback');
+        try {
+            const data = await api.listFeedback({ limit: 10 });
+            const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
+            if (!items.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Sin feedback</p></div></td></tr>'; return; }
+            tbody.innerHTML = items.map(f => `<tr>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.query || '')}</td>
+                <td>${f.rating === 'positive' ? '<span class="badge badge-success">👍</span>' : '<span class="badge badge-danger">👎</span>'}</td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.comment || '—')}</td>
+                <td>${f.reviewed ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">pendiente</span>'}</td>
+            </tr>`).join('');
+        } catch { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">Feedback no disponible</td></tr>'; }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════════════════════
+const Chat = {
+    messages: [],
+
+    async send() {
+        const input = document.getElementById('chatInput');
+        const query = input.value.trim();
+        if (!query) return;
+
+        input.value = '';
+        this.messages.push({ role: 'user', content: query });
+        this.addBubble('user', query);
+
+        const btn = document.getElementById('chatSendBtn');
+        btn.disabled = true;
+
+        const thinkId = 'think-' + Date.now();
+        const thinkEl = document.createElement('div');
+        thinkEl.id = thinkId;
+        thinkEl.className = 'chat-msg assistant';
+        thinkEl.innerHTML = '<div class="spinner"></div> Pensando...';
+        document.getElementById('chatMessages').appendChild(thinkEl);
+        thinkEl.scrollIntoView({ behavior: 'smooth' });
+
+        try {
+            const topK = parseInt(document.getElementById('chatTopK').value) || 5;
+            const model = document.getElementById('chatModel').value;
+            let fullContent = '';
+            thinkEl.innerHTML = '';
+
+            await api.chatCompletionsStream(
+                { model, messages: this.messages, tenant_id: App.tenantId, top_k: topK, stream: true },
+                (chunk) => {
+                    const delta = chunk.choices?.[0]?.delta?.content || '';
+                    if (delta) { fullContent += delta; thinkEl.innerHTML = marked.parse(fullContent); thinkEl.scrollIntoView({ behavior: 'smooth' }); }
+                },
+                () => { this.messages.push({ role: 'assistant', content: fullContent }); btn.disabled = false; }
+            );
+        } catch (e) {
+            thinkEl.innerHTML = `<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`;
+            btn.disabled = false;
+        }
+    },
+
+    addBubble(role, content) {
+        const el = document.createElement('div');
+        el.className = 'chat-msg ' + role;
+        el.innerHTML = role === 'assistant' ? marked.parse(content) : esc(content);
+        document.getElementById('chatMessages').appendChild(el);
+        el.scrollIntoView({ behavior: 'smooth' });
+    },
+
+    clear() {
+        this.messages = [];
+        document.getElementById('chatMessages').innerHTML = '<div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. ¿En qué puedo ayudarte?</div>';
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+const Config = {
+    async load() {
+        await Promise.all([this.loadRetrieval(), WidgetCfg.load(), this.generateEmbed(), TasksMod.refresh()]);
+    },
+
+    async loadRetrieval() {
+        const container = document.getElementById('retrievalConfig');
+        try {
+            const tenant = await api.getTenant(App.tenantId);
+            const rc = tenant.retrieval_config || {};
+            container.innerHTML = `
+                <div class="form-row">
+                    <div class="form-group"><label>Top K</label><input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="50"></div>
+                    <div class="form-group"><label>Umbral Similitud</label><input type="number" value="${rc.similarity_threshold||0.7}" id="rcThreshold" min="0" max="1" step="0.05"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Chunk Size</label><input type="number" value="${rc.chunk_size||500}" id="rcChunkSize" min="100" max="5000"></div>
+                    <div class="form-group"><label>Chunk Overlap</label><input type="number" value="${rc.chunk_overlap||50}" id="rcOverlap" min="0" max="500"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="Config.saveRetrieval()">💾 Guardar</button>`;
+        } catch (e) { container.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`; }
+    },
+
+    async saveRetrieval() {
+        try {
+            await api.updateTenant(App.tenantId, { retrieval_config: {
+                top_k: parseInt(document.getElementById('rcTopK').value),
+                similarity_threshold: parseFloat(document.getElementById('rcThreshold').value),
+                chunk_size: parseInt(document.getElementById('rcChunkSize').value),
+                chunk_overlap: parseInt(document.getElementById('rcOverlap').value)
+            }});
+            toast('Retrieval config guardado', 'success');
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    generateEmbed() {
+        const baseUrl = location.origin;
+        const tid = App.tenantId;
+        document.getElementById('embedCodes').innerHTML = `
+            <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">Script Tag</div>
+                <pre id="embedScript">&lt;script src="${baseUrl}/src/draga-chat.js"&gt;&lt;/script&gt;
+&lt;draga-chat tenant-id="${tid}" api-base="${baseUrl}/api/v2"&gt;&lt;/draga-chat&gt;</pre>
+                <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedScript').textContent);toast('Copiado','success')">📋</button></div>
+            <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">iframe</div>
+                <pre id="embedIframe">&lt;iframe src="${baseUrl}/chat-interface.html?tenant=${tid}" style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"&gt;&lt;/iframe&gt;</pre>
+                <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedIframe').textContent);toast('Copiado','success')">📋</button></div>`;
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// WIDGET CONFIG
+// ══════════════════════════════════════════════════════════════
+const WidgetCfg = {
+    config: null,
+
+    async load() {
+        try {
+            this.config = await api.getWidgetConfig(App.tenantId);
+            this.renderTheme();
+            this.renderBranding();
+            this.renderBehavior();
+            this.renderPreview();
+        } catch { document.getElementById('widgetThemeForm').innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Widget config no disponible</div>'; }
+    },
+
+    renderTheme() {
+        const t = this.config.theme || {};
+        const fields = [['primary_color','Primario'],['background_color','Fondo'],['text_color','Texto'],['header_background','Header BG'],['header_text_color','Header Text'],['user_bubble_color','Burbuja User'],['bot_bubble_color','Burbuja Bot']];
+        document.getElementById('widgetThemeForm').innerHTML = fields.map(([k,l]) =>
+            `<div class="color-input-row"><input type="color" value="${t[k]||'#2563eb'}" id="wt_${k}" onchange="WidgetCfg.renderPreview()"><span style="font-size:11px">${l}</span></div>`
+        ).join('');
+    },
+
+    renderBranding() {
+        const b = this.config.branding || {};
+        document.getElementById('widgetBrandingForm').innerHTML = `
+            <div class="form-group"><label>Título</label><input type="text" value="${esc(b.title||'')}" id="wb_title" onchange="WidgetCfg.renderPreview()"></div>
+            <div class="form-group"><label>Subtítulo</label><input type="text" value="${esc(b.subtitle||'')}" id="wb_subtitle"></div>
+            <div class="form-group"><label>Placeholder</label><input type="text" value="${esc(b.placeholder_text||'')}" id="wb_placeholder_text"></div>
+            <div class="form-group"><label>Mensaje Bienvenida</label><textarea id="wb_welcome_message">${esc(b.welcome_message||'')}</textarea></div>`;
+    },
+
+    renderBehavior() {
+        const bh = this.config.behavior || {};
+        document.getElementById('widgetBehaviorForm').innerHTML = `
+            <div class="form-row">
+                <div class="form-group"><label>Posición</label><select id="wbh_position"><option value="bottom-right" ${bh.position==='bottom-right'?'selected':''}>Abajo Derecha</option><option value="bottom-left" ${bh.position==='bottom-left'?'selected':''}>Abajo Izquierda</option></select></div>
+                <div class="form-group"><label>Estado Inicial</label><select id="wbh_initial_state"><option value="closed" ${bh.initial_state==='closed'?'selected':''}>Cerrado</option><option value="open" ${bh.initial_state==='open'?'selected':''}>Abierto</option></select></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Rate Limit/min</label><input type="number" value="${bh.rate_limit_per_minute||30}" id="wbh_rate_limit_per_minute" min="1"></div>
+                <div class="form-group"><label>Máx mensaje</label><input type="number" value="${bh.max_message_length||2000}" id="wbh_max_message_length" min="100"></div>
+            </div>`;
+    },
+
+    renderPreview() {
+        const t = this.config?.theme || {};
+        const b = this.config?.branding || {};
+        const pc = document.getElementById('wt_primary_color')?.value || t.primary_color || '#2563eb';
+        const bg = document.getElementById('wt_background_color')?.value || t.background_color || '#fff';
+        const hbg = document.getElementById('wt_header_background')?.value || t.header_background || '#2563eb';
+        const htc = document.getElementById('wt_header_text_color')?.value || t.header_text_color || '#fff';
+        const title = document.getElementById('wb_title')?.value || b.title || 'Chat';
+        document.getElementById('widgetPreview').innerHTML = `
+            <div style="width:280px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.2);border:1px solid #e5e7eb;">
+                <div style="background:${hbg};color:${htc};padding:12px 16px;font-weight:700;font-size:14px">💬 ${esc(title)}</div>
+                <div style="background:${bg};padding:14px;min-height:120px">
+                    <div style="background:#f3f4f6;padding:8px 12px;border-radius:10px;font-size:12px;max-width:80%;margin-bottom:8px;color:#333">¡Hola! ¿En qué puedo ayudarte?</div>
+                    <div style="background:${pc};color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;max-width:80%;margin-left:auto;text-align:right">¿Cuáles son las tarifas?</div>
+                </div>
+                <div style="padding:10px;border-top:1px solid #e5e7eb;background:${bg};display:flex;gap:6px">
+                    <input style="flex:1;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:11px" placeholder="Escribe..." disabled>
+                    <button style="background:${pc};color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer">▶</button>
+                </div>
+            </div>`;
+    },
+
+    async save() {
+        const theme = {};
+        ['primary_color','background_color','text_color','header_background','header_text_color','user_bubble_color','bot_bubble_color'].forEach(k => {
+            const el = document.getElementById('wt_'+k); if (el) theme[k] = el.value;
+        });
+        const branding = {};
+        ['title','subtitle','placeholder_text','welcome_message'].forEach(k => {
+            const el = document.getElementById('wb_'+k); if (el) branding[k] = el.value;
+        });
+        const behavior = {
+            position: document.getElementById('wbh_position')?.value || 'bottom-right',
+            initial_state: document.getElementById('wbh_initial_state')?.value || 'closed',
+            rate_limit_per_minute: parseInt(document.getElementById('wbh_rate_limit_per_minute')?.value) || 30,
+            max_message_length: parseInt(document.getElementById('wbh_max_message_length')?.value) || 2000,
+        };
+        try {
+            await api.updateWidgetConfig(App.tenantId, { theme, branding, behavior });
+            toast('Widget guardado', 'success');
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    async reset() {
+        showConfirm('Reset Widget', 'Restaurar configuración del widget a defaults.', async () => {
+            try { await api.resetWidgetConfig(App.tenantId); toast('Widget reseteado', 'success'); this.load(); }
+            catch (e) { toast('Error: ' + e.message, 'error'); }
+        });
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// TASKS
+// ══════════════════════════════════════════════════════════════
+const TasksMod = {
+    async refresh() {
+        const container = document.getElementById('taskTable');
+        const state = document.getElementById('taskStateFilter')?.value || null;
+        try {
+            const res = await api.listTasks(App.tenantId, state);
+            const tasks = res.tasks || res || [];
+            if (!tasks.length) { container.innerHTML = '<div class="empty-state"><p>No hay tareas</p></div>'; return; }
+            container.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Estado</th><th>Progreso</th><th>Archivos</th><th>Resultado</th><th>Tiempo</th></tr></thead>
+                <tbody>${tasks.map(t => {
+                    const pct = t.progress_pct ?? t.progress ?? null;
+                    const fileInfo = t.total_files ? `${t.processed_files||0}/${t.total_files}` : '—';
+                    const resultInfo = [];
+                    if (t.successful != null) resultInfo.push(`✅${t.successful}`);
+                    if (t.failed != null && t.failed > 0) resultInfo.push(`❌${t.failed}`);
+                    if (t.chunks_created != null) resultInfo.push(`📦${t.chunks_created}`);
+                    const elapsed = t.elapsed_seconds != null ? t.elapsed_seconds.toFixed(1) + 's' : '—';
+                    return `<tr>
+                        <td style="font-size:10px;color:var(--text-muted)">${(t.task_id||t.id||'').slice(0,12)}…</td>
+                        <td>${statusBadge(t.state || t.status)}</td>
+                        <td>${pct != null ? `<div style="display:flex;align-items:center;gap:4px"><div class="progress-bar" style="flex:1;height:6px"><div class="fill" style="width:${pct}%"></div></div><span style="font-size:10px">${Math.round(pct)}%</span></div>` : '—'}</td>
+                        <td style="font-size:11px">${fileInfo}</td>
+                        <td style="font-size:10px">${resultInfo.join(' ') || '—'}</td>
+                        <td style="font-size:10px;color:var(--text-muted)">${elapsed}</td>
+                    </tr>`;
+                }).join('')}</tbody></table></div>`;
+        } catch (e) { container.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`; }
+    },
+
+    async cleanup() {
+        showConfirm('Limpiar Tareas', 'Eliminar tareas completadas/fallidas.', async () => {
+            try { await api.cleanupTasks(App.tenantId); toast('Tareas limpiadas', 'success'); this.refresh(); }
+            catch (e) { toast('Error: ' + e.message, 'error'); }
+        });
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>

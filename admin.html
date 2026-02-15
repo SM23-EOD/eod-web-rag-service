@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA — Platform Admin</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══════════════════════════════════════════════════════════════
+   DRAGA PLATFORM ADMIN — DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+    --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;--draga-accent-alpha:rgba(124,58,237,0.15);
+    --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+    --draga-glow:0 0 40px rgba(124,58,237,0.25);
+    --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+    --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;--bg-input:#242e44;
+    --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+    --border:#243049;--border-light:#334155;
+    --shadow:0 4px 24px rgba(0,0,0,0.35);
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;height:100vh;}
+
+/* ═══ HEADER ═══ */
+.header{grid-column:1/-1;background:var(--bg-main);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;}
+.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.header-brand .logo{width:32px;height:32px;background:var(--draga-gradient);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--draga-glow);}
+.header-brand .name{font-size:18px;font-weight:900;background:var(--draga-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px;}
+.header-brand .subtitle{font-size:10px;color:var(--text-muted);margin-top:-2px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.health-pill{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;}
+.health-pill.online{background:rgba(34,197,94,0.1);color:var(--success);}
+.health-pill.offline{background:rgba(239,68,68,0.1);color:var(--danger);}
+.health-pill.degraded{background:rgba(245,158,11,0.1);color:var(--warning);}
+.health-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{background:var(--bg-main);border-right:1px solid var(--border);padding:16px 0;overflow-y:auto;}
+.sidebar-section{padding:0 16px;margin-bottom:20px;}
+.sidebar-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:700;margin-bottom:8px;padding:0 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary);transition:var(--transition);text-decoration:none;margin-bottom:2px;}
+.nav-item:hover{background:var(--bg-card-hover);color:var(--text-primary);}
+.nav-item.active{background:var(--draga-accent-alpha);color:var(--draga-accent-light);}
+.nav-item .icon{font-size:18px;width:24px;text-align:center;}
+.nav-item .badge{margin-left:auto;background:var(--draga-accent-alpha);color:var(--draga-accent-light);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+
+/* ═══ MAIN CONTENT ═══ */
+.main{overflow-y:auto;padding:24px 32px;background:var(--bg-dark);}
+.module{display:none;}
+.module.active{display:block;}
+.page-title{font-size:24px;font-weight:900;margin-bottom:6px;}
+.page-desc{font-size:13px;color:var(--text-muted);margin-bottom:24px;}
+
+/* ═══ CARDS & GRIDS ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);}
+.stat-card:hover{border-color:var(--draga-accent);box-shadow:var(--draga-glow);}
+.stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px;}
+.stat-card .value{font-size:28px;font-weight:900;}
+
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-bottom:24px;}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);}
+.card:hover{border-color:var(--border-light);}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.card-title{font-weight:700;font-size:15px;}
+.card-meta{font-size:12px;color:var(--text-muted);margin-bottom:12px;}
+.card-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{border-color:var(--draga-accent);color:var(--text-primary);}
+.btn-primary{background:var(--draga-gradient);color:#fff;border-color:transparent;}
+.btn-primary:hover{opacity:0.9;border-color:transparent;}
+.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);}
+.btn-danger:hover{background:rgba(239,68,68,0.2);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+
+/* ═══ BADGES ═══ */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-success{background:rgba(34,197,94,0.12);color:var(--success);}
+.badge-danger{background:rgba(239,68,68,0.12);color:var(--danger);}
+.badge-warning{background:rgba(245,158,11,0.12);color:var(--warning);}
+.badge-info{background:rgba(59,130,246,0.12);color:var(--info);}
+.badge-muted{background:rgba(100,116,139,0.12);color:var(--text-muted);}
+.badge-draga{background:var(--draga-accent-alpha);color:var(--draga-accent-light);}
+
+/* ═══ TABLES ═══ */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border);font-weight:700;}
+td{padding:10px 12px;border-bottom:1px solid rgba(36,48,73,0.5);}
+tr:hover td{background:var(--bg-card);}
+
+/* ═══ FORMS ═══ */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;transition:var(--transition);}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--draga-accent);}
+.form-group textarea{resize:vertical;min-height:80px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* ═══ MODALS ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);width:90%;max-width:520px;max-height:80vh;overflow-y:auto;padding:28px;}
+.modal-title{font-size:18px;font-weight:900;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+
+/* ═══ DRAGA INSTANCE CARDS ═══ */
+.draga-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;transition:var(--transition);position:relative;overflow:hidden;}
+.draga-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--draga-gradient);}
+.draga-card:hover{border-color:var(--draga-accent);transform:translateY(-2px);box-shadow:var(--draga-glow);}
+.draga-card .dc-name{font-size:17px;font-weight:900;margin-bottom:4px;}
+.draga-card .dc-id{font-size:11px;color:var(--text-muted);font-family:monospace;margin-bottom:12px;}
+.draga-card .dc-anatomy{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.dc-part{text-align:center;padding:8px 4px;background:var(--bg-input);border-radius:var(--radius-sm);font-size:10px;color:var(--text-muted);}
+.dc-part .icon{font-size:16px;display:block;margin-bottom:3px;}
+.draga-card .dc-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-size:11px;color:var(--text-muted);}
+.draga-card .dc-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ═══ SECTION ═══ */
+.section{margin-bottom:32px;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.section-title .icon{font-size:20px;}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state h3{font-size:16px;margin-bottom:6px;color:var(--text-secondary);}
+.empty-state p{font-size:13px;}
+
+/* ═══ LOADING ═══ */
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--draga-accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:40px;color:var(--text-muted);}
+
+/* ═══ TOAST ═══ */
+.toast-container{position:fixed;top:64px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:10px 18px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;animation:slideIn .3s ease;max-width:360px;}
+.toast-error{background:#991b1b;color:#fecaca;}
+.toast-info{background:#1e3a5f;color:#93c5fd;}
+.toast-success{background:#166534;color:#bbf7d0;}
+.toast-warning{background:#78350f;color:#fde68a;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ═══ PROGRESS BAR ═══ */
+.progress-bar{height:8px;background:var(--bg-input);border-radius:4px;overflow:hidden;}
+.progress-bar .fill{height:100%;border-radius:4px;background:var(--draga-gradient);transition:width 1s ease;}
+
+/* ═══ ROADMAP ═══ */
+.phase-banner{border-radius:var(--radius-lg);padding:28px;margin-bottom:32px;position:relative;overflow:hidden;}
+.phase-banner .phase-num{font-size:10px;text-transform:uppercase;letter-spacing:2px;font-weight:700;opacity:0.7;margin-bottom:4px;}
+.phase-banner .phase-title{font-size:24px;font-weight:900;margin-bottom:4px;}
+.phase-banner .phase-desc{font-size:13px;opacity:0.8;max-width:600px;}
+.timeline{position:relative;padding-left:36px;}
+.timeline::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:2px;background:var(--border);}
+.timeline-node{position:relative;margin-bottom:32px;}
+.timeline-node::before{content:'';position:absolute;left:-30px;top:4px;width:16px;height:16px;border-radius:50%;border:3px solid var(--border);background:var(--bg-dark);z-index:1;}
+.timeline-node.done::before{background:var(--success);border-color:var(--success);}
+.timeline-node.active::before{background:var(--draga-accent);border-color:var(--draga-accent);box-shadow:0 0 10px rgba(124,58,237,0.5);}
+.sprint-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.sprint-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;transition:var(--transition);}
+.sprint-header:hover{background:var(--bg-card-hover);}
+.sprint-header .s-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.sprint-header .s-badge{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.sprint-header .s-toggle{font-size:12px;color:var(--text-muted);transition:transform .2s;}
+.sprint-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
+.sprint-body.open{display:block;padding-top:14px;}
+.task-list{list-style:none;}
+.task-list li{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px;}
+.task-list li:last-child{border:none;}
+.task-check{flex-shrink:0;width:18px;text-align:center;}
+.task-text{flex:1;color:var(--text-secondary);}
+.task-actor{flex-shrink:0;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;text-transform:uppercase;}
+.actor-copilot{background:rgba(124,58,237,0.15);color:var(--draga-accent-light);}
+.actor-human{background:rgba(236,137,81,0.15);color:#ec8951;}
+.actor-hybrid{background:rgba(59,130,246,0.15);color:var(--info);}
+
+/* ═══ MCP CARD ═══ */
+.mcp-item{margin-bottom:12px;padding:14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);}
+.mcp-item .name{font-weight:700;font-size:13px;color:var(--draga-accent-light);margin-bottom:4px;}
+.mcp-item .desc{font-size:11px;color:var(--text-muted);margin-bottom:6px;}
+.mcp-item .params{display:flex;flex-wrap:wrap;gap:4px;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:56px 48px 1fr;}
+    .sidebar{overflow-x:auto;display:flex;flex-direction:row;padding:0 12px;gap:4px;align-items:center;border-right:none;border-bottom:1px solid var(--border);}
+    .sidebar-section{display:flex;gap:4px;margin:0;padding:0;}
+    .sidebar-label{display:none;}
+    .nav-item{white-space:nowrap;padding:8px 12px;}
+    .main{padding:16px;}
+    .card-grid{grid-template-columns:1fr;}
+    .form-row{grid-template-columns:1fr;}
+}
+    </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="app">
+<header class="header">
+    <a href="index.html" class="header-brand">
+        <div class="logo">🐉</div>
+        <div><div class="name">DRAGA</div><div class="subtitle">Platform Admin</div></div>
+    </a>
+    <div class="header-right">
+        <div class="health-pill online" id="healthPill">
+            <div class="health-dot"></div>
+            <span id="healthText">checking...</span>
+        </div>
+        <a href="index.html" class="btn btn-sm">🏠 Home</a>
+    </div>
+</header>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+    <div class="sidebar-section">
+        <div class="sidebar-label">Plataforma</div>
+        <a class="nav-item active" onclick="nav('dashboard')" data-mod="dashboard">
+            <span class="icon">📊</span> Dashboard
+        </a>
+        <a class="nav-item" onclick="nav('tenants')" data-mod="tenants">
+            <span class="icon">🏢</span> Tenants
+            <span class="badge" id="tenantCount">—</span>
+        </a>
+        <a class="nav-item" onclick="nav('agents')" data-mod="agents">
+            <span class="icon">🤖</span> Agents
+            <span class="badge" id="agentCount">—</span>
+        </a>
+    </div>
+    <div class="sidebar-section">
+        <div class="sidebar-label">Operaciones</div>
+        <a class="nav-item" onclick="nav('analytics')" data-mod="analytics">
+            <span class="icon">📈</span> Analytics
+        </a>
+        <a class="nav-item" onclick="nav('system')" data-mod="system">
+            <span class="icon">⚙️</span> Sistema
+        </a>
+        <a class="nav-item" onclick="nav('roadmap')" data-mod="roadmap">
+            <span class="icon">🗺️</span> Roadmap
+        </a>
+    </div>
+</nav>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<main class="main">
+
+<!-- ── MODULE: DASHBOARD ── -->
+<div class="module active" id="mod-dashboard">
+    <h1 class="page-title">Platform Dashboard</h1>
+    <p class="page-desc">Vista global de todos los DRAGAs activos en la plataforma</p>
+
+    <div class="stats-grid" id="heroStats">
+        <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
+        <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
+        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
+        <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" style="color:var(--success)">98%</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🐉</span> DRAGA Instances</div>
+        <div class="card-grid" id="dragaGrid">
+            <div class="loading"><div class="spinner"></div> Cargando instancias...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODULE: TENANTS ── -->
+<div class="module" id="mod-tenants">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <div>
+            <h1 class="page-title">Gestión de Tenants</h1>
+            <p class="page-desc" style="margin-bottom:0">CRUD completo de tenants multi-tenant</p>
+        </div>
+        <button class="btn btn-primary" onclick="showTenantModal()">➕ Nuevo Tenant</button>
+    </div>
+    <div class="card-grid" id="tenantCards">
+        <div class="loading"><div class="spinner"></div> Cargando...</div>
+    </div>
+</div>
+
+<!-- ── MODULE: AGENTS ── -->
+<div class="module" id="mod-agents">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <div>
+            <h1 class="page-title">Gestión de Agentes</h1>
+            <p class="page-desc" style="margin-bottom:0">Agentes RAG asociados a tenants</p>
+        </div>
+        <button class="btn btn-primary" onclick="showAgentModal()">➕ Nuevo Agente</button>
+    </div>
+    <div class="card-grid" id="agentCards">
+        <div class="loading"><div class="spinner"></div> Cargando...</div>
+    </div>
+</div>
+
+<!-- ── MODULE: ANALYTICS ── -->
+<div class="module" id="mod-analytics">
+    <h1 class="page-title">Analytics & Feedback</h1>
+    <p class="page-desc">Salud del sistema, satisfacción de usuarios y métricas</p>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🏥</span> Estado de Servicios</div>
+        <div class="stats-grid" id="healthGrid"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+        <div class="section">
+            <div class="section-title"><span class="icon">💬</span> Satisfacción</div>
+            <div class="card" id="feedbackPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="section">
+            <div class="section-title"><span class="icon">📊</span> Sistema</div>
+            <div class="card" id="systemPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">📝</span> Feedback Reciente</div>
+        <div class="card" style="overflow-x:auto;">
+            <table>
+                <thead><tr><th>Query</th><th>Rating</th><th>Confianza</th><th>Comentario</th><th>Revisado</th><th>Acción</th></tr></thead>
+                <tbody id="feedbackTableBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODULE: SYSTEM ── -->
+<div class="module" id="mod-system">
+    <h1 class="page-title">Sistema & MCP</h1>
+    <p class="page-desc">Herramientas MCP, modelos, caché y operaciones de mantenimiento</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+        <div class="section">
+            <div class="section-title"><span class="icon">🔧</span> MCP Tools</div>
+            <div id="mcpToolsPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="section">
+            <div class="section-title"><span class="icon">📝</span> MCP Prompts</div>
+            <div id="mcpPromptsPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+        <div class="section">
+            <div class="section-title"><span class="icon">📂</span> MCP Resources</div>
+            <div id="mcpResourcesPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="section">
+            <div class="section-title"><span class="icon">🧠</span> Modelos</div>
+            <div id="modelsPanel"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🛠️</span> Mantenimiento</div>
+        <div class="card" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+            <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+                <label>Tenant ID para caché</label>
+                <input type="text" id="cacheTenantId" value="default" placeholder="tenant_id">
+            </div>
+            <button class="btn" onclick="clearCacheAction()">🧹 Limpiar Caché</button>
+            <button class="btn btn-danger" onclick="resetReindexAction()">☢️ Reset Nuclear</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODULE: ROADMAP ── -->
+<div class="module" id="mod-roadmap">
+    <h1 class="page-title">Roadmap SaaS</h1>
+    <p class="page-desc">3 fases, 8 sprints, 57 tareas — De SaaS interno a General Availability</p>
+
+    <div class="stats-grid" style="margin-bottom:32px;">
+        <div class="stat-card"><div class="label">Fases</div><div class="value">3</div></div>
+        <div class="stat-card"><div class="label">Sprints</div><div class="value">8</div></div>
+        <div class="stat-card"><div class="label">Tareas</div><div class="value">57</div></div>
+        <div class="stat-card"><div class="label">Progreso</div><div class="value" id="roadmapPct">0%</div></div>
+    </div>
+
+    <div class="section" style="margin-bottom:16px;">
+        <div class="progress-bar" style="height:14px;border-radius:7px;">
+            <div class="fill" id="roadmapFill" style="width:0%"></div>
+        </div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-banner" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);">
+        <div class="phase-num" style="color:var(--info)">Fase 1</div>
+        <div class="phase-title" style="color:var(--info)">🏗️ Foundation → Internal SaaS</div>
+        <div class="phase-desc">PostgreSQL, Hybrid Search, JWT Auth, Observability, CI/CD</div>
+    </div>
+    <div class="timeline">
+        <div class="timeline-node active">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🏗️ Sprint 1 — Data & Persistence</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(59,130,246,0.15);color:var(--info)">8 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">PostgreSQL adapter (puerto SQL en hexagonal)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Alembic migrations (tenants, documents, feedback, sessions)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">pgvector extension + hybrid search adapter</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Redis cache adapter (reemplaza in-memory)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Migración de datos ChromaDB → pgvector</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Tests de integración DB</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Docker compose con PG + Redis</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">ADR-017: Decision PostgreSQL + pgvector</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🔐 Sprint 2 — Auth & Multi-tenancy</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(59,130,246,0.15);color:var(--info)">8 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">JWT auth middleware (access + refresh tokens)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">RBAC: admin, tenant_admin, user roles</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Row-level security en PostgreSQL</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">API key management (create/revoke/rotate)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Tenant provisioning automatizado</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Login page + OAuth2 (Google/GitHub)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Audit log (quién hizo qué, cuándo)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Tests de seguridad + penetration basic</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">📡 Sprint 3 — Observability & Quality</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(59,130,246,0.15);color:var(--info)">8 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">OpenTelemetry traces en pipeline</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Prometheus metrics (latencia, throughput, errores)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Grafana dashboards pre-configurados</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Structured logging (JSON, correlation-id)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Health check avanzado (/health/detailed)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Alertas Slack/Discord en anomalías</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Dashboard de calidad en DRAGA frontend</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">SLA monitoring (uptime, latency P99)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🚀 Sprint 4 — CI/CD & Internal Launch</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(59,130,246,0.15);color:var(--info)">8 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">GitHub Actions pipeline (lint, test, build, deploy)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Docker multi-stage build optimizado</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Blue-green deployment en DigitalOcean</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Backup automatizado (PG + volumes)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Rate limiting por tenant (nginx + app)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Documentation site (Docusaurus/MkDocs)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Smoke tests post-deploy</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Internal SaaS launch para Envios23</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-banner" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);margin-top:40px;">
+        <div class="phase-num" style="color:var(--warning)">Fase 2</div>
+        <div class="phase-title" style="color:var(--warning)">🌐 Self-Service → SDK & Marketplace</div>
+        <div class="phase-desc">Portal self-service, SDK Python/JS, Marketplace de conectores</div>
+    </div>
+    <div class="timeline">
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🖥️ Sprint 5 — Self-Service Portal</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(245,158,11,0.15);color:var(--warning)">8 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Onboarding wizard (create tenant → upload docs → test chat)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Usage dashboard (queries/día, tokens, storage)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Billing integration (Stripe/Paddle)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Plan management (Free, Pro, Enterprise)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Team management (invite, roles, permissions)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Webhook configurator</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Custom domain mapping por tenant</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Tenant isolation audit + compliance</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">📦 Sprint 6 — SDK & Developer Experience</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(245,158,11,0.15);color:var(--warning)">7 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Python SDK (pip install draga)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">JavaScript SDK (npm install @draga/sdk)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">OpenAPI spec auto-generated + Swagger UI</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Postman/Insomnia collection auto-gen</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">CLI tool (draga init, draga deploy, draga query)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Marketplace de conectores (Notion, Confluence, GDrive)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Developer portal con tutorials</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase-banner" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);margin-top:40px;">
+        <div class="phase-num" style="color:var(--success)">Fase 3</div>
+        <div class="phase-title" style="color:var(--success)">🌍 Scale → General Availability</div>
+        <div class="phase-desc">Taxonomías avanzadas, escala horizontal, marketplace público</div>
+    </div>
+    <div class="timeline">
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🧬 Sprint 7 — Taxonomías & Advanced RAG</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(34,197,94,0.15);color:var(--success)">5 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Taxonomy Agent (auto-clasificación de documentos)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Knowledge Graph builder (relaciones entre entidades)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Multi-modal RAG (imágenes, tablas, diagramas)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Agentic RAG (multi-step reasoning)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Evaluation framework automatizado (RAGAS)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="timeline-node upcoming">
+            <div class="sprint-card">
+                <div class="sprint-header" onclick="toggleSprint(this)">
+                    <span class="s-name">🌍 Sprint 8 — Scale & GA</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="s-badge" style="background:rgba(34,197,94,0.15);color:var(--success)">5 tareas</span>
+                        <span class="s-toggle">▸</span>
+                    </div>
+                </div>
+                <div class="sprint-body">
+                    <ul class="task-list">
+                        <li><span class="task-check">⬜</span><span class="task-text">Horizontal scaling (Kubernetes/Nomad)</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Multi-region deployment</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Enterprise SSO (SAML, OIDC)</span><span class="task-actor actor-copilot">Copilot</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">SOC2 compliance preparation</span><span class="task-actor actor-human">Human</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Public launch + ProductHunt</span><span class="task-actor actor-human">Human</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</main>
+</div>
+
+<!-- ═══ TENANT MODAL ═══ -->
+<div class="modal-overlay" id="tenantModal">
+    <div class="modal">
+        <div class="modal-title">🏢 <span id="tenantModalTitle">Nuevo Tenant</span></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>ID del Tenant</label>
+                <input type="text" id="tenantIdInput" placeholder="mi-empresa" pattern="[a-z0-9_\-]+">
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="tenantNameInput" placeholder="Mi Empresa">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Descripción</label>
+            <input type="text" id="tenantDescInput" placeholder="Descripción del tenant">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Modelo LLM</label>
+                <input type="text" id="tenantModelInput" value="anthropic/claude-3-haiku" placeholder="anthropic/claude-3-haiku">
+            </div>
+            <div class="form-group">
+                <label>Idioma</label>
+                <select id="tenantLangInput">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                    <option value="pt">Português</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>System Prompt (opcional, mín. 10 chars)</label>
+            <textarea id="tenantPromptInput" placeholder="Instrucciones específicas para el modelo..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('tenantModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveTenant()">💾 Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ AGENT MODAL ═══ -->
+<div class="modal-overlay" id="agentModal">
+    <div class="modal">
+        <div class="modal-title">🤖 Nuevo Agente</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Tenant ID</label>
+                <input type="text" id="agentIdInput" placeholder="mi-agente" pattern="[a-z0-9_\-]+">
+            </div>
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="agentNameInput" placeholder="Agente de Soporte">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="agentDescInput" placeholder="Descripción del agente..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('agentModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="saveAgent()">💾 Crear</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TOAST CONTAINER ═══ -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// DRAGA PLATFORM ADMIN — JavaScript
+// ══════════════════════════════════════════════════════════════
+
+const modules = ['dashboard', 'tenants', 'agents', 'analytics', 'system', 'roadmap'];
+
+// ── NAVIGATION ──
+function nav(mod) {
+    if (!modules.includes(mod)) mod = 'dashboard';
+    modules.forEach(m => {
+        document.getElementById('mod-' + m).classList.toggle('active', m === mod);
+        document.querySelector(`[data-mod="${m}"]`)?.classList.toggle('active', m === mod);
+    });
+    window.location.hash = mod;
+
+    // Load module data
+    const loaders = {
+        dashboard: loadDashboard,
+        tenants: loadTenants,
+        agents: loadAgents,
+        analytics: loadAnalytics,
+        system: loadSystem,
+        roadmap: calcRoadmapProgress
+    };
+    loaders[mod]?.();
+}
+
+// ── TOAST ──
+function toast(msg, type = 'info', duration = 4000) {
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), duration);
+}
+
+// ── MODALS ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── HEALTH CHECK ──
+async function checkHealth() {
+    const pill = document.getElementById('healthPill');
+    const text = document.getElementById('healthText');
+    try {
+        await api.health();
+        pill.className = 'health-pill online';
+        text.textContent = 'online';
+    } catch {
+        pill.className = 'health-pill offline';
+        text.textContent = 'offline';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: DASHBOARD
+// ══════════════════════════════════════════════════════════════
+async function loadDashboard() {
+    const grid = document.getElementById('dragaGrid');
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando instancias...</div>';
+
+    try {
+        const [tenantsData, agentsData] = await Promise.all([
+            api.listTenants(true),
+            api.listAgents().catch(() => [])
+        ]);
+        const tenants = tenantsData.tenants || [];
+        const agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
+
+        document.getElementById('tenantCount').textContent = tenants.length;
+        document.getElementById('agentCount').textContent = agents.length;
+        document.getElementById('statDragas').textContent = tenants.length;
+
+        let totalDocs = 0;
+        tenants.forEach(t => { totalDocs += t.document_count || 0; });
+        document.getElementById('statDocs').textContent = totalDocs;
+
+        if (tenants.length === 0) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🐉</div>
+                <h3>Sin DRAGAs</h3><p>Crea tu primer tenant para iniciar un DRAGA</p>
+                <button class="btn btn-primary" onclick="nav('tenants')" style="margin-top:12px">➕ Crear Tenant</button></div>`;
+            return;
+        }
+
+        grid.innerHTML = tenants.map(t => {
+            const tAgents = agents.filter(a => a.tenant_id === t.tenant_id);
+            return `<div class="draga-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div class="dc-name">${t.name}</div>
+                    ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
+                </div>
+                <div class="dc-id">${t.tenant_id}</div>
+                <div class="dc-anatomy">
+                    <div class="dc-part"><span class="icon">🏢</span>Tenant</div>
+                    <div class="dc-part"><span class="icon">📚</span>${t.document_count || 0} docs</div>
+                    <div class="dc-part"><span class="icon">⚙️</span>14 steps</div>
+                    <div class="dc-part"><span class="icon">🤖</span>${tAgents.length} agents</div>
+                </div>
+                <div class="dc-meta">
+                    <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
+                    <span>🌐 ${t.response_language || '—'}</span>
+                    <span>📦 ${t.collection_name || '—'}</span>
+                </div>
+                <div class="dc-actions">
+                    <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-primary btn-sm">🐉 Dashboard</a>
+                    <a href="draga.html?tenant=${t.tenant_id}#chat" class="btn btn-sm">💬 Chat</a>
+                    <a href="draga.html?tenant=${t.tenant_id}#knowledge" class="btn btn-sm">📚 KB</a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">❌</div>
+            <h3>Error</h3><p>${e.message}</p>
+            <button class="btn" onclick="loadDashboard()" style="margin-top:12px">🔄 Reintentar</button></div>`;
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: TENANTS
+// ══════════════════════════════════════════════════════════════
+async function loadTenants() {
+    const container = document.getElementById('tenantCards');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+        const data = await api.listTenants(true);
+        const tenants = data.tenants || [];
+        document.getElementById('tenantCount').textContent = tenants.length;
+
+        if (tenants.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏢</div>
+                <h3>Sin tenants</h3><p>Crea un tenant para comenzar</p></div>`;
+            return;
+        }
+
+        container.innerHTML = tenants.map(t => `<div class="card">
+            <div class="card-header">
+                <span class="card-title">${t.name}</span>
+                ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
+            </div>
+            <div class="card-meta">
+                <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${t.tenant_id}</code>
+            </div>
+            ${t.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">${t.description}</div>` : ''}
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--text-muted);margin-bottom:14px;flex-wrap:wrap;">
+                <span>🧠 ${t.default_model || '—'}</span>
+                <span>🌐 ${t.response_language || '—'}</span>
+                <span>📄 ${t.document_count ?? 0} docs</span>
+            </div>
+            <div class="card-actions">
+                <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary" style="text-decoration:none">🐉 Dashboard</a>
+                <button class="btn btn-sm" onclick="editTenant('${t.tenant_id}')">✏️ Editar</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteTenantAction('${t.tenant_id}','${t.name.replace(/'/g,"\\'")}')">🗑️</button>
+            </div>
+        </div>`).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color:var(--danger);padding:20px">❌ Error: ${e.message}</div>`;
+    }
+}
+
+function showTenantModal() {
+    document.getElementById('tenantModalTitle').textContent = 'Nuevo Tenant';
+    document.getElementById('tenantIdInput').value = '';
+    document.getElementById('tenantIdInput').disabled = false;
+    document.getElementById('tenantNameInput').value = '';
+    document.getElementById('tenantDescInput').value = '';
+    document.getElementById('tenantModelInput').value = 'anthropic/claude-3-haiku';
+    document.getElementById('tenantLangInput').value = 'es';
+    document.getElementById('tenantPromptInput').value = '';
+    openModal('tenantModal');
+}
+
+async function editTenant(id) {
+    try {
+        const t = await api.getTenant(id);
+        document.getElementById('tenantModalTitle').textContent = `Editar: ${t.name}`;
+        document.getElementById('tenantIdInput').value = t.tenant_id;
+        document.getElementById('tenantIdInput').disabled = true;
+        document.getElementById('tenantNameInput').value = t.name || '';
+        document.getElementById('tenantDescInput').value = t.description || '';
+        document.getElementById('tenantModelInput').value = t.default_model || '';
+        document.getElementById('tenantLangInput').value = t.response_language || 'es';
+        document.getElementById('tenantPromptInput').value = '';
+        openModal('tenantModal');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function saveTenant() {
+    const id = document.getElementById('tenantIdInput').value.trim();
+    const isEdit = document.getElementById('tenantIdInput').disabled;
+    const data = {
+        name: document.getElementById('tenantNameInput').value.trim(),
+        description: document.getElementById('tenantDescInput').value.trim() || undefined,
+        default_model: document.getElementById('tenantModelInput').value.trim() || undefined,
+        response_language: document.getElementById('tenantLangInput').value,
+    };
+    const prompt = document.getElementById('tenantPromptInput').value.trim();
+    if (prompt && prompt.length >= 10) data.system_prompt = prompt;
+
+    if (!id || !data.name) { toast('ID y Nombre son requeridos', 'error'); return; }
+
+    try {
+        if (isEdit) {
+            await api.updateTenant(id, data);
+            toast(`Tenant "${data.name}" actualizado`, 'success');
+        } else {
+            data.tenant_id = id;
+            await api.createTenant(data);
+            toast(`Tenant "${data.name}" creado`, 'success');
+        }
+        closeModal('tenantModal');
+        loadTenants();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteTenantAction(id, name) {
+    if (!confirm(`¿Eliminar tenant "${name}" (${id})?`)) return;
+    const delCol = confirm('¿Eliminar también la colección ChromaDB? (DESTRUCTIVO)');
+    try {
+        await api.deleteTenant(id, delCol);
+        toast(`Tenant "${name}" eliminado`, 'success');
+        loadTenants();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: AGENTS
+// ══════════════════════════════════════════════════════════════
+async function loadAgents() {
+    const container = document.getElementById('agentCards');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+        const data = await api.listAgents();
+        const agents = Array.isArray(data) ? data : (data.agents || []);
+        document.getElementById('agentCount').textContent = agents.length;
+
+        if (agents.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🤖</div>
+                <h3>Sin agentes</h3><p>Crea un agente RAG</p></div>`;
+            return;
+        }
+
+        container.innerHTML = agents.map(a => {
+            const statusClass = a.status === 'active' ? 'badge-success' : a.status === 'error' ? 'badge-danger' : 'badge-warning';
+            return `<div class="card">
+                <div class="card-header">
+                    <span class="card-title">${a.name}</span>
+                    <span class="badge ${statusClass}">${a.status || '?'}</span>
+                </div>
+                <div class="card-meta">
+                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${a.tenant_id}</code>
+                    ${a.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${a.description}</div>` : ''}
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</div>
+                <div class="card-actions">
+                    <a href="draga.html?tenant=${a.tenant_id}#chat" class="btn btn-sm btn-primary" style="text-decoration:none">💬 Chat</a>
+                    <button class="btn btn-sm" onclick="viewAgentStats('${a.tenant_id}')">📊 Stats</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAgentAction('${a.tenant_id}','${(a.name||'').replace(/'/g,"\\'")}')">🗑️</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color:var(--danger);padding:20px">❌ Error: ${e.message}</div>`;
+    }
+}
+
+function showAgentModal() { openModal('agentModal'); }
+
+async function saveAgent() {
+    const id = document.getElementById('agentIdInput').value.trim();
+    const name = document.getElementById('agentNameInput').value.trim();
+    const desc = document.getElementById('agentDescInput').value.trim();
+    if (!id || !name) { toast('ID y Nombre son requeridos', 'error'); return; }
+    try {
+        await api.createAgent({ tenant_id: id, name, description: desc || '' });
+        toast(`Agente "${name}" creado`, 'success');
+        closeModal('agentModal');
+        loadAgents();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function deleteAgentAction(id, name) {
+    if (!confirm(`¿Eliminar agente "${name}"?`)) return;
+    try {
+        await api.deleteAgent(id);
+        toast(`Agente "${name}" eliminado`, 'success');
+        loadAgents();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function viewAgentStats(id) {
+    try {
+        const stats = await api.agentStats(id);
+        alert(JSON.stringify(stats, null, 2));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: ANALYTICS
+// ══════════════════════════════════════════════════════════════
+function loadAnalytics() {
+    loadHealthStatus();
+    loadFeedbackStats();
+    loadSystemStats();
+    loadFeedbackList();
+}
+
+async function loadHealthStatus() {
+    const grid = document.getElementById('healthGrid');
+    const services = [
+        { name: 'RAG API', icon: '🧠', check: () => api.health() },
+        { name: 'MCP Server', icon: '🔌', check: () => api.mcpHealth() },
+    ];
+    let html = '';
+    for (const svc of services) {
+        try {
+            await svc.check();
+            html += `<div class="stat-card" style="border-left:3px solid var(--success)">
+                <div class="label">${svc.icon} ${svc.name}</div><div class="value" style="color:var(--success);font-size:16px;">✅ Online</div></div>`;
+        } catch {
+            html += `<div class="stat-card" style="border-left:3px solid var(--danger)">
+                <div class="label">${svc.icon} ${svc.name}</div><div class="value" style="color:var(--danger);font-size:16px;">❌ Offline</div></div>`;
+        }
+    }
+    grid.innerHTML = html;
+}
+
+async function loadFeedbackStats() {
+    const panel = document.getElementById('feedbackPanel');
+    try {
+        const stats = await api.feedbackStats();
+        const posRate = stats.positive_rate || 0;
+        panel.innerHTML = `
+            <div style="margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span style="font-size:13px">Satisfacción</span>
+                    <span style="font-size:13px;font-weight:700;color:${posRate >= 70 ? 'var(--success)' : posRate >= 40 ? 'var(--warning)' : 'var(--danger)'}">${posRate.toFixed(0)}%</span>
+                </div>
+                <div class="progress-bar"><div class="fill" style="width:${posRate}%"></div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+                <div>👍 Positivos: <strong>${stats.positive_count}</strong></div>
+                <div>👎 Negativos: <strong>${stats.negative_count}</strong></div>
+                <div>📊 Total: <strong>${stats.total_feedback || 0}</strong></div>
+                <div>📋 Sin revisar: <strong>${stats.unreviewed_count}</strong></div>
+            </div>`;
+    } catch {
+        panel.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <div style="font-size:24px;margin-bottom:8px">📊</div>
+            <div style="font-size:12px">Feedback service no disponible</div></div>`;
+    }
+}
+
+async function loadSystemStats() {
+    const panel = document.getElementById('systemPanel');
+    try {
+        const stats = await api.getStats();
+        panel.innerHTML = `<div style="font-size:12px">
+            <div style="margin-bottom:6px"><strong>Tenant:</strong> ${stats.tenant_id}</div>
+            <pre style="background:var(--bg-input);padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;color:var(--text-secondary);max-height:200px;">${JSON.stringify(stats, null, 2)}</pre></div>`;
+    } catch (e) {
+        panel.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadFeedbackList() {
+    const tbody = document.getElementById('feedbackTableBody');
+    try {
+        const data = await api.listFeedback({ limit: 20 });
+        const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📝</div><h3>Sin feedback</h3></div></td></tr>`;
+            return;
+        }
+        tbody.innerHTML = items.map(f => `<tr>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.query || ''}">${f.query || '—'}</td>
+            <td>${f.rating === 'positive' ? '<span class="badge badge-success">👍</span>' : '<span class="badge badge-danger">👎</span>'}</td>
+            <td>${f.confidence != null ? `${(f.confidence * 100).toFixed(0)}%` : '—'}</td>
+            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.comment || '—'}</td>
+            <td>${f.reviewed ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">pendiente</span>'}</td>
+            <td>${!f.reviewed ? `<button class="btn btn-sm" onclick="markReviewed('${f.feedback_id || f.id}')">✓</button>` : ''}</td>
+        </tr>`).join('');
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">
+            <div style="font-size:20px;margin-bottom:6px">💬</div>Feedback service no disponible</td></tr>`;
+    }
+}
+
+async function markReviewed(id) {
+    try {
+        await api.markReviewed(id, 'Revisado desde admin');
+        toast('Feedback revisado', 'success');
+        loadFeedbackList();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: SYSTEM
+// ══════════════════════════════════════════════════════════════
+function loadSystem() {
+    loadMcpTools();
+    loadMcpPrompts();
+    loadMcpResources();
+    loadModels();
+}
+
+async function loadMcpTools() {
+    try {
+        const data = await api.mcpTools();
+        const tools = data.tools || [];
+        document.getElementById('mcpToolsPanel').innerHTML = tools.length ? tools.map(t => `
+            <div class="mcp-item">
+                <div class="name">🔧 ${t.name}</div>
+                <div class="desc">${(t.description || '').split('\n')[0]}</div>
+                <div class="params">${Object.entries(t.parameters || {}).map(([k, v]) =>
+                    `<span class="badge badge-muted">${k}: ${v.type}</span>`
+                ).join(' ')}</div>
+            </div>`).join('') : '<div class="empty-state"><p>Sin tools</p></div>';
+    } catch (e) {
+        document.getElementById('mcpToolsPanel').innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadMcpPrompts() {
+    try {
+        const data = await api.mcpPrompts();
+        const prompts = data.prompts || [];
+        document.getElementById('mcpPromptsPanel').innerHTML = prompts.length ? prompts.map(p => `
+            <div class="mcp-item">
+                <div class="name">📝 ${p.name}</div>
+                <div class="desc">${(p.description || '').split('\n')[0]}</div>
+                <div class="params">${(p.arguments || []).map(a => `<span class="badge badge-info">${a}</span>`).join(' ')}</div>
+            </div>`).join('') : '<div class="empty-state"><p>Sin prompts</p></div>';
+    } catch (e) {
+        document.getElementById('mcpPromptsPanel').innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+    }
+}
+
+async function loadMcpResources() {
+    try {
+        const data = await api.mcpResources();
+        const resources = data.resources || [];
+        document.getElementById('mcpResourcesPanel').innerHTML = resources.length ? resources.map(r => `
+            <div class="mcp-item" style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:12px;font-weight:700;color:var(--info);flex:1">${r.uri}</span>
+                <button class="btn btn-sm" onclick="fetchResource('${r.uri}')">📥</button>
+            </div>`).join('') : '<div class="empty-state"><p>Sin resources</p></div>';
+    } catch (e) {
+        document.getElementById('mcpResourcesPanel').innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+    }
+}
+
+async function fetchResource(uri) {
+    try {
+        const path = uri.replace('rag://', '');
+        const data = await api.mcpGetResource(path);
+        alert(JSON.stringify(data, null, 2));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function loadModels() {
+    try {
+        const data = await api.listModels();
+        const models = data.data || [];
+        document.getElementById('modelsPanel').innerHTML = models.length ? models.map(m => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <span style="font-size:18px">🧠</span>
+                <div><div style="font-weight:700;font-size:13px">${m.id}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${m.description || m.owned_by || '—'}</div></div>
+            </div>`).join('') : '<div class="empty-state"><p>Sin modelos</p></div>';
+    } catch (e) {
+        document.getElementById('modelsPanel').innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+    }
+}
+
+async function clearCacheAction() {
+    const tenantId = document.getElementById('cacheTenantId').value.trim() || 'default';
+    if (!confirm(`¿Limpiar caché del tenant "${tenantId}"?`)) return;
+    try {
+        await api.clearCache(tenantId);
+        toast(`Caché de "${tenantId}" limpiado`, 'success');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function resetReindexAction() {
+    if (!confirm('⚠️ RESET NUCLEAR\n\nEsto eliminará toda la colección y re-indexará.\n\n¿Continuar?')) return;
+    if (!confirm('¿ESTÁS SEGURO? No se puede deshacer.')) return;
+    try {
+        toast('Ejecutando reset...', 'info');
+        const result = await api.resetReindex();
+        toast(`Reset completo: ${result.successful} docs en ${result.elapsed_seconds?.toFixed(1)}s`, 'success');
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: ROADMAP
+// ══════════════════════════════════════════════════════════════
+function toggleSprint(header) {
+    const body = header.nextElementSibling;
+    const toggle = header.querySelector('.s-toggle');
+    body.classList.toggle('open');
+    toggle.textContent = body.classList.contains('open') ? '▾' : '▸';
+}
+
+function calcRoadmapProgress() {
+    const checks = document.querySelectorAll('#mod-roadmap .task-check');
+    let done = 0, total = 0;
+    checks.forEach(c => { total++; if (c.textContent.trim() === '☑️') done++; });
+    const pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('roadmapPct').textContent = pct + '%';
+    document.getElementById('roadmapFill').style.width = pct + '%';
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+(function init() {
+    const hash = window.location.hash.replace('#', '') || 'dashboard';
+    if (modules.includes(hash)) nav(hash);
+    else nav('dashboard');
+
+    checkHealth();
+    setInterval(checkHealth, 30000);
+
+    window.addEventListener('hashchange', () => {
+        const h = window.location.hash.replace('#', '');
+        if (modules.includes(h)) nav(h);
+    });
+})();
+</script>
+</body>
+</html>
