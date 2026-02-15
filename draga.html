@@ -637,7 +637,12 @@ tr:hover td{background:var(--bg-card);}
             <span id="dvDocId"></span>
             <span id="dvChunkCount"></span>
             <span id="dvSize"></span>
-            <button class="btn btn-sm" onclick="DocViewer.close()">✕ Cerrar</button>
+            <div style="display:flex;gap:6px;align-items:center">
+                <button class="btn btn-sm" id="dvTabSource" onclick="DocViewer.switchTab('source')" style="background:var(--draga-accent);color:#fff">📄 Fuente</button>
+                <button class="btn btn-sm" id="dvTabChunks" onclick="DocViewer.switchTab('chunks')">🧩 Chunks</button>
+                <a class="btn btn-sm" id="dvDownload" href="#" target="_blank" style="display:none">⬇️ Descargar</a>
+                <button class="btn btn-sm" onclick="DocViewer.close()">✕ Cerrar</button>
+            </div>
         </div>
     </div>
     <div class="doc-viewer-body" id="dvBody">
@@ -658,8 +663,16 @@ const MODULES = ['overview','knowledge','pipeline','quality','chat','config'];
 // DOCUMENT VIEWER — View source document chunks
 // ══════════════════════════════════════════════════════════════
 const DocViewer = {
-    // Open viewer by document_id — loads all chunks from the KB
+    _currentDocId: null,
+    _currentFilename: null,
+    _chunks: [],
+    _activeTab: 'source',
+
+    // Open viewer by document_id — shows original source file
     async openById(docId, filename) {
+        this._currentDocId = docId;
+        this._currentFilename = filename;
+        this._chunks = [];
         this._show(filename);
         const body = document.getElementById('dvBody');
         try {
@@ -670,11 +683,14 @@ const DocViewer = {
                 document.getElementById('dvChunkCount').textContent = `${doc.chunk_count || '?'} chunks`;
                 document.getElementById('dvSize').textContent = fileSize(doc.file_size_bytes || 0);
             }
-            // Get chunks via query
-            const chunks = await api.getDocumentChunks(docId, App.tenantId, 20, filename);
-            const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
-            const display = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
-            this._renderChunks(body, display, docChunks.length > 0);
+            // Show source file
+            this._renderSource(body, docId, filename);
+            // Pre-fetch chunks in background for the chunks tab
+            api.getDocumentChunks(docId, App.tenantId, 20, filename)
+                .then(chunks => {
+                    const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
+                    this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
+                }).catch(() => {});
         } catch (e) {
             body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Error cargando contenido</h3><p style="font-size:12px">${esc(e.message)}</p></div>`;
         }
@@ -693,10 +709,12 @@ const DocViewer = {
             }
             // No exact match — try a broad search with filename as query
             body.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando contenido...</div>';
-            const res = await api.query({ query: filename.replace(/\.[^.]+$/, ''), tenant_id: App.tenantId, top_k: 20, include_metadata: true });
+            const res = await api.query({ query: filename.replace(/\.[^.]+$/, ''), tenant_id: App.tenantId, top_k: 20 });
             const allChunks = res.retrieved_chunks || [];
             if (allChunks.length) {
+                this._chunks = allChunks;
                 this._renderChunks(body, allChunks, false);
+                this.switchTab('chunks');
             } else {
                 body.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Sin contenido recuperable</h3><p>Este documento no tiene chunks indexados.</p></div>';
             }
@@ -707,9 +725,84 @@ const DocViewer = {
 
     // Open viewer showing pre-loaded chunks (from pipeline/chat results)
     openWithChunks(title, chunks) {
+        this._currentDocId = null;
+        this._currentFilename = title;
+        this._chunks = chunks;
         this._show(title);
         document.getElementById('dvChunkCount').textContent = `${chunks.length} chunks`;
+        // Hide source tab if no doc ID
+        document.getElementById('dvTabSource').style.display = 'none';
+        document.getElementById('dvDownload').style.display = 'none';
+        this.switchTab('chunks');
         this._renderChunks(document.getElementById('dvBody'), chunks, true);
+    },
+
+    // Render original source file in viewer
+    _renderSource(container, docId, filename) {
+        const ext = (filename || '').split('.').pop().toLowerCase();
+        const sourceUrl = api.getDocumentSourceUrl(docId, App.tenantId);
+        // Show download link
+        const dlBtn = document.getElementById('dvDownload');
+        dlBtn.href = sourceUrl;
+        dlBtn.style.display = '';
+
+        if (ext === 'pdf') {
+            container.innerHTML = `<iframe src="${sourceUrl}" style="width:100%;height:100%;border:none;border-radius:8px;background:#fff"></iframe>`;
+        } else if (['png','jpg','jpeg','gif','svg','webp'].includes(ext)) {
+            container.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;padding:20px"><img src="${sourceUrl}" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" /></div>`;
+        } else if (['txt','md','json','xml','csv'].includes(ext)) {
+            container.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando texto...</div>';
+            fetch(sourceUrl).then(r => r.text()).then(text => {
+                const isJson = ext === 'json';
+                const isMd = ext === 'md';
+                container.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;height:100%;overflow:auto"><pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7;color:var(--text-secondary);font-family:${isJson ? 'monospace' : 'inherit'}">${esc(text)}</pre></div>`;
+            }).catch(e => {
+                container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Error: ${esc(e.message)}</p></div>`;
+            });
+        } else {
+            // DOCX, XLSX, ODT etc. — show download prompt + chunks
+            container.innerHTML = `<div class="empty-state" style="padding-top:60px">
+                <div class="icon" style="font-size:48px">${ext === 'docx' || ext === 'odt' ? '📘' : ext === 'xlsx' || ext === 'xls' ? '📊' : '📄'}</div>
+                <h3>${esc(filename)}</h3>
+                <p style="color:var(--text-muted);margin:12px 0">Los archivos .${ext} no pueden previsualizarse en el navegador.</p>
+                <a href="${sourceUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none;margin:8px 0">⬇️ Descargar archivo original</a>
+                <p style="color:var(--text-muted);font-size:12px;margin-top:16px">Cambia a la pestaña <strong>🧩 Chunks</strong> para ver el contenido indexado.</p>
+            </div>`;
+        }
+    },
+
+    switchTab(tab) {
+        this._activeTab = tab;
+        const srcBtn = document.getElementById('dvTabSource');
+        const chkBtn = document.getElementById('dvTabChunks');
+        const body = document.getElementById('dvBody');
+        if (tab === 'source') {
+            srcBtn.style.background = 'var(--draga-accent)'; srcBtn.style.color = '#fff';
+            chkBtn.style.background = ''; chkBtn.style.color = '';
+            if (this._currentDocId) {
+                this._renderSource(body, this._currentDocId, this._currentFilename);
+            }
+        } else {
+            chkBtn.style.background = 'var(--draga-accent)'; chkBtn.style.color = '#fff';
+            srcBtn.style.background = ''; srcBtn.style.color = '';
+            if (this._chunks.length) {
+                this._renderChunks(body, this._chunks, true);
+            } else {
+                body.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando chunks...</div>';
+                if (this._currentDocId) {
+                    api.getDocumentChunks(this._currentDocId, App.tenantId, 20, this._currentFilename)
+                        .then(chunks => {
+                            const docChunks = chunks.filter(c => c.document_id === this._currentDocId || c.metadata?.document_id === this._currentDocId);
+                            this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
+                            this._renderChunks(body, this._chunks, docChunks.length > 0);
+                        }).catch(e => {
+                            body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>${esc(e.message)}</p></div>`;
+                        });
+                } else {
+                    body.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Sin chunks disponibles</h3></div>';
+                }
+            }
+        }
     },
 
     _show(filename) {
@@ -721,6 +814,11 @@ const DocViewer = {
         document.getElementById('dvChunkCount').textContent = '';
         document.getElementById('dvSize').textContent = '';
         document.getElementById('dvBody').innerHTML = '<div class="loading"><div class="spinner"></div> Cargando contenido...</div>';
+        document.getElementById('dvTabSource').style.display = '';
+        document.getElementById('dvDownload').style.display = 'none';
+        document.getElementById('dvTabSource').style.background = 'var(--draga-accent)'; document.getElementById('dvTabSource').style.color = '#fff';
+        document.getElementById('dvTabChunks').style.background = ''; document.getElementById('dvTabChunks').style.color = '';
+        this._activeTab = 'source';
         document.getElementById('docViewer').classList.add('open');
     },
 
@@ -1072,7 +1170,8 @@ const KB = {
                 ...(doc.error ? [['Error', `<span style="color:var(--danger)">${esc(doc.error)}</span>`]] : [])
             ].map(([l, v]) => `<div class="dp-field"><div class="dp-label">${l}</div><div class="dp-value">${v}</div></div>`).join('');
             actions.innerHTML = `
-                <button class="btn btn-sm" style="flex:1" onclick="DocViewer.openById('${doc.document_id}','${esc(doc.filename)}')">👁️ Ver Contenido</button>
+                <a class="btn btn-sm" style="flex:1;text-decoration:none;text-align:center" href="${api.getDocumentSourceUrl(doc.document_id, App.tenantId)}" target="_blank">📄 Ver Fuente</a>
+                <button class="btn btn-sm" style="flex:1" onclick="DocViewer.openById('${doc.document_id}','${esc(doc.filename)}')">👁️ Visor</button>
                 <button class="btn btn-sm btn-primary" style="flex:1" onclick="KB.reindex('${doc.document_id}')">🔄 Re-indexar</button>
                 <button class="btn btn-sm btn-danger" style="flex:1" onclick="KB.confirmDelete('${doc.document_id}','${esc(doc.filename)}')">🗑️ Eliminar</button>`;
         } catch (e) {

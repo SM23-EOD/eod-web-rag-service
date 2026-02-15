@@ -170,6 +170,14 @@ class RAGApiClient {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
         return this.post(`/documents/${id}/reindex${q}`);
     }
+    /**
+     * Get the URL to the original source file for a document.
+     * The backend serves the file with correct MIME type and Content-Disposition: inline.
+     */
+    getDocumentSourceUrl(documentId, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : `?tenant_id=default`;
+        return `${this.baseUrl}/documents/${documentId}/source${q}`;
+    }
     async documentStats(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
         return this.get(`/documents/stats/summary${q}`);
