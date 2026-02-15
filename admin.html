@@ -256,8 +256,15 @@ tr:hover td{background:var(--bg-card);}
 
 <!-- ── MODULE: DASHBOARD ── -->
 <div class="module active" id="mod-dashboard">
-    <h1 class="page-title">Platform Dashboard</h1>
-    <p class="page-desc">Vista global de todos los DRAGAs activos en la plataforma</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+            <h1 class="page-title" style="margin-bottom:4px">Platform Dashboard</h1>
+            <p class="page-desc" style="margin-bottom:0">Vista global de todos los DRAGAs activos en la plataforma</p>
+        </div>
+        <button class="btn btn-primary" onclick="showDragaModal()" style="white-space:nowrap">
+            <i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA
+        </button>
+    </div>
 
     <div class="stats-grid" id="heroStats">
         <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
@@ -600,6 +607,78 @@ tr:hover td{background:var(--bg-card);}
 </main>
 </div>
 
+<!-- ═══ DRAGA CREATION MODAL ═══ -->
+<div class="modal-overlay" id="dragaModal">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-title"><i class="di" style="width:20px;height:20px;vertical-align:middle"></i> Nueva DRAGA</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Crea una nueva instancia DRAGA. Selecciona un tenant existente o crea uno nuevo para asociarla.</p>
+
+        <!-- Tenant selection mode -->
+        <div class="form-group">
+            <label>Tenant</label>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button class="btn btn-sm btn-primary" id="dragaTenantModeExist" onclick="toggleDragaTenantMode('existing')" style="flex:1">📋 Usar existente</button>
+                <button class="btn btn-sm" id="dragaTenantModeNew" onclick="toggleDragaTenantMode('new')" style="flex:1">➕ Crear nuevo</button>
+            </div>
+        </div>
+
+        <!-- Existing tenant selector -->
+        <div id="dragaTenantExisting">
+            <div class="form-group">
+                <label>Seleccionar Tenant</label>
+                <select id="dragaTenantSelect" onchange="onDragaTenantSelected()">
+                    <option value="">— Selecciona un tenant —</option>
+                </select>
+            </div>
+            <div id="dragaTenantInfo" style="display:none;padding:10px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:14px;font-size:12px;"></div>
+        </div>
+
+        <!-- New tenant form -->
+        <div id="dragaTenantNew" style="display:none">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>ID del Tenant <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="dragaNewTenantId" placeholder="mi-empresa" pattern="[a-z0-9_\-]+">
+                    <small style="color:var(--text-muted);font-size:10px">Solo minúsculas, números, guiones</small>
+                </div>
+                <div class="form-group">
+                    <label>Nombre <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="dragaNewTenantName" placeholder="Mi Empresa">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" id="dragaNewTenantDesc" placeholder="Descripción del tenant">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Modelo LLM</label>
+                    <input type="text" id="dragaNewTenantModel" value="anthropic/claude-3-haiku" placeholder="anthropic/claude-3-haiku">
+                </div>
+                <div class="form-group">
+                    <label>Idioma</label>
+                    <select id="dragaNewTenantLang">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                        <option value="pt">Português</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>System Prompt (opcional, mín. 10 chars)</label>
+                <textarea id="dragaNewTenantPrompt" placeholder="Instrucciones específicas para el modelo..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('dragaModal')">Cancelar</button>
+            <button class="btn btn-primary" id="dragaCreateBtn" onclick="createDraga()">
+                <i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Crear DRAGA
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ TENANT MODAL ═══ -->
 <div class="modal-overlay" id="tenantModal">
     <div class="modal">
@@ -727,6 +806,144 @@ async function checkHealth() {
 }
 
 // ══════════════════════════════════════════════════════════════
+// DRAGA CREATION FLOW
+// ══════════════════════════════════════════════════════════════
+let _dragaTenantMode = 'existing';
+let _dragaTenantList = [];
+
+async function showDragaModal() {
+    _dragaTenantMode = 'existing';
+    toggleDragaTenantMode('existing');
+
+    // Load tenants into the selector
+    try {
+        const data = await api.listTenants(true);
+        _dragaTenantList = data.tenants || [];
+        const select = document.getElementById('dragaTenantSelect');
+        select.innerHTML = '<option value="">— Selecciona un tenant —</option>' +
+            _dragaTenantList.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id}) — ${t.document_count || 0} docs</option>`).join('');
+    } catch (e) {
+        _dragaTenantList = [];
+        document.getElementById('dragaTenantSelect').innerHTML = '<option value="">Error cargando tenants</option>';
+    }
+
+    document.getElementById('dragaTenantInfo').style.display = 'none';
+    // Clear new tenant fields
+    document.getElementById('dragaNewTenantId').value = '';
+    document.getElementById('dragaNewTenantName').value = '';
+    document.getElementById('dragaNewTenantDesc').value = '';
+    document.getElementById('dragaNewTenantModel').value = 'anthropic/claude-3-haiku';
+    document.getElementById('dragaNewTenantLang').value = 'es';
+    document.getElementById('dragaNewTenantPrompt').value = '';
+
+    openModal('dragaModal');
+}
+
+function toggleDragaTenantMode(mode) {
+    _dragaTenantMode = mode;
+    const existBtn = document.getElementById('dragaTenantModeExist');
+    const newBtn = document.getElementById('dragaTenantModeNew');
+    const existDiv = document.getElementById('dragaTenantExisting');
+    const newDiv = document.getElementById('dragaTenantNew');
+
+    if (mode === 'existing') {
+        existBtn.className = 'btn btn-sm btn-primary';
+        newBtn.className = 'btn btn-sm';
+        existDiv.style.display = '';
+        newDiv.style.display = 'none';
+    } else {
+        existBtn.className = 'btn btn-sm';
+        newBtn.className = 'btn btn-sm btn-primary';
+        existDiv.style.display = 'none';
+        newDiv.style.display = '';
+    }
+}
+
+function onDragaTenantSelected() {
+    const id = document.getElementById('dragaTenantSelect').value;
+    const info = document.getElementById('dragaTenantInfo');
+    if (!id) { info.style.display = 'none'; return; }
+
+    const t = _dragaTenantList.find(x => x.tenant_id === id);
+    if (!t) { info.style.display = 'none'; return; }
+
+    info.style.display = '';
+    info.innerHTML = `
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <span>🏢 <strong>${t.name}</strong></span>
+            <span>📄 ${t.document_count || 0} docs</span>
+            <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
+            <span>🌐 ${t.response_language || '—'}</span>
+            ${t.is_active !== false ? '<span class="badge badge-success" style="font-size:10px">Activo</span>' : '<span class="badge badge-muted" style="font-size:10px">Inactivo</span>'}
+        </div>
+        ${t.description ? '<div style="margin-top:6px;color:var(--text-secondary)">' + t.description + '</div>' : ''}`;
+}
+
+async function createDraga() {
+    const btn = document.getElementById('dragaCreateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Creando...';
+
+    try {
+        let tenantId;
+
+        if (_dragaTenantMode === 'existing') {
+            tenantId = document.getElementById('dragaTenantSelect').value;
+            if (!tenantId) {
+                toast('Selecciona un tenant existente', 'error');
+                return;
+            }
+        } else {
+            // Create new tenant first
+            tenantId = document.getElementById('dragaNewTenantId').value.trim();
+            const name = document.getElementById('dragaNewTenantName').value.trim();
+            if (!tenantId || !name) {
+                toast('ID y Nombre del tenant son requeridos', 'error');
+                return;
+            }
+
+            // Validate ID pattern
+            if (!/^[a-z0-9][a-z0-9_\-]*[a-z0-9]$|^[a-z0-9]$/.test(tenantId)) {
+                toast('ID inválido: solo minúsculas, números, guiones y underscores', 'error');
+                return;
+            }
+
+            // Check if tenant already exists
+            const existing = _dragaTenantList.find(t => t.tenant_id === tenantId);
+            if (existing) {
+                toast(`El tenant "${tenantId}" ya existe. Usa "Usar existente" o elige otro ID.`, 'error');
+                return;
+            }
+
+            const payload = { tenant_id: tenantId, name };
+            const desc = document.getElementById('dragaNewTenantDesc').value.trim();
+            const model = document.getElementById('dragaNewTenantModel').value.trim();
+            const lang = document.getElementById('dragaNewTenantLang').value;
+            const prompt = document.getElementById('dragaNewTenantPrompt').value.trim();
+            if (desc) payload.description = desc;
+            if (model) payload.default_model = model;
+            if (lang) payload.response_language = lang;
+            if (prompt && prompt.length >= 10) payload.system_prompt = prompt;
+
+            await api.createTenant(payload);
+            toast(`Tenant "${name}" creado exitosamente`, 'success');
+        }
+
+        closeModal('dragaModal');
+        toast(`DRAGA inicializada — redirigiendo al dashboard...`, 'success', 2000);
+        setTimeout(() => {
+            window.location.href = `draga.html?tenant=${tenantId}`;
+        }, 800);
+
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Crear DRAGA';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
 // MODULE: DASHBOARD
 // ══════════════════════════════════════════════════════════════
 async function loadDashboard() {
@@ -751,8 +968,8 @@ async function loadDashboard() {
 
         if (tenants.length === 0) {
             grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
-                <h3>Sin DRAGAs</h3><p>Crea tu primer tenant para iniciar un DRAGA</p>
-                <button class="btn btn-primary" onclick="nav('tenants')" style="margin-top:12px">➕ Crear Tenant</button></div>`;
+                <h3>Sin DRAGAs</h3><p>Crea tu primera instancia DRAGA para comenzar</p>
+                <button class="btn btn-primary" onclick="showDragaModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
             return;
         }
 
