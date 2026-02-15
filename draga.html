@@ -179,6 +179,17 @@ tr:hover td{background:var(--bg-card);}
 .chat-msg.assistant pre code{background:none;padding:0;}
 .chat-msg.assistant ul,.chat-msg.assistant ol{padding-left:18px;margin:6px 0;}
 .chat-input-bar{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border);}
+/* ═══ CHAT FEEDBACK ═══ */
+.chat-feedback{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);}
+.chat-fb-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:13px;transition:var(--transition);color:var(--text-muted);display:inline-flex;align-items:center;gap:3px;}
+.chat-fb-btn:hover{border-color:var(--draga-accent);color:var(--text-primary);background:var(--draga-accent-alpha);}
+.chat-fb-btn.selected{border-color:var(--success);background:rgba(34,197,94,0.15);color:var(--success);}
+.chat-fb-btn.selected.negative{border-color:var(--danger);background:rgba(239,68,68,0.15);color:var(--danger);}
+.chat-fb-comment{display:flex;gap:6px;align-items:center;margin-top:6px;}
+.chat-fb-comment input{flex:1;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:11px;font-family:inherit;}
+.chat-fb-comment input:focus{outline:none;border-color:var(--draga-accent);}
+.chat-fb-comment button{padding:4px 12px;font-size:11px;}
+.chat-fb-sent{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--success);}
 .chat-input-bar input{flex:1;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;font-family:inherit;}
 .chat-input-bar input:focus{outline:none;border-color:var(--draga-accent);}
 
@@ -1279,7 +1290,7 @@ const Pipeline = {
         const t0 = Date.now();
 
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId, include_metadata: true });
+            const res = await api.query({ query, tenant_id: App.tenantId });
             const latency = Date.now() - t0;
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
@@ -1381,7 +1392,7 @@ const Quality = {
     async testGapQuery(query) {
         toast('Ejecutando consulta...', 'info');
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId, top_k: 10, include_metadata: true });
+            const res = await api.query({ query, tenant_id: App.tenantId, top_k: 10 });
             const chunks = res.retrieved_chunks || [];
             if (chunks.length) {
                 DocViewer.openWithChunks(`Fuentes: "${query.slice(0, 50)}"`, chunks);
@@ -1397,6 +1408,9 @@ const Quality = {
 // ══════════════════════════════════════════════════════════════
 const Chat = {
     messages: [],
+    _lastChunks: [],
+    _msgCounter: 0,
+    _feedbackData: {}, // msgId -> { query, response, confidence, sources }
 
     async send() {
         const input = document.getElementById('chatInput');
@@ -1410,9 +1424,9 @@ const Chat = {
         const btn = document.getElementById('chatSendBtn');
         btn.disabled = true;
 
-        const thinkId = 'think-' + Date.now();
+        const msgId = 'chat-msg-' + (++this._msgCounter);
         const thinkEl = document.createElement('div');
-        thinkEl.id = thinkId;
+        thinkEl.id = msgId;
         thinkEl.className = 'chat-msg assistant';
         thinkEl.innerHTML = '<div class="spinner"></div> Pensando...';
         document.getElementById('chatMessages').appendChild(thinkEl);
@@ -1425,7 +1439,7 @@ const Chat = {
             thinkEl.innerHTML = '';
 
             // Also do a parallel RAG query to get sources for this question
-            const sourcePromise = api.query({ query, tenant_id: App.tenantId, top_k: topK, include_metadata: true }).catch(() => null);
+            const sourcePromise = api.query({ query, tenant_id: App.tenantId, top_k: topK }).catch(() => null);
 
             await api.chatCompletionsStream(
                 { model, messages: this.messages, tenant_id: App.tenantId, top_k: topK, stream: true },
@@ -1436,18 +1450,38 @@ const Chat = {
                 async () => {
                     this.messages.push({ role: 'assistant', content: fullContent });
                     btn.disabled = false;
-                    // Append source chips after streaming completes
+
+                    // Store feedback data for this message
                     const ragResult = await sourcePromise;
+                    this._feedbackData[msgId] = {
+                        query,
+                        response: fullContent,
+                        confidence: ragResult?.confidence || null,
+                        sources: ragResult?.sources || []
+                    };
+
+                    // Build sources + feedback footer
+                    const footer = document.createElement('div');
+                    footer.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+
+                    // Source chips
+                    let srcHtml = '';
                     if (ragResult?.sources?.length) {
-                        const srcDiv = document.createElement('div');
-                        srcDiv.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;';
                         const chips = ragResult.sources.map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')">📄 ${esc(s)}</span>`).join('');
                         const chunks = ragResult.retrieved_chunks || [];
                         const viewBtn = chunks.length ? `<span class="source-chip" onclick="DocViewer.openWithChunks('Chunks: ${esc(query.slice(0,30))}', Chat._lastChunks)" style="background:rgba(34,197,94,0.1);color:var(--success)">👁️ ${chunks.length} chunks</span>` : '';
                         Chat._lastChunks = chunks;
-                        srcDiv.innerHTML = `📎 ${chips} ${viewBtn}`;
-                        thinkEl.appendChild(srcDiv);
+                        srcHtml = `<div style="font-size:11px;margin-bottom:8px">📎 ${chips} ${viewBtn}</div>`;
                     }
+
+                    // Feedback controls
+                    footer.innerHTML = `${srcHtml}
+                        <div class="chat-feedback" id="fb-${msgId}">
+                            <span>¿Fue útil?</span>
+                            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','positive')" title="Útil">👍</button>
+                            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','negative')" title="No útil">👎</button>
+                        </div>`;
+                    thinkEl.appendChild(footer);
                 }
             );
         } catch (e) {
@@ -1456,7 +1490,56 @@ const Chat = {
         }
     },
 
-    _lastChunks: [],
+    // Handle rating selection — show comment input
+    rate(msgId, rating) {
+        const container = document.getElementById('fb-' + msgId);
+        if (!container) return;
+        const ratingLabel = rating === 'positive' ? '👍 Útil' : '👎 No útil';
+        const ratingClass = rating === 'negative' ? ' negative' : '';
+        container.innerHTML = `
+            <span class="chat-fb-btn selected${ratingClass}" style="cursor:default">${ratingLabel}</span>
+            <div class="chat-fb-comment" style="flex:1">
+                <input type="text" placeholder="Comentario opcional..." id="fb-comment-${msgId}" onkeydown="if(event.key==='Enter')Chat.submitFeedback('${msgId}','${rating}')" />
+                <button class="btn btn-sm btn-primary" onclick="Chat.submitFeedback('${msgId}','${rating}')">Enviar</button>
+                <button class="btn btn-sm" onclick="Chat.submitFeedback('${msgId}','${rating}',true)">Omitir</button>
+            </div>`;
+        const input = container.querySelector('input');
+        if (input) input.focus();
+    },
+
+    // Submit feedback to the API
+    async submitFeedback(msgId, rating, skip = false) {
+        const container = document.getElementById('fb-' + msgId);
+        const data = this._feedbackData[msgId];
+        if (!data || !container) return;
+
+        const commentInput = document.getElementById('fb-comment-' + msgId);
+        const comment = skip ? '' : (commentInput?.value?.trim() || '');
+
+        try {
+            const payload = {
+                tenant_id: App.tenantId,
+                query: data.query,
+                response: data.response,
+                rating,
+                confidence: data.confidence,
+                session_id: `draga-chat-${App.tenantId}`
+            };
+            if (comment) payload.comment = comment;
+
+            await api.submitFeedback(payload);
+
+            const icon = rating === 'positive' ? '👍' : '👎';
+            container.innerHTML = `<div class="chat-fb-sent">
+                <span>${icon}</span>
+                <span>Feedback enviado${comment ? ': ' + esc(comment) : ''}</span>
+                ✓
+            </div>`;
+            toast('Feedback registrado', 'success', 2000);
+        } catch (e) {
+            container.innerHTML = `<div style="font-size:11px;color:var(--danger)">❌ Error: ${esc(e.message)}</div>`;
+        }
+    },
 
     addBubble(role, content) {
         const el = document.createElement('div');
@@ -1468,6 +1551,8 @@ const Chat = {
 
     clear() {
         this.messages = [];
+        this._msgCounter = 0;
+        this._feedbackData = {};
         document.getElementById('chatMessages').innerHTML = '<div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. ¿En qué puedo ayudarte?</div>';
     }
 };
