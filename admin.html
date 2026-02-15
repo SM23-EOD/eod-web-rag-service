@@ -236,6 +236,10 @@ tr:hover td{background:var(--bg-card);}
             <span class="icon">🤖</span> Agents
             <span class="badge" id="agentCount">—</span>
         </a>
+        <a class="nav-item" onclick="nav('apikeys')" data-mod="apikeys">
+            <span class="icon">🔑</span> API Keys
+            <span class="badge" id="apikeyCount">—</span>
+        </a>
     </div>
     <div class="sidebar-section">
         <div class="sidebar-label">Operaciones</div>
@@ -269,6 +273,8 @@ tr:hover td{background:var(--bg-card);}
     <div class="stats-grid" id="heroStats">
         <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
         <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
+        <div class="stat-card"><div class="label">Agents</div><div class="value" id="statAgents" style="color:var(--info)">—</div></div>
+        <div class="stat-card"><div class="label">API Keys</div><div class="value" id="statKeys" style="color:var(--warning)">—</div></div>
         <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
         <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" style="color:var(--success)">98%</div></div>
     </div>
@@ -306,6 +312,21 @@ tr:hover td{background:var(--bg-card);}
     </div>
     <div class="card-grid" id="agentCards">
         <div class="loading"><div class="spinner"></div> Cargando...</div>
+    </div>
+</div>
+
+<!-- ── MODULE: API KEYS ── -->
+<div class="module" id="mod-apikeys">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <div>
+            <h1 class="page-title">API Keys</h1>
+            <p class="page-desc" style="margin-bottom:0">Gestión de claves de acceso por tenant (SHA-256 hashed, scoped)</p>
+        </div>
+        <button class="btn btn-primary" onclick="showApiKeyModal()">🔑 Nueva API Key</button>
+    </div>
+    <div class="section">
+        <div class="section-title"><span class="icon">🔐</span> Claves Activas</div>
+        <div id="apiKeysList"><div class="loading"><div class="spinner"></div></div></div>
     </div>
 </div>
 
@@ -747,6 +768,34 @@ tr:hover td{background:var(--bg-card);}
     </div>
 </div>
 
+<!-- ═══ API KEY MODAL ═══ -->
+<div class="modal-overlay" id="apiKeyModal">
+    <div class="modal" style="max-width:480px">
+        <div class="modal-title">🔑 Nueva API Key</div>
+        <div class="form-group">
+            <label>Tenant</label>
+            <select id="akTenantSelect"><option value="">Cargando...</option></select>
+        </div>
+        <div class="form-group">
+            <label>Label</label>
+            <input type="text" id="akLabelInput" placeholder="mi-clave-produccion">
+        </div>
+        <div class="form-group">
+            <label>Scopes</label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="query" checked class="akScope"> query</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="ingest" class="akScope"> ingest</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="admin" class="akScope"> admin</label>
+                <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" value="feedback" class="akScope"> feedback</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('apiKeyModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="createApiKeyAction()">🔑 Crear</button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ TOAST CONTAINER ═══ -->
 <div class="toast-container" id="toasts"></div>
 
@@ -755,7 +804,7 @@ tr:hover td{background:var(--bg-card);}
 // DRAGA PLATFORM ADMIN — JavaScript
 // ══════════════════════════════════════════════════════════════
 
-const modules = ['dashboard', 'tenants', 'agents', 'analytics', 'system', 'roadmap'];
+const modules = ['dashboard', 'tenants', 'agents', 'apikeys', 'analytics', 'system', 'roadmap'];
 
 // ── NAVIGATION ──
 function nav(mod) {
@@ -771,6 +820,7 @@ function nav(mod) {
         dashboard: loadDashboard,
         tenants: loadTenants,
         agents: loadAgents,
+        apikeys: loadApiKeys,
         analytics: loadAnalytics,
         system: loadSystem,
         roadmap: calcRoadmapProgress
@@ -961,6 +1011,7 @@ async function loadDashboard() {
         document.getElementById('tenantCount').textContent = tenants.length;
         document.getElementById('agentCount').textContent = agents.length;
         document.getElementById('statDragas').textContent = tenants.length;
+        document.getElementById('statAgents').textContent = agents.length;
 
         let totalDocs = 0;
         tenants.forEach(t => { totalDocs += t.document_count || 0; });
@@ -1132,6 +1183,8 @@ async function loadAgents() {
 
         container.innerHTML = agents.map(a => {
             const statusClass = a.status === 'active' ? 'badge-success' : a.status === 'error' ? 'badge-danger' : 'badge-warning';
+            const cfg = a.config || {};
+            const stats = a.stats || {};
             return `<div class="card">
                 <div class="card-header">
                     <span class="card-title">${a.name}</span>
@@ -1140,6 +1193,17 @@ async function loadAgents() {
                 <div class="card-meta">
                     <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${a.tenant_id}</code>
                     ${a.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${a.description}</div>` : ''}
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
+                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🧠 ${(cfg.llm_model || '—').split('/').pop()}</span>
+                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">Top K: ${cfg.top_k || 5}</span>
+                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🎯 Sim: ${cfg.similarity_threshold || 0.5}</span>
+                    ${cfg.use_cache ? '<span style="background:rgba(34,197,94,0.1);padding:2px 8px;border-radius:12px;color:var(--success)">Cache ✓</span>' : ''}
+                </div>
+                <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:12px">
+                    <span>💬 ${stats.total_queries || 0} queries</span>
+                    <span>📄 ${stats.total_documents || 0} docs</span>
+                    <span>📦 ${stats.total_chunks || 0} chunks</span>
                 </div>
                 <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</div>
                 <div class="card-actions">
@@ -1182,6 +1246,95 @@ async function viewAgentStats(id) {
     try {
         const stats = await api.agentStats(id);
         alert(JSON.stringify(stats, null, 2));
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MODULE: API KEYS
+// ══════════════════════════════════════════════════════════════
+async function loadApiKeys() {
+    const container = document.getElementById('apiKeysList');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+        // Load keys for all tenants
+        const tenantsData = await api.listTenants(true);
+        const tenants = tenantsData.tenants || [];
+        let allKeys = [];
+
+        for (const t of tenants) {
+            try {
+                const data = await api.listApiKeys(t.tenant_id);
+                const keys = data.keys || [];
+                keys.forEach(k => k._tenant = t.tenant_id);
+                allKeys = allKeys.concat(keys);
+            } catch (e) { /* skip tenant errors */ }
+        }
+
+        document.getElementById('apikeyCount').textContent = allKeys.length;
+
+        if (allKeys.length === 0) {
+            container.innerHTML = `<div class="empty-state"><div class="icon">🔑</div>
+                <h3>Sin API Keys</h3><p>Crea una clave de acceso para integrar tus aplicaciones</p>
+                <button class="btn btn-primary" onclick="showApiKeyModal()" style="margin-top:12px">🔑 Nueva API Key</button></div>`;
+            return;
+        }
+
+        container.innerHTML = `<div class="card" style="overflow-x:auto;"><table class="table">
+            <thead><tr><th>Label</th><th>Tenant</th><th>Prefijo</th><th>Tipo</th><th>Creada</th><th>Expira</th><th></th></tr></thead>
+            <tbody>${allKeys.map(k => `<tr>
+                <td><strong>${k.label || '—'}</strong></td>
+                <td><code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${k._tenant || k.tenant_id}</code></td>
+                <td><code style="font-size:11px">${k.key_prefix || '—'}</code></td>
+                <td><span class="badge">${k.key_type || 'secret'}</span></td>
+                <td style="font-size:12px;color:var(--text-secondary)">${k.created_at ? new Date(k.created_at).toLocaleDateString('es') : '—'}</td>
+                <td style="font-size:12px;color:var(--text-secondary)">${k.expires_at ? new Date(k.expires_at).toLocaleDateString('es') : 'Nunca'}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="revokeApiKeyAction('${k.key_id}','${(k.label||"").replace(/'/g,"\\'")}')">Revocar</button></td>
+            </tr>`).join('')}</tbody></table></div>`;
+    } catch (e) {
+        container.innerHTML = `<div style="color:var(--danger);padding:20px">❌ Error: ${e.message}</div>`;
+    }
+}
+
+async function showApiKeyModal() {
+    const sel = document.getElementById('akTenantSelect');
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    openModal('apiKeyModal');
+    try {
+        const data = await api.listTenants(true);
+        const tenants = data.tenants || [];
+        sel.innerHTML = tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('');
+    } catch (e) { sel.innerHTML = '<option value="">Error</option>'; }
+}
+
+async function createApiKeyAction() {
+    const tenantId = document.getElementById('akTenantSelect').value;
+    const label = document.getElementById('akLabelInput').value.trim();
+    if (!tenantId || !label) { toast('Tenant y Label son requeridos', 'error'); return; }
+
+    const scopes = [...document.querySelectorAll('.akScope:checked')].map(c => c.value);
+    if (scopes.length === 0) { toast('Selecciona al menos un scope', 'error'); return; }
+
+    try {
+        const result = await api.createApiKey({ tenant_id: tenantId, label, scopes });
+        closeModal('apiKeyModal');
+        document.getElementById('akLabelInput').value = '';
+
+        // Show the raw key (only shown once)
+        const keyDisplay = result.raw_key || result.key || '—';
+        const copyMsg = `✅ API Key creada exitosamente!\n\n🔑 Clave: ${keyDisplay}\n\n⚠️ Guarda esta clave ahora — no se podrá ver de nuevo.`;
+        alert(copyMsg);
+        try { await navigator.clipboard.writeText(keyDisplay); toast('Clave copiada al portapapeles', 'success'); } catch {}
+
+        loadApiKeys();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function revokeApiKeyAction(keyId, label) {
+    if (!confirm(`¿Revocar API Key "${label}"? Esta acción es irreversible.`)) return;
+    try {
+        await api.revokeApiKey(keyId);
+        toast(`API Key "${label}" revocada`, 'success');
+        loadApiKeys();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 

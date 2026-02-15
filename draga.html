@@ -260,6 +260,8 @@ tr:hover td{background:var(--bg-card);}
     .pipeline-phases{grid-template-columns:1fr 1fr;}
     .form-row{grid-template-columns:1fr;}
     .chat-container{height:calc(100vh - 180px);}
+    #mod-chat > div:nth-child(3){grid-template-columns:1fr !important;}
+    #mod-chat > div:nth-child(3) > .card{display:none;}
 }
     </style>
 </head>
@@ -527,13 +529,22 @@ tr:hover td{background:var(--bg-card);}
         <button class="btn btn-sm" onclick="Chat.clear()" style="align-self:flex-end;margin-bottom:2px;">🗑️ Limpiar</button>
     </div>
 
-    <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            <div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?</div>
+    <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;">
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?</div>
+            </div>
+            <div class="chat-input-bar">
+                <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter')Chat.send()">
+                <button class="btn btn-primary" id="chatSendBtn" onclick="Chat.send()">▶ Enviar</button>
+            </div>
         </div>
-        <div class="chat-input-bar">
-            <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter')Chat.send()">
-            <button class="btn btn-primary" id="chatSendBtn" onclick="Chat.send()">▶ Enviar</button>
+        <div class="card" style="padding:12px;height:fit-content;max-height:600px;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <h3 style="font-size:13px;margin:0;">💬 Historial</h3>
+                <button class="btn btn-sm" onclick="ConvHistory.load()" style="padding:2px 6px;font-size:10px;">🔄</button>
+            </div>
+            <div id="convHistoryList" style="font-size:12px;"><span style="color:var(--text-muted)">Cargando...</span></div>
         </div>
     </div>
 </div>
@@ -541,7 +552,15 @@ tr:hover td{background:var(--bg-card);}
 <!-- ── CONFIG ── -->
 <div class="module" id="mod-config">
     <h1 class="page-title">Configuración</h1>
-    <p class="page-desc">Retrieval config, widget, embed codes y tareas</p>
+    <p class="page-desc">API Keys, retrieval config, widget, embed codes y tareas</p>
+
+    <div class="section">
+        <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span><span class="icon">🔑</span> API Keys</span>
+            <button class="btn btn-sm btn-primary" onclick="ApiKeys.create()">+ Nueva Key</button>
+        </div>
+        <div id="dragaApiKeys"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
 
     <div class="section">
         <div class="section-title"><span class="icon">⚙️</span> Retrieval Config</div>
@@ -995,7 +1014,7 @@ const App = {
             knowledge: () => KB.load(),
             pipeline: () => {},
             quality: () => Quality.load(),
-            chat: () => {},
+            chat: () => ConvHistory.load(),
             config: () => Config.load()
         };
         loaders[mod]?.();
@@ -1574,11 +1593,117 @@ const Chat = {
 };
 
 // ══════════════════════════════════════════════════════════════
+// CONVERSATION HISTORY
+// ══════════════════════════════════════════════════════════════
+const ConvHistory = {
+    async load() {
+        const container = document.getElementById('convHistoryList');
+        container.innerHTML = '<span style="color:var(--text-muted)">Cargando...</span>';
+        try {
+            const data = await api.listConversations(App.tenantId, 20);
+            const sessions = data.sessions || [];
+
+            if (sessions.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);font-size:11px;text-align:center;padding:16px 0">Sin conversaciones previas</div>';
+                return;
+            }
+
+            container.innerHTML = sessions.map(s => {
+                const date = s.created_at ? new Date(s.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+                const msgCount = s.message_count || s.messages?.length || 0;
+                const preview = s.last_message || s.preview || s.session_id || '—';
+                return `<div onclick="ConvHistory.openSession('${esc(s.session_id)}')" style="padding:8px;margin-bottom:6px;border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background='transparent'">
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">${date} · ${msgCount} msgs</div>
+                    <div style="font-size:12px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;">${esc(String(preview).slice(0, 60))}</div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            container.innerHTML = `<div style="color:var(--text-muted);font-size:11px;text-align:center;padding:16px 0">No hay historial disponible</div>`;
+        }
+    },
+
+    async openSession(sessionId) {
+        try {
+            const data = await api.getConversation(sessionId);
+            const messages = data.messages || [];
+            if (messages.length === 0) { toast('Sesión vacía', 'info'); return; }
+
+            Chat.clear();
+            Chat.messages = messages.map(m => ({ role: m.role, content: m.content }));
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            messages.forEach(m => Chat.addBubble(m.role, m.content));
+            toast(`Sesión cargada: ${messages.length} mensajes`, 'success', 2000);
+        } catch (e) { toast('Error al cargar sesión: ' + e.message, 'error'); }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// API KEYS (DRAGA instance)
+// ══════════════════════════════════════════════════════════════
+const ApiKeys = {
+    async load() {
+        const container = document.getElementById('dragaApiKeys');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+            const data = await api.listApiKeys(App.tenantId);
+            const keys = data.keys || [];
+
+            if (keys.length === 0) {
+                container.innerHTML = `<div class="card" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+                    <div>🔑 Sin API Keys para este DRAGA</div>
+                    <div style="font-size:11px;margin-top:4px">Crea una clave para integrar aplicaciones externas</div>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = `<div class="card" style="overflow-x:auto;"><table class="table" style="font-size:12px;">
+                <thead><tr><th>Label</th><th>Prefijo</th><th>Tipo</th><th>Expira</th><th></th></tr></thead>
+                <tbody>${keys.map(k => `<tr>
+                    <td><strong>${k.label || '—'}</strong></td>
+                    <td><code style="font-size:11px">${k.key_prefix || '—'}</code></td>
+                    <td><span class="badge">${k.key_type || 'secret'}</span></td>
+                    <td style="color:var(--text-secondary)">${k.expires_at ? new Date(k.expires_at).toLocaleDateString('es') : 'Nunca'}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="ApiKeys.revoke('${k.key_id}','${(k.label||'').replace(/'/g,"\\'")}')">Revocar</button></td>
+                </tr>`).join('')}</tbody></table></div>`;
+        } catch (e) {
+            container.innerHTML = `<div class="card" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">🔑 Sin API Keys</div>`;
+        }
+    },
+
+    async create() {
+        const label = prompt('Label para la nueva API Key:');
+        if (!label || !label.trim()) return;
+
+        try {
+            const result = await api.createApiKey({
+                tenant_id: App.tenantId,
+                label: label.trim(),
+                scopes: ['query', 'ingest', 'feedback']
+            });
+            const rawKey = result.raw_key || result.key || '—';
+            alert(`✅ API Key creada!\n\n🔑 ${rawKey}\n\n⚠️ Guarda esta clave — no se podrá ver de nuevo.`);
+            try { await navigator.clipboard.writeText(rawKey); toast('Clave copiada al portapapeles', 'success'); } catch {}
+            this.load();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    async revoke(keyId, label) {
+        if (!confirm(`¿Revocar API Key "${label}"?`)) return;
+        try {
+            await api.revokeApiKey(keyId);
+            toast(`API Key "${label}" revocada`, 'success');
+            this.load();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════════
 const Config = {
     async load() {
-        await Promise.all([this.loadRetrieval(), WidgetCfg.load(), this.generateEmbed(), TasksMod.refresh()]);
+        await Promise.all([this.loadRetrieval(), ApiKeys.load(), WidgetCfg.load(), this.generateEmbed(), TasksMod.refresh()]);
     },
 
     async loadRetrieval() {

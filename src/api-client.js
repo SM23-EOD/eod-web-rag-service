@@ -75,8 +75,11 @@ class RAGApiClient {
     // ── Agents ────────────────────────────────────────────────────
 
     async createAgent(data) { return this.post('/agents', data); }
-    async listAgents(status = null) {
-        const q = status ? `?status_filter=${status}` : '';
+    async listAgents(tenantId = null, status = null) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
+        if (status) params.set('status_filter', status);
+        const q = params.toString() ? `?${params}` : '';
         return this.get(`/agents${q}`);
     }
     async getAgent(id) { return this.get(`/agents/${id}`); }
@@ -84,6 +87,27 @@ class RAGApiClient {
     async queryAgent(id, data) { return this.post(`/agents/${id}/query`, data); }
     async ingestAgent(id, docs) { return this.post(`/agents/${id}/ingest`, docs); }
     async agentStats(id) { return this.get(`/agents/${id}/stats`); }
+
+    // ── API Keys ──────────────────────────────────────────────────
+
+    async listApiKeys(tenantId) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/api-keys${q}`);
+    }
+    async createApiKey(data) { return this.post('/api-keys', data); }
+    async revokeApiKey(keyId) { return this.del(`/api-keys/${keyId}`); }
+
+    // ── Conversations ─────────────────────────────────────────────
+
+    async listConversations(tenantId, limit = 20) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
+        if (limit) params.set('limit', limit);
+        return this.get(`/conversations?${params}`);
+    }
+    async getConversation(sessionId) {
+        return this.get(`/conversations/${sessionId}`);
+    }
 
     // ── Widget Config ─────────────────────────────────────────────
 
