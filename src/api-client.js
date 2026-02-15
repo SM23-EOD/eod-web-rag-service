@@ -1,6 +1,6 @@
 /**
- * RAG API Client - Envios23
- * Cliente centralizado para todos los endpoints de la API RAG v2
+ * DRAGA Platform API Client
+ * Cliente centralizado para todos los endpoints de la API v2
  * Base URL: /api/v2/ (via Traefik reverse proxy)
  */
 class RAGApiClient {

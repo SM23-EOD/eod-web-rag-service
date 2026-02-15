@@ -342,12 +342,12 @@ tr:hover td{background:var(--bg-card);}
     <div class="section">
         <div class="section-title"><span class="icon">🤖</span> Agent Crew (6 activos + 1 roadmap)</div>
         <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🔍</div><div style="font-size:11px;font-weight:700;margin-top:4px">Query Analyzer</div></div>
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📊</div><div style="font-size:11px;font-weight:700;margin-top:4px">Retriever</div></div>
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🧹</div><div style="font-size:11px;font-weight:700;margin-top:4px">Reranker</div></div>
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">✍️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Generator</div></div>
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🛡️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Verifier</div></div>
-            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📝</div><div style="font-size:11px;font-weight:700;margin-top:4px">Formatter</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🔍</div><div style="font-size:11px;font-weight:700;margin-top:4px">Retrieval</div><div style="font-size:9px;color:var(--text-muted)">Búsqueda + adaptive top_k</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🛡️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Grounding</div><div style="font-size:9px;color:var(--text-muted)">NLI + verificación</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🌐</div><div style="font-size:11px;font-weight:700;margin-top:4px">Language</div><div style="font-size:9px;color:var(--text-muted)">Detección + traducción</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📥</div><div style="font-size:11px;font-weight:700;margin-top:4px">Ingestion</div><div style="font-size:9px;color:var(--text-muted)">Chunking + NER</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">💬</div><div style="font-size:11px;font-weight:700;margin-top:4px">Feedback</div><div style="font-size:9px;color:var(--text-muted)">Aprendizaje continuo</div></div>
+            <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">📊</div><div style="font-size:11px;font-weight:700;margin-top:4px">Quality</div><div style="font-size:9px;color:var(--text-muted)">Gaps + cobertura</div></div>
             <div class="stat-card" style="text-align:center;padding:12px;opacity:0.5;border-style:dashed;"><div style="font-size:20px">🧬</div><div style="font-size:11px;font-weight:700;margin-top:4px">Taxonomy</div><div style="font-size:9px;color:var(--text-muted)">Roadmap</div></div>
         </div>
     </div>
@@ -518,7 +518,7 @@ tr:hover td{background:var(--bg-card);}
     <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
         <div class="form-group" style="margin:0;flex:1;max-width:200px;">
             <label>Modelo</label>
-            <select id="chatModel"><option value="eod-rag">eod-rag</option></select>
+            <select id="chatModel"><option value="eod-rag">DRAGA RAG</option><option value="anthropic/claude-3-haiku">Claude 3 Haiku</option></select>
         </div>
         <div class="form-group" style="margin:0;width:80px;">
             <label>Top K</label>
@@ -1464,6 +1464,22 @@ const Chat = {
                     const footer = document.createElement('div');
                     footer.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
 
+                    // Confidence & grounding metrics bar
+                    const conf = ragResult?.confidence;
+                    const confPct = conf != null ? (conf * 100).toFixed(0) : null;
+                    const confColor = conf > 0.7 ? 'var(--success)' : conf > 0.4 ? 'var(--warning)' : 'var(--danger)';
+                    const chunksSearched = ragResult?.metadata?.total_chunks_searched || 0;
+                    const latencyMs = ragResult?.metadata?.query_time_ms;
+                    let metricsHtml = '';
+                    if (confPct != null) {
+                        metricsHtml = `<div style="display:flex;gap:10px;font-size:10px;color:var(--text-muted);margin-bottom:6px;flex-wrap:wrap;">
+                            <span style="color:${confColor};font-weight:700">🎯 Confianza: ${confPct}%</span>
+                            ${chunksSearched ? `<span>📦 ${chunksSearched} chunks buscados</span>` : ''}
+                            ${latencyMs ? `<span>⏱️ ${Math.round(latencyMs)}ms</span>` : ''}
+                            ${ragResult?.metadata?.grounding_rate != null ? `<span>🛡️ Grounding: ${(ragResult.metadata.grounding_rate * 100).toFixed(0)}%</span>` : ''}
+                        </div>`;
+                    }
+
                     // Source chips
                     let srcHtml = '';
                     if (ragResult?.sources?.length) {
@@ -1475,7 +1491,7 @@ const Chat = {
                     }
 
                     // Feedback controls
-                    footer.innerHTML = `${srcHtml}
+                    footer.innerHTML = `${metricsHtml}${srcHtml}
                         <div class="chat-feedback" id="fb-${msgId}">
                             <span>¿Fue útil?</span>
                             <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','positive')" title="Útil">👍</button>
