@@ -219,7 +219,7 @@ class RAGApiClient {
     }
     async resetReindex(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.post(`/documents/reset-reindex${q}`);
+        return this._request('POST', `/documents/reset-reindex${q}`, null, { retries: 0 });
     }
 
     /**
