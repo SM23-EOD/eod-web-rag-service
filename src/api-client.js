@@ -195,9 +195,12 @@ class RAGApiClient {
      * and filtering retrieved_chunks by document_id on the client side.
      * This is a workaround since the backend has no /documents/{id}/chunks endpoint.
      */
-    async getDocumentChunks(documentId, tenantId = null, topK = 100) {
+    async getDocumentChunks(documentId, tenantId = null, topK = 100, filenameHint = null) {
+        const queryText = filenameHint
+            ? filenameHint.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+            : 'contenido completo del documento';
         const res = await this.query({
-            query: ' ',
+            query: queryText,
             tenant_id: tenantId,
             top_k: topK,
             include_metadata: true
