@@ -214,6 +214,29 @@ tr:hover td{background:var(--bg-card);}
 .embed-block pre{font-size:11px;color:var(--text-secondary);white-space:pre-wrap;word-break:break-all;margin:0;}
 .embed-block .copy-btn{position:absolute;top:8px;right:8px;}
 
+/* ═══ DOCUMENT VIEWER ═══ */
+.doc-viewer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1500;display:none;backdrop-filter:blur(6px);}
+.doc-viewer-overlay.open{display:flex;flex-direction:column;}
+.doc-viewer-header{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg-main);border-bottom:1px solid var(--border);}
+.doc-viewer-header .dv-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;}
+.doc-viewer-header .dv-meta{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text-muted);}
+.doc-viewer-body{flex:1;overflow-y:auto;padding:24px 32px;}
+.chunk-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;position:relative;transition:var(--transition);}
+.chunk-card:hover{border-color:var(--draga-accent);}
+.chunk-card .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.chunk-card .cc-id{font-size:10px;font-family:monospace;color:var(--text-muted);}
+.chunk-card .cc-type{font-size:10px;text-transform:uppercase;font-weight:700;}
+.chunk-card .cc-content{font-size:13px;line-height:1.7;color:var(--text-secondary);}
+.chunk-card .cc-content table{margin:8px 0;font-size:12px;}
+.chunk-card .cc-content table th{background:var(--bg-input);font-size:10px;}
+.chunk-card .cc-content table td{font-size:11px;}
+.chunk-card .cc-score{position:absolute;top:12px;right:14px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;}
+.chunk-card .cc-meta{display:flex;gap:12px;margin-top:8px;font-size:10px;color:var(--text-muted);flex-wrap:wrap;}
+.source-link{color:var(--draga-accent-light);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;transition:var(--transition);}
+.source-link:hover{color:var(--text-primary);text-decoration-style:solid;}
+.source-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:var(--draga-accent-alpha);color:var(--draga-accent-light);cursor:pointer;transition:var(--transition);margin:2px 2px;border:1px solid transparent;}
+.source-chip:hover{border-color:var(--draga-accent);background:rgba(124,58,237,0.25);}
+
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px){
     .app{grid-template-columns:1fr;grid-template-rows:56px 44px 1fr;}
@@ -602,6 +625,25 @@ tr:hover td{background:var(--bg-card);}
     <div id="detailActions" style="display:flex;gap:8px;margin-top:16px;"></div>
 </div>
 
+<!-- ═══ DOCUMENT VIEWER ═══ -->
+<div class="doc-viewer-overlay" id="docViewer">
+    <div class="doc-viewer-header">
+        <div class="dv-title">
+            <span id="dvIcon">📄</span>
+            <span id="dvFilename">—</span>
+        </div>
+        <div class="dv-meta">
+            <span id="dvDocId"></span>
+            <span id="dvChunkCount"></span>
+            <span id="dvSize"></span>
+            <button class="btn btn-sm" onclick="DocViewer.close()">✕ Cerrar</button>
+        </div>
+    </div>
+    <div class="doc-viewer-body" id="dvBody">
+        <div class="loading"><div class="spinner"></div></div>
+    </div>
+</div>
+
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -610,6 +652,136 @@ tr:hover td{background:var(--bg-card);}
 // ══════════════════════════════════════════════════════════════
 
 const MODULES = ['overview','knowledge','pipeline','quality','chat','config'];
+
+// ══════════════════════════════════════════════════════════════
+// DOCUMENT VIEWER — View source document chunks
+// ══════════════════════════════════════════════════════════════
+const DocViewer = {
+    // Open viewer by document_id — loads all chunks from the KB
+    async openById(docId, filename) {
+        this._show(filename);
+        const body = document.getElementById('dvBody');
+        try {
+            // Get document detail for metadata
+            const doc = await api.getDocument(docId, App.tenantId).catch(() => null);
+            if (doc) {
+                document.getElementById('dvDocId').textContent = `ID: ${docId}`;
+                document.getElementById('dvChunkCount').textContent = `${doc.chunk_count || '?'} chunks`;
+                document.getElementById('dvSize').textContent = fileSize(doc.file_size_bytes || 0);
+            }
+            // Get chunks via query
+            const chunks = await api.getDocumentChunks(docId, App.tenantId, 100);
+            const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
+            const display = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
+            this._renderChunks(body, display, docChunks.length > 0);
+        } catch (e) {
+            body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Error cargando contenido</h3><p style="font-size:12px">${esc(e.message)}</p></div>`;
+        }
+    },
+
+    // Open viewer by filename — resolve doc_id first
+    async openByFilename(filename) {
+        this._show(filename);
+        const body = document.getElementById('dvBody');
+        try {
+            const data = await api.listDocuments(App.tenantId);
+            const docs = data.documents || data || [];
+            const doc = docs.find(d => d.filename === filename || (d.filename || '').endsWith(filename.split('/').pop()));
+            if (doc) {
+                return this.openById(doc.document_id, doc.filename);
+            }
+            // No exact match — try a broad search with filename as query
+            body.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando contenido...</div>';
+            const res = await api.query({ query: filename.replace(/\.[^.]+$/, ''), tenant_id: App.tenantId, top_k: 20, include_metadata: true });
+            const allChunks = res.retrieved_chunks || [];
+            if (allChunks.length) {
+                this._renderChunks(body, allChunks, false);
+            } else {
+                body.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Sin contenido recuperable</h3><p>Este documento no tiene chunks indexados.</p></div>';
+            }
+        } catch (e) {
+            body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>${esc(e.message)}</p></div>`;
+        }
+    },
+
+    // Open viewer showing pre-loaded chunks (from pipeline/chat results)
+    openWithChunks(title, chunks) {
+        this._show(title);
+        document.getElementById('dvChunkCount').textContent = `${chunks.length} chunks`;
+        this._renderChunks(document.getElementById('dvBody'), chunks, true);
+    },
+
+    _show(filename) {
+        const ext = (filename || '').split('.').pop().toLowerCase();
+        const icons = { md:'📝', pdf:'📕', txt:'📃', docx:'📘', json:'🔧', xml:'📐', xlsx:'📊', odt:'📓' };
+        document.getElementById('dvIcon').textContent = icons[ext] || '📄';
+        document.getElementById('dvFilename').textContent = filename || 'Documento';
+        document.getElementById('dvDocId').textContent = '';
+        document.getElementById('dvChunkCount').textContent = '';
+        document.getElementById('dvSize').textContent = '';
+        document.getElementById('dvBody').innerHTML = '<div class="loading"><div class="spinner"></div> Cargando contenido...</div>';
+        document.getElementById('docViewer').classList.add('open');
+    },
+
+    close() { document.getElementById('docViewer').classList.remove('open'); },
+
+    _renderChunks(container, chunks, exactMatch) {
+        if (!chunks.length) {
+            container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Sin chunks</h3></div>';
+            return;
+        }
+        // Sort by chunk_id if possible
+        chunks.sort((a, b) => (a.chunk_id || a.metadata?.chunk_id || '').localeCompare(b.chunk_id || b.metadata?.chunk_id || ''));
+
+        container.innerHTML = (!exactMatch ? '<div style="padding:6px 12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:11px;color:var(--warning);margin-bottom:14px;">⚠️ Mostrando chunks más relevantes (no fue posible filtrar exactamente por documento)</div>' : '') +
+            chunks.map((c, i) => {
+                const chunkId = c.chunk_id || c.metadata?.chunk_id || `chunk-${i}`;
+                const chunkType = c.metadata?.chunk_type || c.chunk_type || 'text';
+                const score = c.similarity_score != null ? c.similarity_score : null;
+                const source = c.metadata?.source || '';
+                const page = c.metadata?.page_number || null;
+                const docId = c.document_id || c.metadata?.document_id || '';
+
+                // Render content — check for table_metadata with structured_data
+                let contentHtml = '';
+                const tableMeta = c.metadata?.table_metadata;
+                if (tableMeta) {
+                    try {
+                        const td = typeof tableMeta === 'string' ? JSON.parse(tableMeta.replace(/'/g, '"')) : tableMeta;
+                        if (td.structured_data && td.headers) {
+                            contentHtml = `<table><thead><tr>${td.headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${td.structured_data.map(row => `<tr>${td.headers.map(h => `<td>${esc(row[h] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+                        }
+                    } catch { /* fall through */ }
+                }
+                if (!contentHtml) {
+                    contentHtml = `<div style="white-space:pre-wrap;word-break:break-word;">${esc(c.content || 'Sin contenido')}</div>`;
+                }
+
+                const typeColors = { table:'var(--info)', text:'var(--text-muted)', header:'var(--warning)' };
+                const scoreColor = score > 0.7 ? 'var(--success)' : score > 0.4 ? 'var(--warning)' : 'var(--text-muted)';
+
+                return `<div class="chunk-card">
+                    <div class="cc-header">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-size:16px">${chunkType === 'table' ? '📊' : '📝'}</span>
+                            <span class="cc-id">${chunkId}</span>
+                            <span class="cc-type badge" style="background:${(typeColors[chunkType] || 'var(--text-muted)')}22;color:${typeColors[chunkType] || 'var(--text-muted)'}">${chunkType}</span>
+                        </div>
+                    </div>
+                    ${score != null ? `<div class="cc-score" style="background:${scoreColor}22;color:${scoreColor}">${(score * 100).toFixed(0)}%</div>` : ''}
+                    <div class="cc-content">${contentHtml}</div>
+                    <div class="cc-meta">
+                        ${page ? `<span>📄 Pág. ${page}</span>` : ''}
+                        ${source ? `<span>📂 ${source.split('/').pop()}</span>` : ''}
+                        ${docId ? `<span>🔗 ${docId}</span>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+    }
+};
+
+// Key binding: Escape closes viewer
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('docViewer').classList.contains('open')) DocViewer.close(); });
 
 // ── Utilities ──
 function toast(msg, type = 'info', dur = 4000) {
@@ -854,7 +1026,7 @@ const KB = {
             return `<tr>
                 <td><div style="display:flex;align-items:center;gap:6px">
                     <span style="font-size:16px">${ico}</span>
-                    <div><div style="font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(d.filename)}">${esc(d.filename)}</div>
+                    <div><div class="source-link" style="font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(d.filename)}" onclick="DocViewer.openById('${d.document_id}','${esc(d.filename)}')">${esc(d.filename)}</div>
                     <div style="font-size:10px;color:var(--text-muted)">${d.document_id}</div></div>
                 </div></td>
                 <td>${statusBadge(d.status)}</td>
@@ -899,6 +1071,7 @@ const KB = {
                 ...(doc.error ? [['Error', `<span style="color:var(--danger)">${esc(doc.error)}</span>`]] : [])
             ].map(([l, v]) => `<div class="dp-field"><div class="dp-label">${l}</div><div class="dp-value">${v}</div></div>`).join('');
             actions.innerHTML = `
+                <button class="btn btn-sm" style="flex:1" onclick="DocViewer.openById('${doc.document_id}','${esc(doc.filename)}')">👁️ Ver Contenido</button>
                 <button class="btn btn-sm btn-primary" style="flex:1" onclick="KB.reindex('${doc.document_id}')">🔄 Re-indexar</button>
                 <button class="btn btn-sm btn-danger" style="flex:1" onclick="KB.confirmDelete('${doc.document_id}','${esc(doc.filename)}')">🗑️ Eliminar</button>`;
         } catch (e) {
@@ -1011,6 +1184,11 @@ const Pipeline = {
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
 
+            // Store chunks for viewer access
+            Pipeline._lastChunks = res.retrieved_chunks || [];
+            const sourcesHtml = (res.sources || []).map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')" title="Ver documento fuente">📄 ${esc(s)}</span>`).join('');
+            const chunksViewBtn = Pipeline._lastChunks.length ? `<button class="btn btn-sm" style="margin-top:10px" onclick="DocViewer.openWithChunks('Chunks Recuperados', Pipeline._lastChunks)">👁️ Ver ${Pipeline._lastChunks.length} chunks recuperados</button>` : '';
+
             result.innerHTML = `
                 <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
                     <div class="stat-card"><div class="label">Confianza</div><div class="value" style="color:${confColor}">${conf}%</div></div>
@@ -1022,7 +1200,8 @@ const Pipeline = {
                 <div class="card" style="border-left:3px solid var(--draga-accent)">
                     <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px">Respuesta</div>
                     <div style="font-size:13px;line-height:1.7">${marked.parse(res.answer || 'Sin respuesta')}</div>
-                    ${res.sources?.length ? `<div style="font-size:11px;color:var(--text-muted);margin-top:10px">📎 Fuentes: ${res.sources.join(', ')}</div>` : ''}
+                    ${sourcesHtml ? `<div style="margin-top:10px">📎 <span style="font-size:11px;color:var(--text-muted)">Fuentes:</span> ${sourcesHtml}</div>` : ''}
+                    ${chunksViewBtn}
                 </div>`;
         } catch (e) {
             result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${e.message}</div></div>`;
@@ -1066,14 +1245,17 @@ const Quality = {
             const data = await api.metricsGaps(App.tenantId, false, 10);
             const gaps = data.gaps || data || [];
             if (!gaps.length) { container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>No hay gaps detectados</p></div>'; return; }
-            container.innerHTML = gaps.map(g => `<div class="gap-card">
-                <div class="gc-query">${esc(g.query || g.question || '')}</div>
+            container.innerHTML = gaps.map(g => {
+                const q = esc(g.query || g.question || '');
+                return `<div class="gap-card">
+                <div class="gc-query"><span class="source-link" onclick="Quality.testGapQuery('${q.replace(/'/g, '\\\'')}')" title="Probar esta consulta en el pipeline">${q}</span></div>
                 <div class="gc-meta">
                     <span>📅 ${g.created_at ? new Date(g.created_at).toLocaleDateString('es') : '—'}</span>
                     <span>📊 Confianza: ${g.confidence != null ? (g.confidence * 100).toFixed(0) + '%' : '—'}</span>
                     <span>${g.resolved ? '<span class="badge badge-success">Resuelto</span>' : '<span class="badge badge-warning">Pendiente</span>'}</span>
                 </div>
-            </div>`).join('');
+            </div>`;
+            }).join('');
         } catch { container.innerHTML = '<div class="empty-state"><p>Gaps service no disponible</p></div>'; }
     },
 
@@ -1083,13 +1265,30 @@ const Quality = {
             const data = await api.listFeedback({ limit: 10 });
             const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
             if (!items.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Sin feedback</p></div></td></tr>'; return; }
-            tbody.innerHTML = items.map(f => `<tr>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.query || '')}</td>
+            tbody.innerHTML = items.map(f => {
+                const q = esc(f.query || '');
+                return `<tr>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="source-link" onclick="Quality.testGapQuery('${q.replace(/'/g, '\\\'')}')" title="Probar esta consulta">${q}</span></td>
                 <td>${f.rating === 'positive' ? '<span class="badge badge-success">👍</span>' : '<span class="badge badge-danger">👎</span>'}</td>
                 <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.comment || '—')}</td>
                 <td>${f.reviewed ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">pendiente</span>'}</td>
-            </tr>`).join('');
+            </tr>`;
+            }).join('');
         } catch { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">Feedback no disponible</td></tr>'; }
+    },
+
+    // Test a gap/feedback query — run it through the pipeline and show source chunks
+    async testGapQuery(query) {
+        toast('Ejecutando consulta...', 'info');
+        try {
+            const res = await api.query({ query, tenant_id: App.tenantId, top_k: 10, include_metadata: true });
+            const chunks = res.retrieved_chunks || [];
+            if (chunks.length) {
+                DocViewer.openWithChunks(`Fuentes: "${query.slice(0, 50)}"`, chunks);
+            } else {
+                toast('Sin chunks recuperados para esta consulta', 'warning');
+            }
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
     }
 };
 
@@ -1125,19 +1324,39 @@ const Chat = {
             let fullContent = '';
             thinkEl.innerHTML = '';
 
+            // Also do a parallel RAG query to get sources for this question
+            const sourcePromise = api.query({ query, tenant_id: App.tenantId, top_k: topK, include_metadata: true }).catch(() => null);
+
             await api.chatCompletionsStream(
                 { model, messages: this.messages, tenant_id: App.tenantId, top_k: topK, stream: true },
                 (chunk) => {
                     const delta = chunk.choices?.[0]?.delta?.content || '';
                     if (delta) { fullContent += delta; thinkEl.innerHTML = marked.parse(fullContent); thinkEl.scrollIntoView({ behavior: 'smooth' }); }
                 },
-                () => { this.messages.push({ role: 'assistant', content: fullContent }); btn.disabled = false; }
+                async () => {
+                    this.messages.push({ role: 'assistant', content: fullContent });
+                    btn.disabled = false;
+                    // Append source chips after streaming completes
+                    const ragResult = await sourcePromise;
+                    if (ragResult?.sources?.length) {
+                        const srcDiv = document.createElement('div');
+                        srcDiv.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;';
+                        const chips = ragResult.sources.map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')">📄 ${esc(s)}</span>`).join('');
+                        const chunks = ragResult.retrieved_chunks || [];
+                        const viewBtn = chunks.length ? `<span class="source-chip" onclick="DocViewer.openWithChunks('Chunks: ${esc(query.slice(0,30))}', Chat._lastChunks)" style="background:rgba(34,197,94,0.1);color:var(--success)">👁️ ${chunks.length} chunks</span>` : '';
+                        Chat._lastChunks = chunks;
+                        srcDiv.innerHTML = `📎 ${chips} ${viewBtn}`;
+                        thinkEl.appendChild(srcDiv);
+                    }
+                }
             );
         } catch (e) {
             thinkEl.innerHTML = `<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`;
             btn.disabled = false;
         }
     },
+
+    _lastChunks: [],
 
     addBubble(role, content) {
         const el = document.createElement('div');

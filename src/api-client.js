@@ -190,6 +190,28 @@ class RAGApiClient {
         return this.post(`/documents/reset-reindex${q}`);
     }
 
+    /**
+     * Retrieve chunks for a specific document by querying with a broad query
+     * and filtering retrieved_chunks by document_id on the client side.
+     * This is a workaround since the backend has no /documents/{id}/chunks endpoint.
+     */
+    async getDocumentChunks(documentId, tenantId = null, topK = 100) {
+        const res = await this.query({
+            query: ' ',
+            tenant_id: tenantId,
+            top_k: topK,
+            include_metadata: true
+        });
+        const all = res.retrieved_chunks || [];
+        // Filter to only chunks from this document
+        const filtered = all.filter(c =>
+            c.document_id === documentId ||
+            c.metadata?.document_id === documentId ||
+            (c.metadata?.source || '').includes(documentId)
+        );
+        return filtered.length > 0 ? filtered : all;
+    }
+
     // Legacy aliases (registry endpoints — kept for backward compat)
     async registryIngest(file, forceReindex = false) {
         return this.uploadDocuments([file], null, !forceReindex, false);
