@@ -731,6 +731,7 @@ const App = {
     },
 
     async loadTenantDetails() {
+        if (!this.tenantId) return;
         try {
             const t = await api.getTenant(this.tenantId);
             document.getElementById('tenantName').textContent = t.name;

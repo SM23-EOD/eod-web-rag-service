@@ -469,6 +469,7 @@ async function loadTenants() {
 }
 
 async function loadAll() {
+    if (!tenantId) { toast('No tenant seleccionado', 'error'); return; }
     loadMetrics();
     loadGaps();
     loadFeedback();

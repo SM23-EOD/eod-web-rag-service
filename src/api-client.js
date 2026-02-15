@@ -205,16 +205,33 @@ class RAGApiClient {
         try {
             return await this.get(`/tenants?include_inactive=${includeInactive}`);
         } catch (e) {
-            // Fallback: try without include_inactive param
+            // Fallback 1: try without include_inactive param (handles 500)
             if (includeInactive) {
                 console.warn('[api] listTenants with include_inactive failed, retrying without:', e.message);
-                return await this.get('/tenants');
+                try {
+                    return await this.get('/tenants');
+                } catch (e2) {
+                    // Fallback 2: if 403/401, return default tenant so pages don't break
+                    if (e2.status === 403 || e2.status === 401) {
+                        console.warn('[api] listTenants 403 — returning default tenant');
+                        return { tenants: [{ tenant_id: 'default', name: 'Default', is_active: true }] };
+                    }
+                    throw e2;
+                }
+            }
+            // Fallback 2: if 403/401, return default tenant
+            if (e.status === 403 || e.status === 401) {
+                console.warn('[api] listTenants 403 — returning default tenant');
+                return { tenants: [{ tenant_id: 'default', name: 'Default', is_active: true }] };
             }
             throw e;
         }
     }
     async createTenant(data) { return this.post('/tenants', data); }
-    async getTenant(id) { return this.get(`/tenants/${id}`); }
+    async getTenant(id) {
+        if (!id || id === 'null') return { tenant_id: id || 'default', name: 'Default' };
+        return this.get(`/tenants/${id}`);
+    }
     async updateTenant(id, data) { return this.put(`/tenants/${id}`, data); }
     async deleteTenant(id, deleteCollection = false) {
         return this.del(`/tenants/${id}?delete_collection=${deleteCollection}`);
