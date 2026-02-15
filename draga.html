@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DRAGA — Instance Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script src="src/api-client.js"></script>
@@ -24,6 +24,7 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+.di{display:inline-block;width:1em;height:1em;vertical-align:-0.15em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/%3E%3Crect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/%3E%3Crect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Crect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Cpath d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/%3E%3Crect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/%3E%3Ccircle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/%3E%3Ccircle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/%3E%3Cpath d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;font-style:normal;}
 
 /* ═══ LAYOUT ═══ */
 .app{display:grid;grid-template-columns:200px 1fr;grid-template-rows:56px 1fr;height:100vh;}
@@ -258,7 +259,7 @@ tr:hover td{background:var(--bg-card);}
 <header class="header">
     <div class="header-left">
         <a href="index.html" class="header-brand">
-            <div class="logo">🐉</div>
+            <div class="logo"><i class="di" style="font-size:16px;width:16px;height:16px"></i></div>
             <span class="name">DRAGA</span>
         </a>
         <div class="header-sep"></div>
@@ -275,7 +276,7 @@ tr:hover td{background:var(--bg-card);}
 
 <!-- ═══ SIDEBAR ═══ -->
 <nav class="sidebar">
-    <a class="nav-item active" onclick="App.nav('overview')" data-mod="overview"><span class="icon">🐉</span> Overview</a>
+    <a class="nav-item active" onclick="App.nav('overview')" data-mod="overview"><span class="icon"><i class="di"></i></span> Overview</a>
     <a class="nav-item" onclick="App.nav('knowledge')" data-mod="knowledge"><span class="icon">📚</span> Knowledge Base <span class="badge" id="navDocCount">—</span></a>
     <a class="nav-item" onclick="App.nav('pipeline')" data-mod="pipeline"><span class="icon">⚙️</span> Pipeline</a>
     <a class="nav-item" onclick="App.nav('quality')" data-mod="quality"><span class="icon">🛡️</span> Quality</a>
@@ -904,7 +905,7 @@ const App = {
 const Overview = {
     async load() {
         const t = App.tenantData;
-        document.getElementById('overviewTitle').textContent = `🐉 ${t.name || App.tenantId}`;
+        document.getElementById('overviewTitle').innerHTML = `<i class="di" style="font-size:28px;width:28px;height:28px;vertical-align:-4px"></i> ${t.name || App.tenantId}`;
         document.getElementById('ovDocs').textContent = t.document_count ?? '—';
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
         document.getElementById('ovLang').textContent = t.response_language || '—';

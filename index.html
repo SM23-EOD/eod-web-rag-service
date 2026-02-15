@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRAGA — Document Grounded RAG Agent Platform</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -44,12 +44,14 @@
     .quick-links a:hover{border-color:var(--draga-accent);color:var(--text-primary);}
     footer{text-align:center;padding:32px;color:var(--text-muted);font-size:13px;border-top:1px solid var(--border);}
     footer a{color:var(--draga-accent-light);text-decoration:none;}
+    .di{display:inline-block;width:1em;height:1em;vertical-align:-0.15em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/%3E%3Crect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/%3E%3Crect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Crect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Cpath d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/%3E%3Crect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/%3E%3Ccircle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/%3E%3Ccircle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/%3E%3Cpath d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;font-style:normal;}
+    .hero-logo .di{width:44px;height:44px;}
     @media(max-width:700px){.hero h1{font-size:32px;}.nav-grid{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
   <div class="hero">
-    <div class="hero-logo">🐉</div>
+    <div class="hero-logo"><i class="di"></i></div>
     <h1>DRAGA</h1>
     <div class="tagline">Plataforma multi-tenant de agentes RAG con grounding verificable y zero-hallucination por diseño</div>
     <div class="acronym">Document · Retrieval · Augmented · Generation · Agent</div>
@@ -66,7 +68,7 @@
       <span class="tile-badge" style="background:rgba(124,58,237,0.15);color:var(--draga-accent-light)">Admin</span>
     </a>
     <a href="draga.html" class="nav-tile">
-      <span class="tile-icon">🐉</span>
+      <span class="tile-icon"><i class="di" style="width:36px;height:36px"></i></span>
       <div class="tile-title">DRAGA Dashboard</div>
       <div class="tile-desc">Deep-dive per-instance: KB, pipeline 14 pasos, quality, chat streaming, config.</div>
       <span class="tile-badge" style="background:rgba(34,197,94,0.15);color:var(--success)">Instance</span>
@@ -91,12 +93,12 @@
   </div>
   <div class="quick-links">
     <a href="admin.html">⚙️ Admin Console</a>
-    <a href="draga.html">🐉 DRAGA Dashboard</a>
+    <a href="draga.html"><i class="di"></i> DRAGA Dashboard</a>
     <a href="demo-widget-v2.html">🤖 Widget V2</a>
     <a href="ab-test-tests.html">🧪 A/B Tests</a>
   </div>
   <footer>
-    <p>🐉 DRAGA Platform · <a href="https://github.com/envios23/eod-web-rag-service">GitHub</a> · Built with grounding-first principles</p>
+    <p><i class="di"></i> DRAGA Platform · <a href="https://github.com/envios23/eod-web-rag-service">GitHub</a> · Built with grounding-first principles</p>
   </footer>
 </body>
 </html>
