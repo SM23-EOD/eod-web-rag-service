@@ -2,6 +2,16 @@
  * DRAGA Platform API Client
  * Cliente centralizado para todos los endpoints de la API v2
  * Base URL: /api/v2/ (via Traefik reverse proxy)
+ *
+ * Endpoint alignment status (verified 2025-06-16):
+ *   ✅ Working: /health, /query, /chat/completions, /models, /tenants, /agents,
+ *              /documents, /documents/{id}, /documents/stats/summary,
+ *              /documents/upload, /documents/process-pending, /stats, /cache,
+ *              /mcp/health, /mcp/tools, /mcp/prompts, /mcp/resources
+ *   ❌ 500 (backend bugs): /feedback, /feedback/stats, /metrics/*,
+ *              /documents/reset-reindex, /documents/sync/directory
+ *   ❌ 502 (service not deployed): /api-keys, /conversations, /tasks
+ *   ❌ 404 (not implemented): /registry/* (official spec target, not yet on backend)
  */
 class RAGApiClient {
     constructor(baseUrl = '/api/v2') {
@@ -94,25 +104,25 @@ class RAGApiClient {
     async ingestAgent(id, docs) { return this.post(`/agents/${id}/ingest`, docs); }
     async agentStats(id) { return this.get(`/agents/${id}/stats`); }
 
-    // ── API Keys ──────────────────────────────────────────────────
+    // ── API Keys (502 on current backend — service not deployed) ──
 
     async listApiKeys(tenantId) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/api-keys${q}`);
+        return this._request('GET', `/api-keys${q}`, null, { retries: 0 });
     }
-    async createApiKey(data) { return this.post('/api-keys', data); }
-    async revokeApiKey(keyId) { return this.del(`/api-keys/${keyId}`); }
+    async createApiKey(data) { return this._request('POST', '/api-keys', data, { retries: 0 }); }
+    async revokeApiKey(keyId) { return this._request('DELETE', `/api-keys/${keyId}`, null, { retries: 0 }); }
 
-    // ── Conversations ─────────────────────────────────────────────
+    // ── Conversations (502 on current backend — service not deployed) ──
 
     async listConversations(tenantId, limit = 20) {
         const params = new URLSearchParams();
         if (tenantId) params.set('tenant_id', tenantId);
         if (limit) params.set('limit', limit);
-        return this.get(`/conversations?${params}`);
+        return this._request('GET', `/conversations?${params}`, null, { retries: 0 });
     }
     async getConversation(sessionId) {
-        return this.get(`/conversations/${sessionId}`);
+        return this._request('GET', `/conversations/${sessionId}`, null, { retries: 0 });
     }
 
     // ── Widget Config ─────────────────────────────────────────────
@@ -121,7 +131,7 @@ class RAGApiClient {
     async updateWidgetConfig(tenantId, data) { return this.put(`/agents/${tenantId}/widget-config`, data); }
     async resetWidgetConfig(tenantId) { return this.del(`/agents/${tenantId}/widget-config`); }
 
-    // ── Tasks ─────────────────────────────────────────────────────
+    // ── Tasks (502 on current backend — service not deployed) ──
 
     async listTasks(tenantId = null, state = null, limit = null) {
         const params = new URLSearchParams();
@@ -129,12 +139,12 @@ class RAGApiClient {
         if (state) params.set('state', state);
         if (limit) params.set('limit', limit);
         const q = params.toString() ? `?${params}` : '';
-        return this.get(`/tasks${q}`);
+        return this._request('GET', `/tasks${q}`, null, { retries: 0 });
     }
-    async getTask(taskId) { return this.get(`/tasks/${taskId}`); }
+    async getTask(taskId) { return this._request('GET', `/tasks/${taskId}`, null, { retries: 0 }); }
     async cleanupTasks(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.del(`/tasks${q}`);
+        return this._request('DELETE', `/tasks${q}`, null, { retries: 0 });
     }
 
     // ── Metrics ───────────────────────────────────────────────────
@@ -205,7 +215,7 @@ class RAGApiClient {
      * The backend serves the file with correct MIME type and Content-Disposition: inline.
      */
     getDocumentSourceUrl(documentId, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : `?tenant_id=default`;
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
         return `${this.baseUrl}/documents/${documentId}/source${q}`;
     }
     async documentStats(tenantId = null) {
@@ -319,7 +329,7 @@ class RAGApiClient {
 
     // ── Feedback ──────────────────────────────────────────────────
 
-    async submitFeedback(data) { return this.post('/feedback', data); }
+    async submitFeedback(data) { return this._request('POST', '/feedback', data, { retries: 0 }); }
     async listFeedback(filters = {}) {
         const params = new URLSearchParams();
         if (filters.rating) params.set('rating', filters.rating);
@@ -327,12 +337,12 @@ class RAGApiClient {
         if (filters.low_confidence) params.set('low_confidence', true);
         if (filters.limit) params.set('limit', filters.limit);
         const q = params.toString() ? `?${params}` : '';
-        return this.get(`/feedback${q}`);
+        return this._request('GET', `/feedback${q}`, null, { retries: 0 });
     }
-    async feedbackStats() { return this.get('/feedback/stats'); }
+    async feedbackStats() { return this._request('GET', '/feedback/stats', null, { retries: 0 }); }
     async markReviewed(id, action = null) {
         const q = action ? `?action_taken=${encodeURIComponent(action)}` : '';
-        return this.post(`/feedback/${id}/review${q}`);
+        return this._request('POST', `/feedback/${id}/review${q}`, null, { retries: 0 });
     }
 
     // ── OpenAI Compatible ─────────────────────────────────────────
