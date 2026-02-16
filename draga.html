@@ -962,9 +962,27 @@ const App = {
         const sel = document.getElementById('tenantSelect');
         sel.innerHTML = this.tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('');
 
-        // Pick tenant from URL
+        // Pick tenant from URL — validate it exists in tenant list
         const params = new URLSearchParams(window.location.search);
-        const tid = params.get('tenant') || (this.tenants[0]?.tenant_id || 'default');
+        const urlTenant = params.get('tenant');
+        const tenantExists = urlTenant && this.tenants.some(t => t.tenant_id === urlTenant);
+
+        let tid;
+        if (tenantExists) {
+            tid = urlTenant;
+        } else if (urlTenant) {
+            // URL tenant doesn't exist in list — warn and fallback
+            console.warn(`[App] Tenant "${urlTenant}" from URL not found in tenant list, falling back`);
+            toast(`El tenant "${urlTenant}" no existe. Se seleccionó el primero disponible.`, 'warning', 4000);
+            tid = this.tenants[0]?.tenant_id || 'default';
+            // Fix URL to reflect actual tenant
+            const fixUrl = new URL(window.location);
+            fixUrl.searchParams.set('tenant', tid);
+            window.history.replaceState({}, '', fixUrl);
+        } else {
+            tid = this.tenants[0]?.tenant_id || 'default';
+        }
+
         sel.value = tid;
         this.tenantId = tid;
         this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };

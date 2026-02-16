@@ -172,6 +172,9 @@ class RAGApiClient {
     // ── Document Management (v2 /documents/* endpoints) ──────────
 
     async uploadDocuments(files, tenantId, autoIndex = true, background = false) {
+        if (!tenantId || tenantId === 'null' || tenantId === 'undefined') {
+            throw new ApiError(400, 'tenant_id is required for document upload');
+        }
         const params = new URLSearchParams({ tenant_id: tenantId, auto_index: autoIndex, background });
         const url = `${this.baseUrl}/documents/upload?${params}`;
         const form = new FormData();

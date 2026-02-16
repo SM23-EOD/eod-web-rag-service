@@ -976,6 +976,16 @@ async function createDraga() {
             if (prompt && prompt.length >= 10) payload.system_prompt = prompt;
 
             await api.createTenant(payload);
+
+            // Verify the tenant was actually created before redirecting
+            try {
+                await api.getTenant(tenantId);
+            } catch (verifyErr) {
+                console.error('[createDraga] Tenant creation returned OK but tenant not found:', verifyErr);
+                toast(`Error: El tenant "${tenantId}" no se creó correctamente en el backend. Intente de nuevo.`, 'error', 5000);
+                return;
+            }
+
             toast(`Tenant "${name}" creado exitosamente`, 'success');
         }
 
