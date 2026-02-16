@@ -39,6 +39,7 @@ body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color
 .tenant-selector{display:flex;align-items:center;gap:8px;}
 .tenant-selector select{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:6px 12px;font-size:12px;font-family:inherit;}
 .tenant-name{font-size:14px;font-weight:700;color:var(--text-primary);}
+.scope-sep{color:var(--text-muted);font-size:14px;font-weight:300;margin:0 2px;}
 .header-right{display:flex;align-items:center;gap:10px;}
 .health-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
@@ -278,6 +279,8 @@ tr:hover td{background:var(--bg-card);}
         <div class="header-sep"></div>
         <div class="tenant-selector">
             <select id="tenantSelect" onchange="App.switchTenant(this.value)"></select>
+            <span class="scope-sep">/</span>
+            <select id="agentSelect" onchange="App.switchAgent(this.value)"></select>
         </div>
     </div>
     <div class="header-right">
@@ -707,7 +710,7 @@ const DocViewer = {
         const body = document.getElementById('dvBody');
         try {
             // Get document detail for metadata
-            const doc = await api.getDocument(docId, App.tenantId).catch(() => null);
+            const doc = await api.getDocument(docId, App.tenantId, App.agentId).catch(() => null);
             if (doc) {
                 document.getElementById('dvDocId').textContent = `ID: ${docId}`;
                 document.getElementById('dvChunkCount').textContent = `${doc.chunk_count || '?'} chunks`;
@@ -716,7 +719,7 @@ const DocViewer = {
             // Show source file
             this._renderSource(body, docId, filename);
             // Pre-fetch chunks in background for the chunks tab
-            api.getDocumentChunks(docId, App.tenantId, 20, filename)
+            api.getDocumentChunks(docId, App.tenantId, 20, filename, App.agentId)
                 .then(chunks => {
                     const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
                     this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
@@ -731,7 +734,7 @@ const DocViewer = {
         this._show(filename);
         const body = document.getElementById('dvBody');
         try {
-            const data = await api.listDocuments(App.tenantId);
+            const data = await api.listDocuments(App.tenantId, null, null, App.agentId);
             const docs = data.documents || data || [];
             const doc = docs.find(d => d.filename === filename || (d.filename || '').endsWith(filename.split('/').pop()));
             if (doc) {
@@ -739,7 +742,7 @@ const DocViewer = {
             }
             // No exact match — try a broad search with filename as query
             body.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando contenido...</div>';
-            const res = await api.query({ query: filename.replace(/\.[^.]+$/, ''), tenant_id: App.tenantId, top_k: 20 });
+            const res = await api.query({ query: filename.replace(/\.[^.]+$/, ''), tenant_id: App.tenantId, agent_id: App.agentId, top_k: 20 });
             const allChunks = res.retrieved_chunks || [];
             if (allChunks.length) {
                 this._chunks = allChunks;
@@ -770,7 +773,7 @@ const DocViewer = {
     // Render original source file in viewer
     _renderSource(container, docId, filename) {
         const ext = (filename || '').split('.').pop().toLowerCase();
-        const sourceUrl = api.getDocumentSourceUrl(docId, App.tenantId);
+        const sourceUrl = api.getDocumentSourceUrl(docId, App.tenantId, App.agentId);
         // Show download link
         const dlBtn = document.getElementById('dvDownload');
         dlBtn.href = sourceUrl;
@@ -820,7 +823,7 @@ const DocViewer = {
             } else {
                 body.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando chunks...</div>';
                 if (this._currentDocId) {
-                    api.getDocumentChunks(this._currentDocId, App.tenantId, 20, this._currentFilename)
+                    api.getDocumentChunks(this._currentDocId, App.tenantId, 20, this._currentFilename, App.agentId)
                         .then(chunks => {
                             const docChunks = chunks.filter(c => c.document_id === this._currentDocId || c.metadata?.document_id === this._currentDocId);
                             this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
@@ -951,6 +954,8 @@ const App = {
     tenantId: null,
     tenantData: null,
     tenants: [],
+    agentId: null,   // ADR-018: active agent within tenant
+    agents: [],       // agents for current tenant
 
     async init() {
         // Load tenants
@@ -971,11 +976,9 @@ const App = {
         if (tenantExists) {
             tid = urlTenant;
         } else if (urlTenant) {
-            // URL tenant doesn't exist in list — warn and fallback
             console.warn(`[App] Tenant "${urlTenant}" from URL not found in tenant list, falling back`);
             toast(`El tenant "${urlTenant}" no existe. Se seleccionó el primero disponible.`, 'warning', 4000);
             tid = this.tenants[0]?.tenant_id || 'default';
-            // Fix URL to reflect actual tenant
             const fixUrl = new URL(window.location);
             fixUrl.searchParams.set('tenant', tid);
             window.history.replaceState({}, '', fixUrl);
@@ -987,7 +990,17 @@ const App = {
         this.tenantId = tid;
         this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };
 
-        document.getElementById('tenantDisplayName').textContent = this.tenantData.name;
+        // ADR-018: Load agents for this tenant and pick from URL
+        await this.loadAgents(tid);
+        const urlAgent = params.get('agent');
+        if (urlAgent && this.agents.some(a => a.agent_id === urlAgent)) {
+            this.agentId = urlAgent;
+        } else {
+            this.agentId = this.agents[0]?.agent_id || 'default';
+        }
+        document.getElementById('agentSelect').value = this.agentId;
+        this._updateDisplayName();
+        this._updateUrl();
 
         // Setup drop zone
         KB.setupDropZone();
@@ -1006,17 +1019,62 @@ const App = {
         });
     },
 
-    switchTenant(tid) {
+    // ADR-018: Load agents for a tenant and populate agent selector
+    async loadAgents(tenantId) {
+        const sel = document.getElementById('agentSelect');
+        try {
+            const data = await api.listAgents(tenantId);
+            this.agents = data.agents || data || [];
+        } catch {
+            this.agents = [{ agent_id: 'default', name: 'Default' }];
+        }
+        // Ensure at least one agent
+        if (!this.agents.length) this.agents = [{ agent_id: 'default', name: 'Default' }];
+        sel.innerHTML = this.agents.map(a => {
+            const label = a.name || a.agent_id;
+            return `<option value="${a.agent_id}">${label}</option>`;
+        }).join('');
+    },
+
+    async switchTenant(tid) {
         this.tenantId = tid;
         this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };
-        document.getElementById('tenantDisplayName').textContent = this.tenantData.name;
-        // Update URL
-        const url = new URL(window.location);
-        url.searchParams.set('tenant', tid);
-        window.history.replaceState({}, '', url);
+        // Reload agents for new tenant
+        await this.loadAgents(tid);
+        this.agentId = this.agents[0]?.agent_id || 'default';
+        document.getElementById('agentSelect').value = this.agentId;
+        this._updateDisplayName();
+        this._updateUrl();
         // Reload current module
         const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
         this.nav(active);
+    },
+
+    switchAgent(aid) {
+        this.agentId = aid;
+        this._updateDisplayName();
+        this._updateUrl();
+        const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
+        this.nav(active);
+    },
+
+    _updateDisplayName() {
+        const tName = this.tenantData?.name || this.tenantId;
+        const aName = (this.agentId && this.agentId !== 'default')
+            ? ` / ${this.agents.find(a => a.agent_id === this.agentId)?.name || this.agentId}`
+            : '';
+        document.getElementById('tenantDisplayName').textContent = tName + aName;
+    },
+
+    _updateUrl() {
+        const url = new URL(window.location);
+        url.searchParams.set('tenant', this.tenantId);
+        if (this.agentId && this.agentId !== 'default') {
+            url.searchParams.set('agent', this.agentId);
+        } else {
+            url.searchParams.delete('agent');
+        }
+        window.history.replaceState({}, '', url);
     },
 
     nav(mod) {
@@ -1060,16 +1118,10 @@ const Overview = {
         // Get stats — try fresh tenant data first
         try {
             const freshTenant = await api.getTenant(App.tenantId);
-            App.tenantData = freshTenant;
-            document.getElementById('ovDocs').textContent = freshTenant.document_count ?? '—';
-            document.getElementById('ovModel').textContent = (freshTenant.default_model || '—').split('/').pop();
-            document.getElementById('ovLang').textContent = freshTenant.response_language || '—';
-            document.getElementById('ovCollection').textContent = freshTenant.collection_name || '—';
-            document.getElementById('tenantDisplayName').textContent = freshTenant.name;
         } catch {}
 
         try {
-            const stats = await api.getStats(App.tenantId);
+            const stats = await api.getStats(App.tenantId, App.agentId);
             const db = stats.vector_database || {};
             document.getElementById('ovChunks').textContent = db.total_chunks || db.documents || '—';
         } catch { document.getElementById('ovChunks').textContent = '—'; }
@@ -1110,7 +1162,7 @@ const KB = {
 
     async loadStats() {
         try {
-            const s = await api.documentStats(App.tenantId);
+            const s = await api.documentStats(App.tenantId, App.agentId);
             const bs = s.by_status || {};
             const totalDocs = s.total_documents || 0;
             const indexed = bs.indexed || 0;
@@ -1126,7 +1178,7 @@ const KB = {
             // If documentStats shows 0 docs but vector DB has chunks, show chunks count from stats
             if (totalDocs === 0) {
                 try {
-                    const vs = await api.getStats(App.tenantId);
+                    const vs = await api.getStats(App.tenantId, App.agentId);
                     const vc = vs.vector_database?.total_chunks || 0;
                     if (vc > 0) {
                         document.getElementById('kbChunks').textContent = vc;
@@ -1138,7 +1190,7 @@ const KB = {
             console.warn('KB Stats error:', e);
             // Fallback to vector DB stats
             try {
-                const vs = await api.getStats(App.tenantId);
+                const vs = await api.getStats(App.tenantId, App.agentId);
                 const db = vs.vector_database || {};
                 document.getElementById('kbTotal').textContent = '—';
                 document.getElementById('kbChunks').textContent = db.total_chunks || 0;
@@ -1158,7 +1210,7 @@ const KB = {
         const tbody = document.getElementById('docTableBody');
         tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
         try {
-            const data = await api.listDocuments(App.tenantId);
+            const data = await api.listDocuments(App.tenantId, null, null, App.agentId);
             this.docs = data.documents || data || [];
             this.docs.forEach(d => { if (d.category) d.category = d.category.replace(/^DocumentCategory\./i, '').toLowerCase(); });
             this.page = 1;
@@ -1243,7 +1295,7 @@ const KB = {
         actions.innerHTML = '';
         panel.classList.add('open');
         try {
-            const doc = await api.getDocument(docId, App.tenantId);
+            const doc = await api.getDocument(docId, App.tenantId, App.agentId);
             body.innerHTML = [
                 ['Archivo', esc(doc.filename)],
                 ['ID', `<span style="font-size:10px;font-family:monospace">${doc.document_id}</span>`],
@@ -1257,7 +1309,7 @@ const KB = {
                 ...(doc.error ? [['Error', `<span style="color:var(--danger)">${esc(doc.error)}</span>`]] : [])
             ].map(([l, v]) => `<div class="dp-field"><div class="dp-label">${l}</div><div class="dp-value">${v}</div></div>`).join('');
             actions.innerHTML = `
-                <a class="btn btn-sm" style="flex:1;text-decoration:none;text-align:center" href="${api.getDocumentSourceUrl(doc.document_id, App.tenantId)}" target="_blank">📄 Ver Fuente</a>
+                <a class="btn btn-sm" style="flex:1;text-decoration:none;text-align:center" href="${api.getDocumentSourceUrl(doc.document_id, App.tenantId, App.agentId)}" target="_blank">📄 Ver Fuente</a>
                 <button class="btn btn-sm" style="flex:1" onclick="DocViewer.openById('${doc.document_id}','${esc(doc.filename)}')">👁️ Visor</button>
                 <button class="btn btn-sm btn-primary" style="flex:1" onclick="KB.reindex('${doc.document_id}')">🔄 Re-indexar</button>
                 <button class="btn btn-sm btn-danger" style="flex:1" onclick="KB.confirmDelete('${doc.document_id}','${esc(doc.filename)}')">🗑️ Eliminar</button>`;
@@ -1268,33 +1320,33 @@ const KB = {
 
     async reindex(id) {
         toast('Re-indexando...', 'info');
-        try { await api.reindexDocument(id, App.tenantId); toast('Re-indexado', 'success'); this.load(); }
+        try { await api.reindexDocument(id, App.tenantId, App.agentId); toast('Re-indexado', 'success'); this.load(); }
         catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     confirmDelete(id, name) {
         showConfirm('Eliminar Documento', `¿Eliminar "${name}"? Se eliminará de la KB y el vector store.`,
-            async () => { try { await api.deleteDocument(id, App.tenantId); toast('Eliminado', 'success'); document.getElementById('detailPanel').classList.remove('open'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+            async () => { try { await api.deleteDocument(id, App.tenantId, App.agentId); toast('Eliminado', 'success'); document.getElementById('detailPanel').classList.remove('open'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
     },
 
     confirmReset() {
-        showConfirm('☢️ Reset Nuclear', `Se limpiarán TODOS los chunks del tenant "${App.tenantId}" y se re-indexará. No se puede deshacer.`,
-            async () => { toast('Reseteando...', 'info'); try { await api.resetReindex(App.tenantId); toast('Reset completado', 'success'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+        showConfirm('☢️ Reset Nuclear', `Se limpiarán TODOS los chunks del agente "${App.agentId}" en tenant "${App.tenantId}". No se puede deshacer.`,
+            async () => { toast('Reseteando...', 'info'); try { await api.resetReindex(App.tenantId, App.agentId); toast('Reset completado', 'success'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
     },
 
     async processPending() {
         toast('Procesando pendientes...', 'info');
-        try { await api.processPending(App.tenantId); toast('Completado', 'success'); this.load(); }
+        try { await api.processPending(App.tenantId, false, App.agentId); toast('Completado', 'success'); this.load(); }
         catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     syncDir() {
-        const path = `/app/storage/sources/${App.tenantId || ''}`;
+        const path = `/app/storage/sources/${App.tenantId || ''}/${App.agentId || 'default'}`;
         const dir = prompt('Directorio del servidor a sincronizar:', path);
         if (!dir) return;
         const force = confirm('¿Forzar re-indexación de existentes?');
         toast('Sincronizando...', 'info');
-        api.syncDirectory(dir, App.tenantId, true, force)
+        api.syncDirectory(dir, App.tenantId, true, force, App.agentId)
             .then(() => { toast('Sincronización completada', 'success'); this.load(); })
             .catch(e => toast('Error: ' + e.message, 'error'));
     },
@@ -1345,7 +1397,7 @@ const KB = {
         try {
             const autoIdx = document.getElementById('optAutoIdx').checked;
             const bg = document.getElementById('optBg').checked;
-            await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg);
+            await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg, App.agentId);
             toast(`${this.uploadFiles.length} documento(s) subidos`, 'success');
             setTimeout(() => { closeModal('uploadModal'); this.load(); }, 600);
         } catch (e) { toast('Error: ' + e.message, 'error'); }
@@ -1366,8 +1418,7 @@ const Pipeline = {
         const t0 = Date.now();
 
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId });
-            const latency = Date.now() - t0;
+            const res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId });
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
 
@@ -1406,10 +1457,10 @@ const Quality = {
 
     async loadMetrics() {
         const [statsRes, coverageRes, groundingRes, fbRes] = await Promise.allSettled([
-            api.getStats(App.tenantId),
-            api.metricsCoverage(App.tenantId),
-            api.metricsGrounding(App.tenantId),
-            api.feedbackStats()
+            api.getStats(App.tenantId, App.agentId),
+            api.metricsCoverage(App.tenantId, App.agentId),
+            api.metricsGrounding(App.tenantId, App.agentId),
+            api.feedbackStats(App.tenantId, App.agentId)
         ]);
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : {};
         const coverage = coverageRes.status === 'fulfilled' ? coverageRes.value : {};
@@ -1429,7 +1480,7 @@ const Quality = {
     async loadGaps() {
         const container = document.getElementById('gapsContainer');
         try {
-            const data = await api.metricsGaps(App.tenantId, false, 10);
+            const data = await api.metricsGaps(App.tenantId, App.agentId, false, 10);
             const gaps = data.gaps || data || [];
             if (!gaps.length) { container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>No hay gaps detectados</p></div>'; return; }
             container.innerHTML = gaps.map(g => {
@@ -1449,7 +1500,7 @@ const Quality = {
     async loadFeedback() {
         const tbody = document.getElementById('qualityFeedback');
         try {
-            const data = await api.listFeedback({ limit: 10 });
+            const data = await api.listFeedback({ limit: 10 }, App.tenantId, App.agentId);
             const items = Array.isArray(data) ? data : (data.entries || data.feedback || data.items || []);
             if (!items.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Sin feedback</p></div></td></tr>'; return; }
             tbody.innerHTML = items.map(f => {
@@ -1468,7 +1519,7 @@ const Quality = {
     async testGapQuery(query) {
         toast('Ejecutando consulta...', 'info');
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId, top_k: 10 });
+            const res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: 10 });
             const chunks = res.retrieved_chunks || [];
             if (chunks.length) {
                 DocViewer.openWithChunks(`Fuentes: "${query.slice(0, 50)}"`, chunks);
@@ -1515,10 +1566,10 @@ const Chat = {
             thinkEl.innerHTML = '';
 
             // Also do a parallel RAG query to get sources for this question
-            const sourcePromise = api.query({ query, tenant_id: App.tenantId, top_k: topK }).catch(() => null);
+            const sourcePromise = api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK }).catch(() => null);
 
             await api.chatCompletionsStream(
-                { model, messages: this.messages, tenant_id: App.tenantId, top_k: topK, stream: true },
+                { model, messages: this.messages, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK, stream: true },
                 (chunk) => {
                     const delta = chunk.choices?.[0]?.delta?.content || '';
                     if (delta) { fullContent += delta; thinkEl.innerHTML = marked.parse(fullContent); thinkEl.scrollIntoView({ behavior: 'smooth' }); }
@@ -1611,11 +1662,12 @@ const Chat = {
         try {
             const payload = {
                 tenant_id: App.tenantId,
+                agent_id: App.agentId,
                 query: data.query,
                 response: data.response,
                 rating,
                 confidence: data.confidence,
-                session_id: `draga-chat-${App.tenantId}`
+                session_id: `draga-chat-${App.tenantId}-${App.agentId || 'default'}`
             };
             if (comment) payload.comment = comment;
 
@@ -1658,7 +1710,7 @@ const ConvHistory = {
         const container = document.getElementById('convHistoryList');
         container.innerHTML = '<span style="color:var(--text-muted)">Cargando...</span>';
         try {
-            const data = await api.listConversations(App.tenantId, 20);
+            const data = await api.listConversations(App.tenantId, 20, App.agentId);
             const sessions = data.sessions || [];
 
             if (sessions.length === 0) {
@@ -1736,6 +1788,7 @@ const ApiKeys = {
         try {
             const result = await api.createApiKey({
                 tenant_id: App.tenantId,
+                agent_id: App.agentId,
                 label: label.trim(),
                 scopes: ['query', 'ingest', 'feedback']
             });
@@ -1797,13 +1850,16 @@ const Config = {
     generateEmbed() {
         const baseUrl = location.origin;
         const tid = App.tenantId;
+        const aid = App.agentId && App.agentId !== 'default' ? App.agentId : '';
+        const agentAttr = aid ? ` agent-id="${aid}"` : '';
+        const agentParam = aid ? `&agent=${aid}` : '';
         document.getElementById('embedCodes').innerHTML = `
             <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">Script Tag</div>
                 <pre id="embedScript">&lt;script src="${baseUrl}/src/draga-chat.js"&gt;&lt;/script&gt;
-&lt;draga-chat tenant-id="${tid}" api-base="${baseUrl}/api/v2"&gt;&lt;/draga-chat&gt;</pre>
+&lt;draga-chat tenant-id="${tid}"${agentAttr} api-base="${baseUrl}/api/v2"&gt;&lt;/draga-chat&gt;</pre>
                 <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedScript').textContent);toast('Copiado','success')">📋</button></div>
             <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">iframe</div>
-                <pre id="embedIframe">&lt;iframe src="${baseUrl}/chat-interface.html?tenant=${tid}" style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"&gt;&lt;/iframe&gt;</pre>
+                <pre id="embedIframe">&lt;iframe src="${baseUrl}/chat-interface.html?tenant=${tid}${agentParam}" style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"&gt;&lt;/iframe&gt;</pre>
                 <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedIframe').textContent);toast('Copiado','success')">📋</button></div>`;
     }
 };
@@ -1816,7 +1872,7 @@ const WidgetCfg = {
 
     async load() {
         try {
-            this.config = await api.getWidgetConfig(App.tenantId);
+            this.config = await api.getWidgetConfig(App.tenantId, App.agentId);
             this.renderTheme();
             this.renderBranding();
             this.renderBehavior();
@@ -1892,14 +1948,14 @@ const WidgetCfg = {
             max_message_length: parseInt(document.getElementById('wbh_max_message_length')?.value) || 2000,
         };
         try {
-            await api.updateWidgetConfig(App.tenantId, { theme, branding, behavior });
+            await api.updateWidgetConfig(App.tenantId, { theme, branding, behavior }, App.agentId);
             toast('Widget guardado', 'success');
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     async reset() {
         showConfirm('Reset Widget', 'Restaurar configuración del widget a defaults.', async () => {
-            try { await api.resetWidgetConfig(App.tenantId); toast('Widget reseteado', 'success'); this.load(); }
+            try { await api.resetWidgetConfig(App.tenantId, App.agentId); toast('Widget reseteado', 'success'); this.load(); }
             catch (e) { toast('Error: ' + e.message, 'error'); }
         });
     }
@@ -1913,7 +1969,7 @@ const TasksMod = {
         const container = document.getElementById('taskTable');
         const state = document.getElementById('taskStateFilter')?.value || null;
         try {
-            const res = await api.listTasks(App.tenantId, state);
+            const res = await api.listTasks(App.tenantId, state, null, App.agentId);
             const tasks = res.tasks || res || [];
             if (!tasks.length) { container.innerHTML = '<div class="empty-state"><p>No hay tareas</p></div>'; return; }
             container.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Estado</th><th>Progreso</th><th>Archivos</th><th>Resultado</th><th>Tiempo</th></tr></thead>
@@ -1939,7 +1995,7 @@ const TasksMod = {
 
     async cleanup() {
         showConfirm('Limpiar Tareas', 'Eliminar tareas completadas/fallidas.', async () => {
-            try { await api.cleanupTasks(App.tenantId); toast('Tareas limpiadas', 'success'); this.refresh(); }
+            try { await api.cleanupTasks(App.tenantId, App.agentId); toast('Tareas limpiadas', 'success'); this.refresh(); }
             catch (e) { toast('Error: ' + e.message, 'error'); }
         });
     }

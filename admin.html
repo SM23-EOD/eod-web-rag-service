@@ -746,12 +746,19 @@ tr:hover td{background:var(--bg-card);}
 <!-- ═══ AGENT MODAL ═══ -->
 <div class="modal-overlay" id="agentModal">
     <div class="modal">
-        <div class="modal-title">🤖 Nuevo Agente</div>
+        <div class="modal-title">🤖 Nuevo Agente (DRAGA)</div>
         <div class="form-row">
             <div class="form-group">
-                <label>Tenant ID</label>
-                <input type="text" id="agentIdInput" placeholder="mi-agente" pattern="[a-z0-9_\-]+">
+                <label>Tenant</label>
+                <select id="agentTenantSelect"><option value="">Cargando...</option></select>
             </div>
+            <div class="form-group">
+                <label>Agent ID</label>
+                <input type="text" id="agentIdInput" placeholder="soporte-v1" pattern="[a-z0-9_\-]+">
+                <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Solo minúsculas, números, guiones</div>
+            </div>
+        </div>
+        <div class="form-row">
             <div class="form-group">
                 <label>Nombre</label>
                 <input type="text" id="agentNameInput" placeholder="Agente de Soporte">
@@ -1206,6 +1213,8 @@ async function loadAgents() {
             const statusClass = a.status === 'active' ? 'badge-success' : a.status === 'error' ? 'badge-danger' : 'badge-warning';
             const cfg = a.config || {};
             const stats = a.stats || {};
+            const aid = a.agent_id || 'default';
+            const agentParam = aid !== 'default' ? `&agent=${aid}` : '';
             return `<div class="card">
                 <div class="card-header">
                     <span class="card-title">${a.name}</span>
@@ -1213,6 +1222,7 @@ async function loadAgents() {
                 </div>
                 <div class="card-meta">
                     <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${a.tenant_id}</code>
+                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px">🤖 ${aid}</code>
                     ${a.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${a.description}</div>` : ''}
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
@@ -1228,9 +1238,9 @@ async function loadAgents() {
                 </div>
                 <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</div>
                 <div class="card-actions">
-                    <a href="draga.html?tenant=${a.tenant_id}#chat" class="btn btn-sm btn-primary" style="text-decoration:none">💬 Chat</a>
-                    <button class="btn btn-sm" onclick="viewAgentStats('${a.tenant_id}')">📊 Stats</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAgentAction('${a.tenant_id}','${(a.name||'').replace(/'/g,"\\'")}')">🗑️</button>
+                    <a href="draga.html?tenant=${a.tenant_id}${agentParam}#chat" class="btn btn-sm btn-primary" style="text-decoration:none">💬 Chat</a>
+                    <button class="btn btn-sm" onclick="viewAgentStats('${a.tenant_id}','${aid}')">📊 Stats</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAgentAction('${a.tenant_id}','${aid}','${(a.name||'').replace(/'/g,"\\'")}')">🗑️</button>
                 </div>
             </div>`;
         }).join('');
@@ -1239,33 +1249,46 @@ async function loadAgents() {
     }
 }
 
-function showAgentModal() { openModal('agentModal'); }
+function showAgentModal() {
+    // Populate tenant selector for agent creation
+    const sel = document.getElementById('agentTenantSelect');
+    api.listTenants(true).then(data => {
+        const tenants = data.tenants || [];
+        sel.innerHTML = tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('');
+    }).catch(() => { sel.innerHTML = '<option value="default">Default</option>'; });
+    openModal('agentModal');
+}
 
 async function saveAgent() {
-    const id = document.getElementById('agentIdInput').value.trim();
+    const tenantId = document.getElementById('agentTenantSelect').value;
+    const agentId = document.getElementById('agentIdInput').value.trim();
     const name = document.getElementById('agentNameInput').value.trim();
     const desc = document.getElementById('agentDescInput').value.trim();
-    if (!id || !name) { toast('ID y Nombre son requeridos', 'error'); return; }
+    if (!tenantId) { toast('Selecciona un tenant', 'error'); return; }
+    if (!agentId || !name) { toast('Agent ID y Nombre son requeridos', 'error'); return; }
+    if (!/^[a-z0-9][a-z0-9_\-]*$/.test(agentId)) {
+        toast('Agent ID inválido: solo minúsculas, números, guiones', 'error'); return;
+    }
     try {
-        await api.createAgent({ tenant_id: id, name, description: desc || '' });
-        toast(`Agente "${name}" creado`, 'success');
+        await api.createAgent({ tenant_id: tenantId, agent_id: agentId, name, description: desc || '' });
+        toast(`Agente "${name}" creado en tenant "${tenantId}"`, 'success');
         closeModal('agentModal');
         loadAgents();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
-async function deleteAgentAction(id, name) {
-    if (!confirm(`¿Eliminar agente "${name}"?`)) return;
+async function deleteAgentAction(tenantId, agentId, name) {
+    if (!confirm(`¿Eliminar agente "${name}" (${agentId}) del tenant "${tenantId}"?`)) return;
     try {
-        await api.deleteAgent(id);
+        await api.deleteAgent(tenantId, agentId);
         toast(`Agente "${name}" eliminado`, 'success');
         loadAgents();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
-async function viewAgentStats(id) {
+async function viewAgentStats(tenantId, agentId) {
     try {
-        const stats = await api.agentStats(id);
+        const stats = await api.agentStats(tenantId, agentId);
         alert(JSON.stringify(stats, null, 2));
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }

@@ -8,15 +8,34 @@
  *              /documents, /documents/{id}, /documents/stats/summary,
  *              /documents/upload, /documents/process-pending, /stats, /cache,
  *              /mcp/health, /mcp/tools, /mcp/prompts, /mcp/resources
- *   ❌ 500 (backend bugs): /feedback, /feedback/stats, /metrics/*,
+ *   ⚠️  Degraded (backend bugs #252-#255): /feedback, /metrics/*,
  *              /documents/reset-reindex, /documents/sync/directory
- *   ❌ 502 (service not deployed): /api-keys, /conversations, /tasks
- *   ❌ 404 (not implemented): /registry/* (official spec target, not yet on backend)
+ *
+ * ADR-018 Multi-DRAGA: All methods that accept tenantId now also accept
+ * optional agentId (defaults to 'default'). Scope key: (tenant_id, agent_id).
  */
 class RAGApiClient {
     constructor(baseUrl = '/api/v2') {
         this.baseUrl = baseUrl;
         this.apiKey = localStorage.getItem('rag-api-key') || null;
+    }
+
+    // ── Scope helpers (ADR-018: tenant_id + agent_id) ─────────────
+
+    /**
+     * Build URLSearchParams with (tenant_id, agent_id) scope.
+     * agent_id is optional — omitted when 'default' to maintain backward compat.
+     */
+    _scopeParams(tenantId, agentId = null) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
+        if (agentId && agentId !== 'default') params.set('agent_id', agentId);
+        return params;
+    }
+
+    _scopeQuery(tenantId, agentId = null) {
+        const p = this._scopeParams(tenantId, agentId);
+        return p.toString() ? `?${p}` : '';
     }
 
     // ── HTTP helpers ──────────────────────────────────────────────
@@ -78,13 +97,13 @@ class RAGApiClient {
 
     async query(params) { return this.post('/query', params); }
     async ingest(docs) { return this.post('/ingest', docs); }
-    async getStats(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/stats${q}`);
+    async getStats(tenantId = null, agentId = null) {
+        return this.get(`/stats${this._scopeQuery(tenantId, agentId)}`);
     }
-    async clearCache(tenantId = null) {
+    async clearCache(tenantId = null, agentId = null) {
         if (!tenantId) throw new ApiError(400, 'tenant_id requerido para limpiar caché');
-        return this.del(`/cache?tenant_id=${tenantId}`);
+        const p = this._scopeParams(tenantId, agentId);
+        return this.del(`/cache?${p}`);
     }
     async health() { return this.get('/health'); }
 
@@ -98,11 +117,27 @@ class RAGApiClient {
         const q = params.toString() ? `?${params}` : '';
         return this.get(`/agents${q}`);
     }
-    async getAgent(id) { return this.get(`/agents/${id}`); }
-    async deleteAgent(id) { return this.del(`/agents/${id}?confirm=true`); }
-    async queryAgent(id, data) { return this.post(`/agents/${id}/query`, data); }
-    async ingestAgent(id, docs) { return this.post(`/agents/${id}/ingest`, docs); }
-    async agentStats(id) { return this.get(`/agents/${id}/stats`); }
+    async getAgent(tenantId, agentId = null) {
+        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
+        return this.get(`/agents/${tenantId}${q}`);
+    }
+    async deleteAgent(tenantId, agentId = null) {
+        const p = new URLSearchParams({ confirm: 'true' });
+        if (agentId && agentId !== 'default') p.set('agent_id', agentId);
+        return this.del(`/agents/${tenantId}?${p}`);
+    }
+    async queryAgent(tenantId, data, agentId = null) {
+        if (agentId && agentId !== 'default') data.agent_id = agentId;
+        return this.post(`/agents/${tenantId}/query`, data);
+    }
+    async ingestAgent(tenantId, docs, agentId = null) {
+        if (agentId && agentId !== 'default') docs.agent_id = agentId;
+        return this.post(`/agents/${tenantId}/ingest`, docs);
+    }
+    async agentStats(tenantId, agentId = null) {
+        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
+        return this.get(`/agents/${tenantId}/stats${q}`);
+    }
 
     // ── API Keys (502 on current backend — service not deployed) ──
 
@@ -115,9 +150,8 @@ class RAGApiClient {
 
     // ── Conversations (502 on current backend — service not deployed) ──
 
-    async listConversations(tenantId, limit = 20) {
-        const params = new URLSearchParams();
-        if (tenantId) params.set('tenant_id', tenantId);
+    async listConversations(tenantId, limit = 20, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
         if (limit) params.set('limit', limit);
         return this._request('GET', `/conversations?${params}`, null, { retries: 0 });
     }
@@ -127,55 +161,59 @@ class RAGApiClient {
 
     // ── Widget Config ─────────────────────────────────────────────
 
-    async getWidgetConfig(tenantId) { return this.get(`/agents/${tenantId}/widget-config`); }
-    async updateWidgetConfig(tenantId, data) { return this.put(`/agents/${tenantId}/widget-config`, data); }
-    async resetWidgetConfig(tenantId) { return this.del(`/agents/${tenantId}/widget-config`); }
+    async getWidgetConfig(tenantId, agentId = null) {
+        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
+        return this.get(`/agents/${tenantId}/widget-config${q}`);
+    }
+    async updateWidgetConfig(tenantId, data, agentId = null) {
+        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
+        return this.put(`/agents/${tenantId}/widget-config${q}`, data);
+    }
+    async resetWidgetConfig(tenantId, agentId = null) {
+        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
+        return this.del(`/agents/${tenantId}/widget-config${q}`);
+    }
 
     // ── Tasks (502 on current backend — service not deployed) ──
 
-    async listTasks(tenantId = null, state = null, limit = null) {
-        const params = new URLSearchParams();
-        if (tenantId) params.set('tenant_id', tenantId);
+    async listTasks(tenantId = null, state = null, limit = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
         if (state) params.set('state', state);
         if (limit) params.set('limit', limit);
         const q = params.toString() ? `?${params}` : '';
         return this._request('GET', `/tasks${q}`, null, { retries: 0 });
     }
     async getTask(taskId) { return this._request('GET', `/tasks/${taskId}`, null, { retries: 0 }); }
-    async cleanupTasks(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('DELETE', `/tasks${q}`, null, { retries: 0 });
+    async cleanupTasks(tenantId = null, agentId = null) {
+        return this._request('DELETE', `/tasks${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
 
     // ── Metrics ───────────────────────────────────────────────────
 
-    async metricsDashboard(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('GET', `/metrics/dashboard${q}`, null, { retries: 0 });
+    async metricsDashboard(tenantId = null, agentId = null) {
+        return this._request('GET', `/metrics/dashboard${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
-    async metricsCoverage(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('GET', `/metrics/coverage${q}`, null, { retries: 0 });
+    async metricsCoverage(tenantId = null, agentId = null) {
+        return this._request('GET', `/metrics/coverage${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
-    async metricsGaps(tenantId = null, unresolvedOnly = false, limit = 20) {
-        const params = new URLSearchParams();
-        if (tenantId) params.set('tenant_id', tenantId);
+    async metricsGaps(tenantId = null, agentId = null, unresolvedOnly = false, limit = 20) {
+        const params = this._scopeParams(tenantId, agentId);
         if (unresolvedOnly) params.set('unresolved_only', 'true');
         if (limit) params.set('limit', limit);
         return this._request('GET', `/metrics/gaps?${params}`, null, { retries: 0 });
     }
-    async metricsGrounding(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('GET', `/metrics/grounding${q}`, null, { retries: 0 });
+    async metricsGrounding(tenantId = null, agentId = null) {
+        return this._request('GET', `/metrics/grounding${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
 
     // ── Document Management (v2 /documents/* endpoints) ──────────
 
-    async uploadDocuments(files, tenantId, autoIndex = true, background = false) {
+    async uploadDocuments(files, tenantId, autoIndex = true, background = false, agentId = null) {
         if (!tenantId || tenantId === 'null' || tenantId === 'undefined') {
             throw new ApiError(400, 'tenant_id is required for document upload');
         }
         const params = new URLSearchParams({ tenant_id: tenantId, auto_index: autoIndex, background });
+        if (agentId && agentId !== 'default') params.set('agent_id', agentId);
         const url = `${this.baseUrl}/documents/upload?${params}`;
         const form = new FormData();
         files.forEach(f => form.append('files', f));
@@ -189,56 +227,49 @@ class RAGApiClient {
         return res.json();
     }
 
-    async listDocuments(tenantId = null, statusFilter = null, categoryFilter = null) {
-        const params = new URLSearchParams();
-        if (tenantId) params.set('tenant_id', tenantId);
+    async listDocuments(tenantId = null, statusFilter = null, categoryFilter = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
         if (statusFilter) params.set('status_filter', statusFilter);
         if (categoryFilter) params.set('category_filter', categoryFilter);
         const q = params.toString() ? `?${params}` : '';
         return this.get(`/documents${q}`);
     }
-    async getDocument(id, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/documents/${id}${q}`);
+    async getDocument(id, tenantId = null, agentId = null) {
+        return this.get(`/documents/${id}${this._scopeQuery(tenantId, agentId)}`);
     }
-    async deleteDocument(id, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.del(`/documents/${id}${q}`);
+    async deleteDocument(id, tenantId = null, agentId = null) {
+        return this.del(`/documents/${id}${this._scopeQuery(tenantId, agentId)}`);
     }
-    async deleteAllDocuments(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.del(`/documents${q}`);
+    async deleteAllDocuments(tenantId = null, agentId = null) {
+        return this.del(`/documents${this._scopeQuery(tenantId, agentId)}`);
     }
-    async reindexDocument(id, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.post(`/documents/${id}/reindex${q}`);
+    async reindexDocument(id, tenantId = null, agentId = null) {
+        return this.post(`/documents/${id}/reindex${this._scopeQuery(tenantId, agentId)}`);
     }
     /**
      * Get the URL to the original source file for a document.
      * The backend serves the file with correct MIME type and Content-Disposition: inline.
      */
-    getDocumentSourceUrl(documentId, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return `${this.baseUrl}/documents/${documentId}/source${q}`;
+    getDocumentSourceUrl(documentId, tenantId = null, agentId = null) {
+        return `${this.baseUrl}/documents/${documentId}/source${this._scopeQuery(tenantId, agentId)}`;
     }
-    async documentStats(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/documents/stats/summary${q}`);
+    async documentStats(tenantId = null, agentId = null) {
+        return this.get(`/documents/stats/summary${this._scopeQuery(tenantId, agentId)}`);
     }
-    async processPending(tenantId = null, forceReindex = false) {
-        const params = new URLSearchParams();
-        if (tenantId) params.set('tenant_id', tenantId);
+    async processPending(tenantId = null, forceReindex = false, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
         if (forceReindex) params.set('force_reindex', 'true');
         return this.post(`/documents/process-pending?${params}`);
     }
-    async syncDirectory(dir, tenantId = null, recursive = true, forceReindex = false) {
-        const params = new URLSearchParams({ directory: dir, recursive, force_reindex: forceReindex });
-        if (tenantId) params.set('tenant_id', tenantId);
+    async syncDirectory(dir, tenantId = null, recursive = true, forceReindex = false, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        params.set('directory', dir);
+        params.set('recursive', recursive);
+        params.set('force_reindex', forceReindex);
         return this.post(`/documents/sync/directory?${params}`);
     }
-    async resetReindex(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('POST', `/documents/reset-reindex${q}`, null, { retries: 0 });
+    async resetReindex(tenantId = null, agentId = null) {
+        return this._request('POST', `/documents/reset-reindex${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
 
     /**
@@ -247,16 +278,18 @@ class RAGApiClient {
      * This is a workaround since the backend has no /documents/{id}/chunks endpoint.
      * Note: backend top_k max is 20.
      */
-    async getDocumentChunks(documentId, tenantId = null, topK = 20, filenameHint = null) {
+    async getDocumentChunks(documentId, tenantId = null, topK = 20, filenameHint = null, agentId = null) {
         const queryText = filenameHint
             ? filenameHint.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
             : 'contenido completo del documento';
-        const res = await this.query({
+        const queryParams = {
             query: queryText,
             tenant_id: tenantId,
             top_k: Math.min(topK, 20),
             use_cache: false
-        });
+        };
+        if (agentId && agentId !== 'default') queryParams.agent_id = agentId;
+        const res = await this.query(queryParams);
         const all = res.retrieved_chunks || [];
         // Filter to only chunks from this document
         const filtered = all.filter(c =>
@@ -268,7 +301,9 @@ class RAGApiClient {
     }
 
     // Legacy aliases (registry endpoints — kept for backward compat)
+    /** @deprecated Use uploadDocuments() with explicit tenantId */
     async registryIngest(file, forceReindex = false) {
+        console.warn('[api] registryIngest is deprecated — use uploadDocuments with tenantId');
         return this.uploadDocuments([file], null, !forceReindex, false);
     }
     async registryStats() { return this.documentStats(); }
@@ -333,8 +368,8 @@ class RAGApiClient {
     // ── Feedback ──────────────────────────────────────────────────
 
     async submitFeedback(data) { return this._request('POST', '/feedback', data, { retries: 0 }); }
-    async listFeedback(filters = {}) {
-        const params = new URLSearchParams();
+    async listFeedback(filters = {}, tenantId = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
         if (filters.rating) params.set('rating', filters.rating);
         if (filters.reviewed !== undefined) params.set('reviewed', filters.reviewed);
         if (filters.low_confidence) params.set('low_confidence', true);
@@ -342,9 +377,13 @@ class RAGApiClient {
         const q = params.toString() ? `?${params}` : '';
         return this._request('GET', `/feedback${q}`, null, { retries: 0 });
     }
-    async feedbackStats() { return this._request('GET', '/feedback/stats', null, { retries: 0 }); }
-    async markReviewed(id, action = null) {
-        const q = action ? `?action_taken=${encodeURIComponent(action)}` : '';
+    async feedbackStats(tenantId = null, agentId = null) {
+        return this._request('GET', `/feedback/stats${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+    }
+    async markReviewed(id, action = null, tenantId = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        if (action) params.set('action_taken', action);
+        const q = params.toString() ? `?${params}` : '';
         return this._request('POST', `/feedback/${id}/review${q}`, null, { retries: 0 });
     }
 
