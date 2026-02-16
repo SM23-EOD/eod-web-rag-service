@@ -68,8 +68,14 @@ class RAGApiClient {
 
     async query(params) { return this.post('/query', params); }
     async ingest(docs) { return this.post('/ingest', docs); }
-    async getStats(tenantId = 'default') { return this.get(`/stats?tenant_id=${tenantId}`); }
-    async clearCache(tenantId = 'default') { return this.del(`/cache?tenant_id=${tenantId}`); }
+    async getStats(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/stats${q}`);
+    }
+    async clearCache(tenantId = null) {
+        if (!tenantId) throw new ApiError(400, 'tenant_id requerido para limpiar caché');
+        return this.del(`/cache?tenant_id=${tenantId}`);
+    }
     async health() { return this.get('/health'); }
 
     // ── Agents ────────────────────────────────────────────────────

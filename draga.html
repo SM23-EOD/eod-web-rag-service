@@ -1039,7 +1039,17 @@ const Overview = {
         document.getElementById('ovLang').textContent = t.response_language || '—';
         document.getElementById('ovCollection').textContent = t.collection_name || '—';
 
-        // Get stats
+        // Get stats — try fresh tenant data first
+        try {
+            const freshTenant = await api.getTenant(App.tenantId);
+            App.tenantData = freshTenant;
+            document.getElementById('ovDocs').textContent = freshTenant.document_count ?? '—';
+            document.getElementById('ovModel').textContent = (freshTenant.default_model || '—').split('/').pop();
+            document.getElementById('ovLang').textContent = freshTenant.response_language || '—';
+            document.getElementById('ovCollection').textContent = freshTenant.collection_name || '—';
+            document.getElementById('tenantDisplayName').textContent = freshTenant.name;
+        } catch {}
+
         try {
             const stats = await api.getStats(App.tenantId);
             const db = stats.vector_database || {};
@@ -1094,7 +1104,36 @@ const KB = {
             document.getElementById('kbErrors').textContent = (bs.error || 0) + (bs.failed || 0);
             document.getElementById('kbCoverage').textContent = coverage + '%';
             document.getElementById('navDocCount').textContent = totalDocs;
-        } catch (e) { console.warn('Stats error:', e); }
+
+            // If documentStats shows 0 docs but vector DB has chunks, show chunks count from stats
+            if (totalDocs === 0) {
+                try {
+                    const vs = await api.getStats(App.tenantId);
+                    const vc = vs.vector_database?.total_chunks || 0;
+                    if (vc > 0) {
+                        document.getElementById('kbChunks').textContent = vc;
+                        document.getElementById('navDocCount').textContent = `${vc}✂`;
+                    }
+                } catch {}
+            }
+        } catch (e) {
+            console.warn('KB Stats error:', e);
+            // Fallback to vector DB stats
+            try {
+                const vs = await api.getStats(App.tenantId);
+                const db = vs.vector_database || {};
+                document.getElementById('kbTotal').textContent = '—';
+                document.getElementById('kbChunks').textContent = db.total_chunks || 0;
+                document.getElementById('kbSize').textContent = '—';
+                document.getElementById('kbIndexed').textContent = '—';
+                document.getElementById('kbErrors').textContent = '—';
+                document.getElementById('kbCoverage').textContent = '—';
+                document.getElementById('navDocCount').textContent = db.total_chunks || 0;
+            } catch {
+                document.getElementById('kbTotal').textContent = '—';
+                document.getElementById('kbChunks').textContent = '—';
+            }
+        }
     },
 
     async loadDocs() {
@@ -1352,7 +1391,7 @@ const Quality = {
             api.getStats(App.tenantId),
             api.metricsCoverage(App.tenantId),
             api.metricsGrounding(App.tenantId),
-            api.feedbackStats()
+            api.feedbackStats().catch(() => ({}))
         ]);
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : {};
         const coverage = coverageRes.status === 'fulfilled' ? coverageRes.value : {};
@@ -1360,7 +1399,7 @@ const Quality = {
         const fb = fbRes.status === 'fulfilled' ? fbRes.value : {};
 
         const db = stats.vector_database || {};
-        document.getElementById('qmDocs').textContent = db.total_documents || stats.total_documents || '—';
+        document.getElementById('qmDocs').textContent = App.tenantData?.document_count || db.total_documents || stats.total_documents || '—';
         document.getElementById('qmChunks').textContent = db.total_chunks || db.documents || '—';
         document.getElementById('qmCoverage').textContent = coverage.coverage_rate != null ? (coverage.coverage_rate * 100).toFixed(0) + '%' : '—';
         document.getElementById('qmGrounding').textContent = grounding.grounding_rate != null ? (grounding.grounding_rate * 100).toFixed(0) + '%' : '—';
@@ -1572,7 +1611,8 @@ const Chat = {
             </div>`;
             toast('Feedback registrado', 'success', 2000);
         } catch (e) {
-            container.innerHTML = `<div style="font-size:11px;color:var(--danger)">❌ Error: ${esc(e.message)}</div>`;
+            // Show non-intrusive error — feedback backend may be temporarily unavailable
+            container.innerHTML = `<div style="font-size:11px;color:var(--text-muted)">⚠️ Feedback no disponible temporalmente</div>`;
         }
     },
 

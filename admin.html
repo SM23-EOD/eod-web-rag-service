@@ -394,7 +394,7 @@ tr:hover td{background:var(--bg-card);}
         <div class="card" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
             <div class="form-group" style="margin:0;flex:1;min-width:200px;">
                 <label>Tenant ID para caché</label>
-                <input type="text" id="cacheTenantId" value="default" placeholder="tenant_id">
+                <select id="cacheTenantId"><option value="">Cargando...</option></select>
             </div>
             <button class="btn" onclick="clearCacheAction()">🧹 Limpiar Caché</button>
             <button class="btn btn-danger" onclick="resetReindexAction()">☢️ Reset Nuclear</button>
@@ -1017,6 +1017,17 @@ async function loadDashboard() {
         tenants.forEach(t => { totalDocs += t.document_count || 0; });
         document.getElementById('statDocs').textContent = totalDocs;
 
+        // Load API keys count across all tenants
+        let totalKeys = 0;
+        for (const t of tenants) {
+            try {
+                const kd = await api.listApiKeys(t.tenant_id);
+                totalKeys += (kd.keys || []).length;
+            } catch {}
+        }
+        document.getElementById('apikeyCount').textContent = totalKeys;
+        document.getElementById('statKeys').textContent = totalKeys;
+
         if (tenants.length === 0) {
             grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
                 <h3>Sin DRAGAs</h3><p>Crea tu primera instancia DRAGA para comenzar</p>
@@ -1397,9 +1408,13 @@ async function loadFeedbackStats() {
 async function loadSystemStats() {
     const panel = document.getElementById('systemPanel');
     try {
-        const stats = await api.getStats();
+        // Use first available tenant instead of 'default'
+        const tenantsData = await api.listTenants(true).catch(() => ({ tenants: [] }));
+        const tenants = tenantsData.tenants || [];
+        const tenantId = tenants[0]?.tenant_id || null;
+        const stats = await api.getStats(tenantId);
         panel.innerHTML = `<div style="font-size:12px">
-            <div style="margin-bottom:6px"><strong>Tenant:</strong> ${stats.tenant_id}</div>
+            <div style="margin-bottom:6px"><strong>Tenant:</strong> ${stats.tenant_id || '—'}</div>
             <pre style="background:var(--bg-input);padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;color:var(--text-secondary);max-height:200px;">${JSON.stringify(stats, null, 2)}</pre></div>`;
     } catch (e) {
         panel.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
@@ -1440,11 +1455,18 @@ async function markReviewed(id) {
 // ══════════════════════════════════════════════════════════════
 // MODULE: SYSTEM
 // ══════════════════════════════════════════════════════════════
-function loadSystem() {
+async function loadSystem() {
     loadMcpTools();
     loadMcpPrompts();
     loadMcpResources();
     loadModels();
+    // Populate tenant selectors in System module
+    try {
+        const data = await api.listTenants(true);
+        const tenants = data.tenants || [];
+        const sel = document.getElementById('cacheTenantId');
+        sel.innerHTML = tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('') || '<option value="">Sin tenants</option>';
+    } catch {}
 }
 
 async function loadMcpTools() {
@@ -1517,7 +1539,8 @@ async function loadModels() {
 }
 
 async function clearCacheAction() {
-    const tenantId = document.getElementById('cacheTenantId').value.trim() || 'default';
+    const tenantId = document.getElementById('cacheTenantId').value;
+    if (!tenantId) { toast('Selecciona un tenant', 'warning'); return; }
     if (!confirm(`¿Limpiar caché del tenant "${tenantId}"?`)) return;
     try {
         await api.clearCache(tenantId);
@@ -1526,12 +1549,14 @@ async function clearCacheAction() {
 }
 
 async function resetReindexAction() {
-    if (!confirm('⚠️ RESET NUCLEAR\n\nEsto eliminará toda la colección y re-indexará.\n\n¿Continuar?')) return;
+    const tenantId = document.getElementById('cacheTenantId').value;
+    if (!tenantId) { toast('Selecciona un tenant', 'warning'); return; }
+    if (!confirm(`⚠️ RESET NUCLEAR para "${tenantId}"\n\nEsto eliminará toda la colección y re-indexará.\n\n¿Continuar?`)) return;
     if (!confirm('¿ESTÁS SEGURO? No se puede deshacer.')) return;
     try {
         toast('Ejecutando reset...', 'info');
-        const result = await api.resetReindex();
-        toast(`Reset completo: ${result.successful} docs en ${result.elapsed_seconds?.toFixed(1)}s`, 'success');
+        const result = await api.resetReindex(tenantId);
+        toast(`Reset completo: ${result.successful || 0} docs en ${result.elapsed_seconds?.toFixed(1) || '?'}s`, 'success');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
