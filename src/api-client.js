@@ -141,22 +141,22 @@ class RAGApiClient {
 
     async metricsDashboard(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/metrics/dashboard${q}`);
+        return this._request('GET', `/metrics/dashboard${q}`, null, { retries: 0 });
     }
     async metricsCoverage(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/metrics/coverage${q}`);
+        return this._request('GET', `/metrics/coverage${q}`, null, { retries: 0 });
     }
     async metricsGaps(tenantId = null, unresolvedOnly = false, limit = 20) {
         const params = new URLSearchParams();
         if (tenantId) params.set('tenant_id', tenantId);
         if (unresolvedOnly) params.set('unresolved_only', 'true');
         if (limit) params.set('limit', limit);
-        return this.get(`/metrics/gaps?${params}`);
+        return this._request('GET', `/metrics/gaps?${params}`, null, { retries: 0 });
     }
     async metricsGrounding(tenantId = null) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/metrics/grounding${q}`);
+        return this._request('GET', `/metrics/grounding${q}`, null, { retries: 0 });
     }
 
     // ── Document Management (v2 /documents/* endpoints) ──────────
@@ -319,7 +319,7 @@ class RAGApiClient {
 
     // ── Feedback ──────────────────────────────────────────────────
 
-    async submitFeedback(data) { return this.post('/feedback', data); }
+    async submitFeedback(data) { return this._request('POST', '/feedback', data, { retries: 0 }); }
     async listFeedback(filters = {}) {
         const params = new URLSearchParams();
         if (filters.rating) params.set('rating', filters.rating);
