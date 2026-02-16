@@ -1425,7 +1425,7 @@ async function loadFeedbackList() {
     const tbody = document.getElementById('feedbackTableBody');
     try {
         const data = await api.listFeedback({ limit: 20 });
-        const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
+        const items = Array.isArray(data) ? data : (data.entries || data.feedback || data.items || []);
         if (items.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📝</div><h3>Sin feedback</h3></div></td></tr>`;
             return;

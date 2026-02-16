@@ -319,7 +319,7 @@ class RAGApiClient {
 
     // ── Feedback ──────────────────────────────────────────────────
 
-    async submitFeedback(data) { return this._request('POST', '/feedback', data, { retries: 0 }); }
+    async submitFeedback(data) { return this.post('/feedback', data); }
     async listFeedback(filters = {}) {
         const params = new URLSearchParams();
         if (filters.rating) params.set('rating', filters.rating);
@@ -327,9 +327,9 @@ class RAGApiClient {
         if (filters.low_confidence) params.set('low_confidence', true);
         if (filters.limit) params.set('limit', filters.limit);
         const q = params.toString() ? `?${params}` : '';
-        return this._request('GET', `/feedback${q}`, null, { retries: 0 });
+        return this.get(`/feedback${q}`);
     }
-    async feedbackStats() { return this._request('GET', '/feedback/stats', null, { retries: 0 }); }
+    async feedbackStats() { return this.get('/feedback/stats'); }
     async markReviewed(id, action = null) {
         const q = action ? `?action_taken=${encodeURIComponent(action)}` : '';
         return this.post(`/feedback/${id}/review${q}`);

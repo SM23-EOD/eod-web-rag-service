@@ -1,57 +1,32 @@
-# [BACKEND] 🔴 8 Endpoints Retornan 500 + Retrieval Roto Post-Migración
+# [BACKEND] ⚠️ 5 Endpoints Retornan 500 + Retrieval Sin Resultados
 
-**Prioridad**: 🔴 ALTA  
+**Prioridad**: ⚠️ MEDIA  
 **Reportado**: 2026-02-15  
-**Contexto**: Tras la corrección de tenant isolation (eliminación de tenant `eod`, migración de chunks de `documents` → `kb_envios23`), múltiples endpoints dejaron de funcionar.
+**Última revisión**: 2026-02-16  
+**Contexto**: Tras la corrección de tenant isolation y migración de datos, algunos subsistemas siguen sin funcionar.
 
 ---
 
 ## 📋 Resumen
 
-Después de los fixes de tenant isolation, el backend tiene **8 endpoints retornando 500** y el **retrieval no recupera chunks** a pesar de que existen 5 en la colección `kb_envios23`.
+~~8 endpoints rotos~~ → **5 endpoints** siguen en 500 tras fixes parciales del backend.
 
-**Estado del sistema verificado**:
-- `GET /health` → ✅ 200 healthy
-- `GET /tenants` → ✅ 1 tenant (`envios23`), `document_count: 5`
-- `GET /stats?tenant_id=envios23` → ✅ `kb_envios23`, 5 chunks, categorías: `{faq: 5}`
-- `GET /documents?tenant_id=envios23` → ✅ 200 pero retorna `{documents: [], total: 0}`
-- `GET /documents/stats/summary?tenant_id=envios23` → ✅ 200 pero `total_documents: 0, total_chunks: 0`
+**✅ RESUELTOS (2026-02-16)**:
+- `POST/GET /feedback`, `/feedback/stats` → Ahora retornan 200
+- `/documents` → Ahora retorna 7 documentos con metadata
+- `/documents/stats/summary` → 7 docs, 21 chunks, 1.2 MB
+- Vector DB → 26 chunks en `kb_envios23`
+
+**❌ PENDIENTES**:
+- `GET /metrics/dashboard|coverage|gaps|grounding` → 500
+- `POST /documents/reset-reindex` → 500
+- `POST /query` → 200 pero 0 chunks searched, 0 retrieved
 
 ---
 
-## 🐛 Bug 1: Feedback — Todos los Endpoints 500
+## ~~🐛 Bug 1: Feedback — Todos los Endpoints 500~~ ✅ RESUELTO (2026-02-16)
 
-### Endpoints afectados
-| Método | Endpoint | HTTP | Error |
-|--------|----------|------|-------|
-| `POST` | `/api/v2/feedback` | 500 | `"Error interno al guardar feedback."` |
-| `GET` | `/api/v2/feedback?limit=5` | 500 | `"Error interno al obtener feedback."` |
-| `GET` | `/api/v2/feedback/stats` | 500 | `"Error interno al obtener estadísticas."` |
-
-### Reproducción
-```bash
-# POST feedback
-curl -sS -X POST "http://167.172.225.44/api/v2/feedback" \
-  -H "Content-Type: application/json" \
-  -d '{"tenant_id":"envios23","query":"test","response":"test","rating":"positive"}'
-# → 500: {"detail":"Error interno al guardar feedback."}
-
-# GET feedback
-curl -sS "http://167.172.225.44/api/v2/feedback?limit=5"
-# → 500: {"detail":"Error interno al obtener feedback."}
-
-# GET feedback stats
-curl -sS "http://167.172.225.44/api/v2/feedback/stats"
-# → 500: {"detail":"Error interno al obtener estadísticas."}
-```
-
-### Impacto Frontend
-- Chat: los botones 👍/👎 de feedback fallan silenciosamente
-- Admin Analytics: panel de satisfacción y tabla de feedback muestran "no disponible"
-- Quality Dashboard: sección de feedback reciente vacía
-
-### Hipótesis
-Posible problema con la tabla/colección de feedback tras la migración. Puede que la tabla se haya eliminado o que haya un schema mismatch.
+> Todos los endpoints de feedback ahora retornan 200. Stats: 1 feedback, 100% positivo.
 
 ---
 
@@ -103,32 +78,29 @@ curl -sS -X POST "http://167.172.225.44/api/v2/documents/reset-reindex?tenant_id
 
 ---
 
-## 🐛 Bug 4: Retrieval No Recupera Chunks (0 de 5)
+## 🐛 Bug 4: Retrieval No Recupera Chunks (0 de 26)
 
 ### Descripción
-El endpoint `/query` busca en 5 chunks pero no recupera ninguno. La confianza siempre es 0.0 y no hay fuentes.
+El endpoint `/query` retorna 200 pero con 0 chunks searched y 0 retrieved. La colección `kb_envios23` tiene 26 chunks pero el pipeline RAG no los consulta.
 
 ### Reproducción
 ```bash
 curl -sS -X POST "http://167.172.225.44/api/v2/query" \
   -H "Content-Type: application/json" \
-  -d '{"query":"que servicios ofrecen","tenant_id":"envios23","top_k":5}' | python3 -c "
+  -d '{"query":"envio de paquetes a Cuba","tenant_id":"envios23","top_k":5}' | python3 -c "
 import json,sys; d=json.load(sys.stdin)
 print(f'chunks_searched: {d[\"metadata\"][\"total_chunks_searched\"]}')
 print(f'chunks_retrieved: {len(d.get(\"retrieved_chunks\",[]))}')
 print(f'confidence: {d[\"confidence\"]}')
-print(f'sources: {d.get(\"sources\",[])}')
-print(f'answer: {d[\"answer\"][:80]}...')"
+print(f'answer: {d[\"answer\"][:100]}...')"
 ```
 
-### Resultado
+### Resultado (2026-02-16)
 ```
-chunks_searched: 5
+chunks_searched: 0
 chunks_retrieved: 0
 confidence: 0.0
-sources: []
-answer: **Sugerencias para ayudarte:**
-- Intenta reformular tu pregunta usando palabras dif...
+answer: Lo siento, no puedo procesar la consulta en este momento debido a un problema técnico...
 ```
 
 ### Resultado Esperado
@@ -141,35 +113,9 @@ Con 5 chunks de FAQ sobre envíos, debería recuperar al menos 1-3 chunks releva
 
 ---
 
-## 🐛 Bug 5: Documents Metadata Perdida
+## ~~🐛 Bug 5: Documents Metadata Perdida~~ ✅ RESUELTO (2026-02-16)
 
-### Descripción
-`/documents` retorna 0 documentos y `/documents/stats/summary` retorna 0 docs / 0 chunks, aunque el vector DB (`/stats`) confirma 5 chunks en `kb_envios23`.
-
-### Reproducción
-```bash
-# Documents API dice 0
-curl -sS "http://167.172.225.44/api/v2/documents?tenant_id=envios23"
-# → {"documents":[],"total":0}
-
-# Document stats dice 0
-curl -sS "http://167.172.225.44/api/v2/documents/stats/summary?tenant_id=envios23"
-# → {"total_documents":0,"total_size_bytes":0,"total_chunks":0,"by_status":{},...}
-
-# Pero el vector DB tiene 5 chunks
-curl -sS "http://167.172.225.44/api/v2/stats?tenant_id=envios23" | python3 -c "
-import json,sys;d=json.load(sys.stdin)
-print(d['vector_database'])"
-# → collection_name=kb_envios23, total_chunks=5, categories={faq: 5}
-```
-
-### Impacto
-- KB: la tabla de documentos muestra "Sin documentos" aunque hay 5 chunks vectorizados
-- No se pueden gestionar documentos individuales (re-indexar, eliminar, ver fuente)
-- El upload funciona (200) pero no persiste metadata
-
-### Hipótesis
-La metadata de documentos (filename, status, file_size, etc.) se almacena en un store separado de los vectores (probablemente un JSON file o tabla). Durante la migración, esta metadata se perdió o no se migró junto con los chunks.
+> Documents ahora retorna 7 documentos (3 indexed, 4 pending). Stats: 21 chunks, 1.2 MB. Vector DB: 26 chunks en `kb_envios23`.
 
 ---
 
@@ -178,13 +124,13 @@ La metadata de documentos (filename, status, file_size, etc.) se almacena en un 
 | Grupo | Endpoints | Estado |
 |-------|-----------|--------|
 | Health/Core | `/health`, `/tenants`, `/stats`, `/models` | ✅ OK |
-| CRUD | `/agents`, `/api-keys`, `/conversations`, `/tasks` | ✅ OK (vacíos pero funcionales) |
-| Documents CRUD | `/documents`, `/documents/upload` | ⚠️ 200 pero sin metadata |
+| CRUD | `/agents`, `/api-keys`, `/conversations`, `/tasks` | ✅ OK |
+| Documents CRUD | `/documents`, `/documents/upload` | ✅ OK (7 docs, 21 chunks) |
 | Widget/Config | `/agents/{id}/widget-config` | ✅ OK |
 | MCP | `/mcp/health`, `/mcp/tools`, etc. | ✅ OK |
 | Cache | `DELETE /cache` | ✅ OK |
-| Chat | `/chat/completions` | ✅ OK (pero sin RAG data) |
-| **Feedback** | `POST/GET /feedback`, `/feedback/stats` | **❌ 500** |
+| Chat | `/chat/completions` | ✅ OK |
+| ~~Feedback~~ | `POST/GET /feedback`, `/feedback/stats` | ✅ RESUELTO |
 | **Metrics** | `/metrics/dashboard,coverage,gaps,grounding` | **❌ 500** |
 | **Reset** | `/documents/reset-reindex` | **❌ 500** |
 | **Query/Retrieval** | `POST /query` | **⚠️ 200 pero 0 chunks retrieved** |

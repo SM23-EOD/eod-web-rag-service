@@ -1391,7 +1391,7 @@ const Quality = {
             api.getStats(App.tenantId),
             api.metricsCoverage(App.tenantId),
             api.metricsGrounding(App.tenantId),
-            api.feedbackStats().catch(() => ({}))
+            api.feedbackStats()
         ]);
         const stats = statsRes.status === 'fulfilled' ? statsRes.value : {};
         const coverage = coverageRes.status === 'fulfilled' ? coverageRes.value : {};
@@ -1432,7 +1432,7 @@ const Quality = {
         const tbody = document.getElementById('qualityFeedback');
         try {
             const data = await api.listFeedback({ limit: 10 });
-            const items = Array.isArray(data) ? data : (data.feedback || data.items || []);
+            const items = Array.isArray(data) ? data : (data.entries || data.feedback || data.items || []);
             if (!items.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><p>Sin feedback</p></div></td></tr>'; return; }
             tbody.innerHTML = items.map(f => {
                 const q = esc(f.query || '');
