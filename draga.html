@@ -720,10 +720,8 @@ const DocViewer = {
             this._renderSource(body, docId, filename);
             // Pre-fetch chunks in background for the chunks tab
             api.getDocumentChunks(docId, App.tenantId, 20, filename, App.agentId)
-                .then(chunks => {
-                    const docChunks = chunks.filter(c => c.document_id === docId || c.metadata?.document_id === docId);
-                    this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
-                }).catch(() => {});
+                .then(chunks => { this._chunks = chunks; })
+                .catch(() => {});
         } catch (e) {
             body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Error cargando contenido</h3><p style="font-size:12px">${esc(e.message)}</p></div>`;
         }
@@ -785,7 +783,9 @@ const DocViewer = {
             container.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;padding:20px"><img src="${sourceUrl}" style="max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.4)" /></div>`;
         } else if (['txt','md','json','xml','csv'].includes(ext)) {
             container.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando texto...</div>';
-            fetch(sourceUrl).then(r => r.text()).then(text => {
+            const fetchHeaders = {};
+            if (api.apiKey) fetchHeaders['X-API-Key'] = api.apiKey;
+            fetch(sourceUrl, { headers: fetchHeaders }).then(r => r.text()).then(text => {
                 const isJson = ext === 'json';
                 const isMd = ext === 'md';
                 container.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;height:100%;overflow:auto"><pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.7;color:var(--text-secondary);font-family:${isJson ? 'monospace' : 'inherit'}">${esc(text)}</pre></div>`;
@@ -825,9 +825,8 @@ const DocViewer = {
                 if (this._currentDocId) {
                     api.getDocumentChunks(this._currentDocId, App.tenantId, 20, this._currentFilename, App.agentId)
                         .then(chunks => {
-                            const docChunks = chunks.filter(c => c.document_id === this._currentDocId || c.metadata?.document_id === this._currentDocId);
-                            this._chunks = docChunks.length > 0 ? docChunks : chunks.slice(0, 20);
-                            this._renderChunks(body, this._chunks, docChunks.length > 0);
+                            this._chunks = chunks;
+                            this._renderChunks(body, this._chunks, true);
                         }).catch(e => {
                             body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>${esc(e.message)}</p></div>`;
                         });
@@ -1114,11 +1113,6 @@ const Overview = {
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
         document.getElementById('ovLang').textContent = t.response_language || '—';
         document.getElementById('ovCollection').textContent = t.collection_name || '—';
-
-        // Get stats — try fresh tenant data first
-        try {
-            const freshTenant = await api.getTenant(App.tenantId);
-        } catch {}
 
         try {
             const stats = await api.getStats(App.tenantId, App.agentId);
@@ -1734,7 +1728,7 @@ const ConvHistory = {
 
     async openSession(sessionId) {
         try {
-            const data = await api.getConversation(sessionId);
+            const data = await api.getConversation(sessionId, App.tenantId);
             const messages = data.messages || [];
             if (messages.length === 0) { toast('Sesión vacía', 'info'); return; }
 

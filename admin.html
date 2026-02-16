@@ -1034,14 +1034,12 @@ async function loadDashboard() {
         tenants.forEach(t => { totalDocs += t.document_count || 0; });
         document.getElementById('statDocs').textContent = totalDocs;
 
-        // Load API keys count across all tenants
+        // Load API keys count across all tenants (parallelized)
         let totalKeys = 0;
-        for (const t of tenants) {
-            try {
-                const kd = await api.listApiKeys(t.tenant_id);
-                totalKeys += (kd.keys || []).length;
-            } catch {}
-        }
+        try {
+            const keyResults = await Promise.all(tenants.map(t => api.listApiKeys(t.tenant_id).catch(() => ({ keys: [] }))));
+            keyResults.forEach(kd => { totalKeys += (kd.keys || []).length; });
+        } catch {}
         document.getElementById('apikeyCount').textContent = totalKeys;
         document.getElementById('statKeys').textContent = totalKeys;
 
@@ -1149,7 +1147,7 @@ async function editTenant(id) {
         document.getElementById('tenantDescInput').value = t.description || '';
         document.getElementById('tenantModelInput').value = t.default_model || '';
         document.getElementById('tenantLangInput').value = t.response_language || 'es';
-        document.getElementById('tenantPromptInput').value = '';
+        document.getElementById('tenantPromptInput').value = t.system_prompt || '';
         openModal('tenantModal');
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
@@ -1305,14 +1303,13 @@ async function loadApiKeys() {
         const tenants = tenantsData.tenants || [];
         let allKeys = [];
 
-        for (const t of tenants) {
-            try {
-                const data = await api.listApiKeys(t.tenant_id);
-                const keys = data.keys || [];
-                keys.forEach(k => k._tenant = t.tenant_id);
-                allKeys = allKeys.concat(keys);
-            } catch (e) { /* skip tenant errors */ }
-        }
+        const keyResults = await Promise.all(tenants.map(t =>
+            api.listApiKeys(t.tenant_id).then(d => {
+                (d.keys || []).forEach(k => k._tenant = t.tenant_id);
+                return d.keys || [];
+            }).catch(() => [])
+        ));
+        keyResults.forEach(keys => { allKeys = allKeys.concat(keys); });
 
         document.getElementById('apikeyCount').textContent = allKeys.length;
 

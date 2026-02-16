@@ -3,13 +3,21 @@
  * Cliente centralizado para todos los endpoints de la API v2
  * Base URL: /api/v2/ (via Traefik reverse proxy)
  *
- * Endpoint alignment status (verified 2025-06-16):
- *   ✅ Working: /health, /query, /chat/completions, /models, /tenants, /agents,
- *              /documents, /documents/{id}, /documents/stats/summary,
- *              /documents/upload, /documents/process-pending, /stats, /cache,
- *              /mcp/health, /mcp/tools, /mcp/prompts, /mcp/resources
- *   ⚠️  Degraded (backend bugs #252-#255): /feedback, /metrics/*,
- *              /documents/reset-reindex, /documents/sync/directory
+ * Endpoint alignment verified against OpenAPI spec (2025-06-18):
+ *   ✅ Working: /health, /health/deep, /query, /chat/completions, /models,
+ *              /tenants, /agents, /documents, /documents/{id},
+ *              /documents/{id}/source, /documents/{id}/reindex,
+ *              /documents/upload, /documents/process-pending,
+ *              /documents/stats/summary, /stats, /cache,
+ *              /mcp/health, /mcp/tools, /mcp/prompts, /mcp/resources,
+ *              /api-keys, /conversations, /tasks,
+ *              /quality/{tenant_id}/summary, /quality/{tenant_id}/recent,
+ *              /ingestion/stats, /ingestion/jobs,
+ *              /metrics/operational, /admin/dashboard
+ *   ⚠️  500 on backend (bugs #252-#255): /feedback, /feedback/stats,
+ *              /metrics/dashboard, /metrics/coverage, /metrics/gaps,
+ *              /metrics/grounding, /documents/reset-reindex,
+ *              /documents/sync/directory
  *
  * ADR-018 Multi-DRAGA: All methods that accept tenantId now also accept
  * optional agentId (defaults to 'default'). Scope key: (tenant_id, agent_id).
@@ -106,6 +114,7 @@ class RAGApiClient {
         return this.del(`/cache?${p}`);
     }
     async health() { return this.get('/health'); }
+    async healthDeep() { return this.get('/health/deep'); }
 
     // ── Agents ────────────────────────────────────────────────────
 
@@ -139,24 +148,33 @@ class RAGApiClient {
         return this.get(`/agents/${tenantId}/stats${q}`);
     }
 
-    // ── API Keys (502 on current backend — service not deployed) ──
+    // ── API Keys ─────────────────────────────────────────────────
 
     async listApiKeys(tenantId) {
         const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this._request('GET', `/api-keys${q}`, null, { retries: 0 });
+        return this.get(`/api-keys${q}`);
     }
-    async createApiKey(data) { return this._request('POST', '/api-keys', data, { retries: 0 }); }
-    async revokeApiKey(keyId) { return this._request('DELETE', `/api-keys/${keyId}`, null, { retries: 0 }); }
+    async createApiKey(data) { return this.post('/api-keys', data); }
+    async revokeApiKey(keyId) { return this.del(`/api-keys/${keyId}`); }
+    async revokeAllApiKeys(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.post(`/api-keys/revoke-all${q}`);
+    }
 
-    // ── Conversations (502 on current backend — service not deployed) ──
+    // ── Conversations ────────────────────────────────────────────
 
     async listConversations(tenantId, limit = 20, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (limit) params.set('limit', limit);
-        return this._request('GET', `/conversations?${params}`, null, { retries: 0 });
+        return this.get(`/conversations?${params}`);
     }
-    async getConversation(sessionId) {
-        return this._request('GET', `/conversations/${sessionId}`, null, { retries: 0 });
+    async getConversation(sessionId, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/conversations/${sessionId}${q}`);
+    }
+    async deleteConversation(sessionId, tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.del(`/conversations/${sessionId}${q}`);
     }
 
     // ── Widget Config ─────────────────────────────────────────────
@@ -174,22 +192,25 @@ class RAGApiClient {
         return this.del(`/agents/${tenantId}/widget-config${q}`);
     }
 
-    // ── Tasks (502 on current backend — service not deployed) ──
+    // ── Tasks ──────────────────────────────────────────────────────
 
     async listTasks(tenantId = null, state = null, limit = null, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (state) params.set('state', state);
         if (limit) params.set('limit', limit);
         const q = params.toString() ? `?${params}` : '';
-        return this._request('GET', `/tasks${q}`, null, { retries: 0 });
+        return this.get(`/tasks${q}`);
     }
-    async getTask(taskId) { return this._request('GET', `/tasks/${taskId}`, null, { retries: 0 }); }
+    async getTask(taskId) { return this.get(`/tasks/${taskId}`); }
     async cleanupTasks(tenantId = null, agentId = null) {
-        return this._request('DELETE', `/tasks${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.del(`/tasks${this._scopeQuery(tenantId, agentId)}`);
     }
 
     // ── Metrics ───────────────────────────────────────────────────
 
+    async metricsOperational(tenantId = null, agentId = null) {
+        return this.get(`/metrics/operational${this._scopeQuery(tenantId, agentId)}`);
+    }
     async metricsDashboard(tenantId = null, agentId = null) {
         return this._request('GET', `/metrics/dashboard${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
     }
@@ -277,8 +298,13 @@ class RAGApiClient {
      * and filtering retrieved_chunks by document_id on the client side.
      * This is a workaround since the backend has no /documents/{id}/chunks endpoint.
      * Note: backend top_k max is 20.
+     * IMPORTANT: Always requires tenant_id for tenant isolation.
      */
     async getDocumentChunks(documentId, tenantId = null, topK = 20, filenameHint = null, agentId = null) {
+        if (!tenantId) {
+            console.warn('[api] getDocumentChunks called without tenantId — returning empty');
+            return [];
+        }
         const queryText = filenameHint
             ? filenameHint.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
             : 'contenido completo del documento';
@@ -291,25 +317,38 @@ class RAGApiClient {
         if (agentId && agentId !== 'default') queryParams.agent_id = agentId;
         const res = await this.query(queryParams);
         const all = res.retrieved_chunks || [];
-        // Filter to only chunks from this document
-        const filtered = all.filter(c =>
+        // Filter strictly to only chunks from this document
+        return all.filter(c =>
             c.document_id === documentId ||
-            c.metadata?.document_id === documentId ||
-            (c.metadata?.source || '').includes(documentId)
+            c.metadata?.document_id === documentId
         );
-        return filtered.length > 0 ? filtered : all;
     }
 
-    // Legacy aliases (registry endpoints — kept for backward compat)
-    /** @deprecated Use uploadDocuments() with explicit tenantId */
-    async registryIngest(file, forceReindex = false) {
-        console.warn('[api] registryIngest is deprecated — use uploadDocuments with tenantId');
-        return this.uploadDocuments([file], null, !forceReindex, false);
+    // ── Quality (tenant_id in PATH per backend OpenAPI spec) ──────
+
+    async qualitySummary(tenantId) {
+        if (!tenantId) throw new ApiError(400, 'tenant_id required for quality summary');
+        return this.get(`/quality/${tenantId}/summary`);
     }
-    async registryStats() { return this.documentStats(); }
-    async scanInbox(tenantId = null, force = false) {
-        return this.processPending(tenantId, force);
+    async qualityRecent(tenantId, limit = 20) {
+        const q = limit ? `?limit=${limit}` : '';
+        if (!tenantId) throw new ApiError(400, 'tenant_id required for quality recent');
+        return this.get(`/quality/${tenantId}/recent${q}`);
     }
+
+    // ── Ingestion ─────────────────────────────────────────────────
+
+    async ingestionStats() { return this.get('/ingestion/stats'); }
+    async ingestionJobs(limit = null) {
+        const q = limit ? `?limit=${limit}` : '';
+        return this.get(`/ingestion/jobs${q}`);
+    }
+    async getIngestionJob(jobId) { return this.get(`/ingestion/jobs/${jobId}`); }
+
+    // ── Admin Dashboard ───────────────────────────────────────────
+
+    async adminDashboard() { return this.get('/admin/dashboard'); }
+    async adminDashboardOverview() { return this.get('/admin/dashboard/overview'); }
 
     // ── Tenants ───────────────────────────────────────────────────
 
