@@ -1021,6 +1021,7 @@ const App = {
     // ADR-018: Load agents for a tenant and populate agent selector
     async loadAgents(tenantId) {
         const sel = document.getElementById('agentSelect');
+        const sep = document.querySelector('.scope-sep');
         try {
             const data = await api.listAgents(tenantId);
             this.agents = data.agents || data || [];
@@ -1029,8 +1030,15 @@ const App = {
         }
         // Track if no DRAGAs exist for this tenant
         this._noDragas = !this.agents.length;
-        // Ensure at least one entry for functionality
-        if (!this.agents.length) this.agents = [{ agent_id: 'default', name: '(sin DRAGA)' }];
+        if (!this.agents.length) {
+            // No DRAGAs — hide selector, work at tenant level
+            this.agents = [{ agent_id: 'default', name: tenantId }];
+            sel.style.display = 'none';
+            if (sep) sep.style.display = 'none';
+        } else {
+            sel.style.display = '';
+            if (sep) sep.style.display = '';
+        }
         sel.innerHTML = this.agents.map(a => {
             const label = a.name || a.agent_id;
             return `<option value="${a.agent_id}">${label}</option>`;
@@ -1112,23 +1120,9 @@ const Overview = {
         const t = App.tenantData;
         document.getElementById('overviewTitle').innerHTML = `<i class="di" style="font-size:28px;width:28px;height:28px;vertical-align:-4px"></i> ${t.name || App.tenantId}`;
 
-        // Show banner if no DRAGAs exist for this tenant
-        let banner = document.getElementById('noDragaBanner');
-        if (App._noDragas) {
-            if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'noDragaBanner';
-                banner.style.cssText = 'padding:16px 20px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:20px;display:flex;align-items:center;gap:12px;';
-                banner.innerHTML = `<span style="font-size:24px">⚠️</span>
-                    <div style="flex:1"><strong style="color:var(--warning)">Sin DRAGAs configurados</strong>
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Este tenant no tiene DRAGAs. Crea uno desde la <a href="admin.html#agents" style="color:var(--draga-accent-light)">consola admin</a> para habilitar chat, pipeline y calidad.</div></div>`;
-                const titleEl = document.getElementById('overviewTitle');
-                titleEl.parentNode.insertBefore(banner, titleEl.nextSibling);
-            }
-            banner.style.display = 'flex';
-        } else if (banner) {
-            banner.style.display = 'none';
-        }
+        // Clean up old banner if present
+        const oldBanner = document.getElementById('noDragaBanner');
+        if (oldBanner) oldBanner.remove();
 
         document.getElementById('ovDocs').textContent = t.document_count ?? '—';
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
@@ -1923,26 +1917,16 @@ const Config = {
     async loadRetrieval() {
         const container = document.getElementById('retrievalConfig');
         try {
-            // Try DRAGA config first (backend #283 — DRAGA owns RAG config)
-            // Fall back to tenant config for legacy deployments without DRAGAs
+            // Load config from tenant (works with or without DRAGAs)
             let rc = {};
-            let configSource = 'tenant';
             try {
-                const agent = await api.getAgent(App.tenantId, App.agentId);
-                rc = agent.config || {};
-                configSource = 'draga';
-            } catch {
-                // Fallback: try tenant retrieval_config (legacy)
-                try {
-                    const tenant = await api.getTenant(App.tenantId);
-                    rc = tenant.retrieval_config || tenant.config || {};
-                } catch { /* use defaults */ }
-            }
+                const tenant = await api.getTenant(App.tenantId);
+                rc = tenant.retrieval_config || tenant.config || {};
+            } catch { /* use defaults */ }
             const sf = SourceFilter.getActiveIds();
             const sfInfo = sf ? `<div style="font-size:11px;color:var(--warning);margin-bottom:8px">🔍 Filtro de fuentes activo: ${sf.length} docs seleccionados <button class="btn btn-sm" onclick="SourceFilter.reset();Config.loadRetrieval()">Limpiar filtro</button></div>` : '';
-            const srcNote = configSource === 'draga' ? '<div style="font-size:10px;color:var(--success);margin-bottom:6px">📡 Config del DRAGA agent</div>' : '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📡 Config del tenant (legacy)</div>';
             container.innerHTML = `
-                ${srcNote}${sfInfo}
+                ${sfInfo}
                 <div class="form-row">
                     <div class="form-group"><label>Top K</label><input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="20"></div>
                     <div class="form-group"><label>Umbral Similitud</label><input type="number" value="${rc.similarity_threshold||0.5}" id="rcThreshold" min="0" max="1" step="0.05"></div>
@@ -1969,23 +1953,9 @@ const Config = {
                 llm_model: document.getElementById('rcModel').value.trim(),
                 response_language: document.getElementById('rcLang').value.trim() || 'auto'
             };
-            // Try saving as DRAGA config first (backend #283)
-            try {
-                await api.createAgent({
-                    tenant_id: App.tenantId,
-                    agent_id: App.agentId || 'default',
-                    name: App.agentId || 'default',
-                    config
-                });
-                toast('Configuración RAG guardada (DRAGA)', 'success');
-                return;
-            } catch (e) {
-                // If agent already exists (400), fall back to tenant update
-                if (e.status !== 400) throw e;
-            }
-            // Fallback: update tenant retrieval_config (legacy)
+            // Save to tenant retrieval_config (works with or without DRAGAs)
             await api.updateTenant(App.tenantId, { retrieval_config: config });
-            toast('Configuración guardada (tenant)', 'success');
+            toast('Configuración guardada', 'success');
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
