@@ -1124,16 +1124,24 @@ const Overview = {
         const oldBanner = document.getElementById('noDragaBanner');
         if (oldBanner) oldBanner.remove();
 
-        document.getElementById('ovDocs').textContent = t.document_count ?? '—';
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
         document.getElementById('ovLang').textContent = t.response_language || '—';
         document.getElementById('ovCollection').textContent = t.collection_name || '—';
 
+        // Fetch real doc/chunk counts from documentStats (tenant.document_count is unreliable)
         try {
-            const stats = await api.getStats(App.tenantId, App.agentId);
-            const db = stats.vector_database || {};
-            document.getElementById('ovChunks').textContent = db.total_chunks || db.documents || '—';
-        } catch { document.getElementById('ovChunks').textContent = '—'; }
+            const ds = await api.documentStats(App.tenantId, App.agentId);
+            const bs = ds.by_status || {};
+            const activeDocs = (ds.total_documents || 0) - (bs.deleted || 0) - (bs.pending_delete || 0);
+            document.getElementById('ovDocs').textContent = activeDocs;
+            document.getElementById('ovChunks').textContent = ds.total_chunks ?? '—';
+        } catch {
+            document.getElementById('ovDocs').textContent = t.document_count ?? '—';
+            try {
+                const stats = await api.getStats(App.tenantId, App.agentId);
+                document.getElementById('ovChunks').textContent = stats.vector_database?.total_chunks || '—';
+            } catch { document.getElementById('ovChunks').textContent = '—'; }
+        }
 
         // Check protocols
         this.checkProtocols();
@@ -1237,7 +1245,8 @@ const KB = {
         try {
             const s = await api.documentStats(App.tenantId, App.agentId);
             const bs = s.by_status || {};
-            const totalDocs = s.total_documents || 0;
+            const deletedDocs = (bs.deleted || 0) + (bs.pending_delete || 0);
+            const totalDocs = (s.total_documents || 0) - deletedDocs;
             const indexed = bs.indexed || 0;
             const coverage = totalDocs ? Math.round(indexed / totalDocs * 100) : 0;
             document.getElementById('kbTotal').textContent = totalDocs;
@@ -1271,7 +1280,7 @@ const KB = {
                 document.getElementById('kbIndexed').textContent = '—';
                 document.getElementById('kbErrors').textContent = '—';
                 document.getElementById('kbCoverage').textContent = '—';
-                document.getElementById('navDocCount').textContent = db.total_chunks || 0;
+                document.getElementById('navDocCount').textContent = db.total_chunks ? `${db.total_chunks}✂` : '0';
             } catch {
                 document.getElementById('kbTotal').textContent = '—';
                 document.getElementById('kbChunks').textContent = '—';
@@ -1285,6 +1294,8 @@ const KB = {
         try {
             const data = await api.listDocuments(App.tenantId, null, null, App.agentId);
             this.docs = data.documents || data || [];
+            // Filter out deleted/pending_delete docs — they shouldn't appear in the KB view
+            this.docs = this.docs.filter(d => d.status !== 'deleted' && d.status !== 'pending_delete');
             this.docs.forEach(d => { if (d.category) d.category = d.category.replace(/^DocumentCategory\./i, '').toLowerCase(); });
             this.page = 1;
             this.applyFilter();
