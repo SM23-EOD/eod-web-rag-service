@@ -3,24 +3,19 @@
  * Cliente centralizado para todos los endpoints de la API v2
  * Base URL: /api/v2/ (via Traefik reverse proxy)
  *
- * Endpoint alignment verified against OpenAPI spec (2025-06-18):
- *   ✅ Working: /health, /health/deep, /query, /chat/completions, /models,
- *              /tenants, /agents, /documents, /documents/{id},
- *              /documents/{id}/source, /documents/{id}/reindex,
- *              /documents/upload, /documents/process-pending,
- *              /documents/stats/summary, /stats, /cache,
- *              /mcp/health, /mcp/tools, /mcp/prompts, /mcp/resources,
- *              /api-keys, /conversations, /tasks,
- *              /quality/{tenant_id}/summary, /quality/{tenant_id}/recent,
- *              /ingestion/stats, /ingestion/jobs,
- *              /metrics/operational, /admin/dashboard
- *   ⚠️  500 on backend (bugs #252-#255): /feedback, /feedback/stats,
- *              /metrics/dashboard, /metrics/coverage, /metrics/gaps,
- *              /metrics/grounding, /documents/reset-reindex,
- *              /documents/sync/directory
+ * Endpoint alignment verified against FRONTEND-API-REFERENCE.md (2026-02-16):
+ *   ✅ All endpoints operational — backend bugs #252-#255 resolved.
+ *   ✅ Metrics/Feedback: graceful degradation on DB failure (backend #270).
+ *   ✅ Retrieval: fallback for legacy chunks without tenant_id filter (#261).
+ *   ✅ document_ids filter: POST /query accepts document_ids[] (#266).
+ *   ✅ Document labels: CRUD + assignments (#276).
+ *   ✅ Document rename: PATCH /documents/{id}/rename (#267).
  *
  * ADR-018 Multi-DRAGA: All methods that accept tenantId now also accept
  * optional agentId (defaults to 'default'). Scope key: (tenant_id, agent_id).
+ *
+ * BREAKING (backend #283): Tenant is now lightweight org. DRAGA owns
+ * all RAG config (system_prompt, top_k, similarity_threshold, etc.).
  */
 class RAGApiClient {
     constructor(baseUrl = '/api/v2') {
@@ -103,6 +98,11 @@ class RAGApiClient {
 
     // ── RAG Core ──────────────────────────────────────────────────
 
+    /**
+     * POST /query — RAG pipeline query.
+     * Supports optional document_ids[] to restrict retrieval to specific documents.
+     * @param {object} params - { query, tenant_id, agent_id?, top_k?, use_cache?, category_filter?, document_ids? }
+     */
     async query(params) { return this.post('/query', params); }
     async ingest(docs) { return this.post('/ingest', docs); }
     async getStats(tenantId = null, agentId = null) {
@@ -212,19 +212,26 @@ class RAGApiClient {
         return this.get(`/metrics/operational${this._scopeQuery(tenantId, agentId)}`);
     }
     async metricsDashboard(tenantId = null, agentId = null) {
-        return this._request('GET', `/metrics/dashboard${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.get(`/metrics/dashboard${this._scopeQuery(tenantId, agentId)}`);
     }
     async metricsCoverage(tenantId = null, agentId = null) {
-        return this._request('GET', `/metrics/coverage${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.get(`/metrics/coverage${this._scopeQuery(tenantId, agentId)}`);
     }
     async metricsGaps(tenantId = null, agentId = null, unresolvedOnly = false, limit = 20) {
         const params = this._scopeParams(tenantId, agentId);
         if (unresolvedOnly) params.set('unresolved_only', 'true');
         if (limit) params.set('limit', limit);
-        return this._request('GET', `/metrics/gaps?${params}`, null, { retries: 0 });
+        return this.get(`/metrics/gaps?${params}`);
     }
     async metricsGrounding(tenantId = null, agentId = null) {
-        return this._request('GET', `/metrics/grounding${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.get(`/metrics/grounding${this._scopeQuery(tenantId, agentId)}`);
+    }
+    async metricsPrometheus() {
+        const url = `${this.baseUrl}/metrics/prometheus`;
+        const headers = {};
+        if (this.apiKey) headers['X-API-Key'] = this.apiKey;
+        const res = await fetch(url, { headers });
+        return res.text();
     }
 
     // ── Document Management (v2 /documents/* endpoints) ──────────
@@ -277,6 +284,13 @@ class RAGApiClient {
     async documentStats(tenantId = null, agentId = null) {
         return this.get(`/documents/stats/summary${this._scopeQuery(tenantId, agentId)}`);
     }
+    async renameDocument(id, displayName, tenantId = null, agentId = null) {
+        const q = this._scopeQuery(tenantId, agentId);
+        return this._request('PATCH', `/documents/${id}/rename${q}`, { display_name: displayName });
+    }
+    async cleanupPendingDeletes(tenantId = null, agentId = null) {
+        return this.post(`/documents/maintenance/cleanup-pending-deletes${this._scopeQuery(tenantId, agentId)}`);
+    }
     async processPending(tenantId = null, forceReindex = false, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (forceReindex) params.set('force_reindex', 'true');
@@ -290,7 +304,7 @@ class RAGApiClient {
         return this.post(`/documents/sync/directory?${params}`);
     }
     async resetReindex(tenantId = null, agentId = null) {
-        return this._request('POST', `/documents/reset-reindex${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.post(`/documents/reset-reindex${this._scopeQuery(tenantId, agentId)}`);
     }
 
     /**
@@ -338,9 +352,14 @@ class RAGApiClient {
 
     // ── Ingestion ─────────────────────────────────────────────────
 
-    async ingestionStats() { return this.get('/ingestion/stats'); }
-    async ingestionJobs(limit = null) {
-        const q = limit ? `?limit=${limit}` : '';
+    async ingestionStats(tenantId = null, agentId = null) {
+        return this.get(`/ingestion/stats${this._scopeQuery(tenantId, agentId)}`);
+    }
+    async ingestionJobs(tenantId = null, agentId = null, state = null, limit = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        if (state) params.set('state', state);
+        if (limit) params.set('limit', limit);
+        const q = params.toString() ? `?${params}` : '';
         return this.get(`/ingestion/jobs${q}`);
     }
     async getIngestionJob(jobId) { return this.get(`/ingestion/jobs/${jobId}`); }
@@ -406,7 +425,7 @@ class RAGApiClient {
 
     // ── Feedback ──────────────────────────────────────────────────
 
-    async submitFeedback(data) { return this._request('POST', '/feedback', data, { retries: 0 }); }
+    async submitFeedback(data) { return this.post('/feedback', data); }
     async listFeedback(filters = {}, tenantId = null, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (filters.rating) params.set('rating', filters.rating);
@@ -414,17 +433,60 @@ class RAGApiClient {
         if (filters.low_confidence) params.set('low_confidence', true);
         if (filters.limit) params.set('limit', filters.limit);
         const q = params.toString() ? `?${params}` : '';
-        return this._request('GET', `/feedback${q}`, null, { retries: 0 });
+        return this.get(`/feedback${q}`);
     }
     async feedbackStats(tenantId = null, agentId = null) {
-        return this._request('GET', `/feedback/stats${this._scopeQuery(tenantId, agentId)}`, null, { retries: 0 });
+        return this.get(`/feedback/stats${this._scopeQuery(tenantId, agentId)}`);
     }
     async markReviewed(id, action = null, tenantId = null, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (action) params.set('action_taken', action);
         const q = params.toString() ? `?${params}` : '';
-        return this._request('POST', `/feedback/${id}/review${q}`, null, { retries: 0 });
+        return this.post(`/feedback/${id}/review${q}`);
     }
+
+    // ── Document Labels ───────────────────────────────────────────
+
+    async listLabels(tenantId) {
+        return this.get(`/agents/${tenantId}/labels`);
+    }
+    async createLabel(tenantId, data) {
+        return this.post(`/agents/${tenantId}/labels`, data);
+    }
+    async getLabel(tenantId, labelId) {
+        return this.get(`/agents/${tenantId}/labels/${labelId}`);
+    }
+    async updateLabel(tenantId, labelId, data) {
+        return this._request('PATCH', `/agents/${tenantId}/labels/${labelId}`, data);
+    }
+    async deleteLabel(tenantId, labelId) {
+        return this.del(`/agents/${tenantId}/labels/${labelId}`);
+    }
+    async getDocumentLabels(tenantId, documentId) {
+        return this.get(`/agents/${tenantId}/documents/${documentId}/labels`);
+    }
+    async assignLabel(tenantId, documentId, labelId) {
+        return this.post(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}`);
+    }
+    async unassignLabel(tenantId, documentId, labelId) {
+        return this.del(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}`);
+    }
+
+    // ── Admin ─────────────────────────────────────────────────────
+
+    async adminTenantUsage() { return this.get('/admin/tenants/usage'); }
+    async adminTenantAudit(tenantId, filters = {}) {
+        const params = new URLSearchParams();
+        if (filters.action) params.set('action', filters.action);
+        if (filters.resource_type) params.set('resource_type', filters.resource_type);
+        if (filters.limit) params.set('limit', filters.limit);
+        const q = params.toString() ? `?${params}` : '';
+        return this.get(`/admin/tenants/${tenantId}/audit${q}`);
+    }
+
+    // ── Feature Flags ─────────────────────────────────────────────
+
+    async listFeatureFlags() { return this.get('/admin/feature-flags'); }
 
     // ── OpenAI Compatible ─────────────────────────────────────────
 

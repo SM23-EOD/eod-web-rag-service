@@ -189,10 +189,11 @@ class DragaFeedbackSender {
     this.apiKey = apiKey;
   }
 
-  async send({ query, response, rating, tenantId, sessionId, comment }) {
+  async send({ query, response, rating, tenantId, agentId, sessionId, comment }) {
     const h = { 'Content-Type': 'application/json' };
     if (this.apiKey) h['X-API-Key'] = this.apiKey;
     const body = { query, response, rating, tenant_id: tenantId, session_id: sessionId };
+    if (agentId && agentId !== 'default') body.agent_id = agentId;
     if (comment) body.comment = comment;
     const res = await fetch(`${this.baseUrl}/feedback`, { method: 'POST', headers: h, body: JSON.stringify(body) });
     return res.ok;
@@ -236,6 +237,9 @@ class DragaProtocolOpenAI {
       similarity_threshold: opts.similarityThreshold ?? 0.3,
       include_sources: opts.includeSources !== false,
     };
+    if (opts.agentId && opts.agentId !== 'default') body.agent_id = opts.agentId;
+    if (opts.sessionId) body.session_id = opts.sessionId;
+    if (opts.documentIds) body.document_ids = opts.documentIds;
     return body;
   }
 
@@ -367,6 +371,8 @@ class DragaProtocolRAG {
       session_id: opts.sessionId,
       ab_session_id: opts.abSessionId,
     };
+    if (opts.agentId && opts.agentId !== 'default') body.agent_id = opts.agentId;
+    if (opts.documentIds) body.document_ids = opts.documentIds;
 
     const url = `${this.baseUrl}/agents/${opts.tenantId}/query`;
     const res = await this._fetchWithRetry(url, {
@@ -465,16 +471,16 @@ class DragaProtocolMCP {
 
   async sendMessage(query, opts = {}) {
     this._abort = new AbortController();
-    const body = {
-      tool_name: 'generate_rag_answer',
-      arguments: {
-        query: query,
-        tenant_id: opts.tenantId,
-        top_k: opts.topK ?? 5,
-        include_sources: opts.includeSources !== false,
-        session_id: opts.sessionId,
-      },
+    const args = {
+      query: query,
+      tenant_id: opts.tenantId,
+      top_k: opts.topK ?? 5,
+      include_sources: opts.includeSources !== false,
+      session_id: opts.sessionId,
     };
+    if (opts.agentId && opts.agentId !== 'default') args.agent_id = opts.agentId;
+    if (opts.documentIds) args.document_ids = opts.documentIds;
+    const body = { tool_name: 'generate_rag_answer', arguments: args };
 
     const res = await this._fetchWithRetry(`${this.baseUrl}/mcp/tools/call`, {
       method: 'POST', headers: this._headers(), body: JSON.stringify(body), signal: this._abort.signal,

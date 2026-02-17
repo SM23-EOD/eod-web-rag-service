@@ -1165,6 +1165,70 @@ const Overview = {
 };
 
 // ══════════════════════════════════════════════════════════════
+// SOURCE FILTER — Restricts RAG queries to active documents
+// Backend: document_ids[] in POST /query and /chat/completions
+// ══════════════════════════════════════════════════════════════
+const SourceFilter = {
+    _key() { return `srcfilter_${App.tenantId}_${App.agentId || 'default'}`; },
+
+    /** Get enabled map: { docId: true/false } — null means all enabled */
+    getMap() {
+        try {
+            const raw = localStorage.getItem(this._key());
+            return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+    },
+
+    /** Save map to localStorage */
+    saveMap(map) {
+        if (!map || Object.keys(map).length === 0) {
+            localStorage.removeItem(this._key());
+        } else {
+            localStorage.setItem(this._key(), JSON.stringify(map));
+        }
+    },
+
+    /**
+     * Get active document IDs to pass as document_ids to query/chat.
+     * Returns null if all docs are active (no filter needed).
+     * Returns string[] if some docs are disabled.
+     */
+    getActiveIds() {
+        const map = this.getMap();
+        if (!map) return null;
+        const activeIds = Object.entries(map).filter(([, enabled]) => enabled).map(([id]) => id);
+        // If no docs excluded, return null (no filter)
+        const allEnabled = Object.values(map).every(v => v);
+        return allEnabled ? null : activeIds;
+    },
+
+    /** Toggle a document on/off. If all docs are disabled creates the map. */
+    toggle(docId) {
+        let map = this.getMap();
+        if (!map) {
+            // Initialize: all enabled, then disable this one
+            map = {};
+            (KB.docs || []).forEach(d => { map[d.document_id] = d.document_id !== docId; });
+        } else {
+            map[docId] = !map[docId];
+        }
+        this.saveMap(map);
+    },
+
+    /** Check if a document is active (enabled for search) */
+    isActive(docId) {
+        const map = this.getMap();
+        if (!map) return true; // null map = all active
+        return map[docId] !== false;
+    },
+
+    /** Reset filter — enable all documents */
+    reset() {
+        localStorage.removeItem(this._key());
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
 // KNOWLEDGE BASE
 // ══════════════════════════════════════════════════════════════
 const KB = {
@@ -1276,10 +1340,14 @@ const KB = {
             const ext = (d.filename || '').split('.').pop().toLowerCase();
             const ico = icons[ext] || '📄';
             const dt = d.indexed_at ? new Date(d.indexed_at).toLocaleDateString('es', { day:'2-digit', month:'short' }) : '—';
-            return `<tr>
+            const sfActive = SourceFilter.isActive(d.document_id);
+            const sfBtn = `<button class="btn-icon" onclick="SourceFilter.toggle('${d.document_id}');KB.render()" title="${sfActive ? 'Excluir de búsquedas' : 'Incluir en búsquedas'}" style="opacity:${sfActive ? 1 : 0.4}">${sfActive ? '🔍' : '🚫'}</button>`;
+            const displayName = d.display_name && d.display_name !== d.filename ? `<div style="font-size:10px;color:var(--info)">${esc(d.display_name)}</div>` : '';
+            return `<tr style="${sfActive ? '' : 'opacity:0.5'}">
                 <td><div style="display:flex;align-items:center;gap:6px">
                     <span style="font-size:16px">${ico}</span>
                     <div><div class="source-link" style="font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(d.filename)}" onclick="DocViewer.openById('${d.document_id}','${esc(d.filename)}')">${esc(d.filename)}</div>
+                    ${displayName}
                     <div style="font-size:10px;color:var(--text-muted)">${d.document_id}</div></div>
                 </div></td>
                 <td>${statusBadge(d.status)}</td>
@@ -1288,6 +1356,7 @@ const KB = {
                 <td>${fileSize(d.file_size_bytes || 0)}</td>
                 <td style="font-size:11px">${dt}</td>
                 <td>
+                    ${sfBtn}
                     <button class="btn-icon" onclick="KB.showDetail('${d.document_id}')" title="Detalle">🔍</button>
                     <button class="btn-icon" onclick="KB.reindex('${d.document_id}')" title="Re-indexar">🔄</button>
                     <button class="btn-icon" onclick="KB.confirmDelete('${d.document_id}','${esc(d.filename)}')" title="Eliminar">🗑️</button>
@@ -1326,6 +1395,7 @@ const KB = {
             actions.innerHTML = `
                 <a class="btn btn-sm" style="flex:1;text-decoration:none;text-align:center" href="${api.getDocumentSourceUrl(doc.document_id, App.tenantId, App.agentId)}" target="_blank">📄 Ver Fuente</a>
                 <button class="btn btn-sm" style="flex:1" onclick="DocViewer.openById('${doc.document_id}','${esc(doc.filename)}')">👁️ Visor</button>
+                <button class="btn btn-sm" style="flex:1" onclick="KB.renameDoc('${doc.document_id}','${esc(doc.display_name || doc.filename)}')">✏️ Renombrar</button>
                 <button class="btn btn-sm btn-primary" style="flex:1" onclick="KB.reindex('${doc.document_id}')">🔄 Re-indexar</button>
                 <button class="btn btn-sm btn-danger" style="flex:1" onclick="KB.confirmDelete('${doc.document_id}','${esc(doc.filename)}')">🗑️ Eliminar</button>`;
         } catch (e) {
@@ -1353,6 +1423,16 @@ const KB = {
         toast('Procesando pendientes...', 'info');
         try { await api.processPending(App.tenantId, false, App.agentId); toast('Completado', 'success'); this.load(); }
         catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    async renameDoc(docId, currentName) {
+        const newName = prompt('Nuevo nombre para el documento:', currentName);
+        if (!newName || newName === currentName) return;
+        try {
+            await api.renameDocument(docId, newName, App.tenantId, App.agentId);
+            toast('Documento renombrado', 'success');
+            this.load();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     syncDir() {
@@ -1534,7 +1614,10 @@ const Quality = {
     async testGapQuery(query) {
         toast('Ejecutando consulta...', 'info');
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: 10 });
+            const queryBody = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: 10 };
+            const docFilter = SourceFilter.getActiveIds();
+            if (docFilter) queryBody.document_ids = docFilter;
+            const res = await api.query(queryBody);
             const chunks = res.retrieved_chunks || [];
             if (chunks.length) {
                 DocViewer.openWithChunks(`Fuentes: "${query.slice(0, 50)}"`, chunks);
@@ -1581,10 +1664,15 @@ const Chat = {
             thinkEl.innerHTML = '';
 
             // Also do a parallel RAG query to get sources for this question
-            const sourcePromise = api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK }).catch(() => null);
+            const docFilter = SourceFilter.getActiveIds();
+            const queryBody = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
+            if (docFilter) queryBody.document_ids = docFilter;
+            const sourcePromise = api.query(queryBody).catch(() => null);
 
+            const chatBody = { model, messages: this.messages, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK, stream: true };
+            if (docFilter) chatBody.document_ids = docFilter;
             await api.chatCompletionsStream(
-                { model, messages: this.messages, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK, stream: true },
+                chatBody,
                 (chunk) => {
                     const delta = chunk.choices?.[0]?.delta?.content || '';
                     if (delta) { fullContent += delta; thinkEl.innerHTML = marked.parse(fullContent); thinkEl.scrollIntoView({ behavior: 'smooth' }); }
@@ -1835,16 +1923,37 @@ const Config = {
     async loadRetrieval() {
         const container = document.getElementById('retrievalConfig');
         try {
-            const tenant = await api.getTenant(App.tenantId);
-            const rc = tenant.retrieval_config || {};
+            // Try DRAGA config first (backend #283 — DRAGA owns RAG config)
+            // Fall back to tenant config for legacy deployments without DRAGAs
+            let rc = {};
+            let configSource = 'tenant';
+            try {
+                const agent = await api.getAgent(App.tenantId, App.agentId);
+                rc = agent.config || {};
+                configSource = 'draga';
+            } catch {
+                // Fallback: try tenant retrieval_config (legacy)
+                try {
+                    const tenant = await api.getTenant(App.tenantId);
+                    rc = tenant.retrieval_config || tenant.config || {};
+                } catch { /* use defaults */ }
+            }
+            const sf = SourceFilter.getActiveIds();
+            const sfInfo = sf ? `<div style="font-size:11px;color:var(--warning);margin-bottom:8px">🔍 Filtro de fuentes activo: ${sf.length} docs seleccionados <button class="btn btn-sm" onclick="SourceFilter.reset();Config.loadRetrieval()">Limpiar filtro</button></div>` : '';
+            const srcNote = configSource === 'draga' ? '<div style="font-size:10px;color:var(--success);margin-bottom:6px">📡 Config del DRAGA agent</div>' : '<div style="font-size:10px;color:var(--text-muted);margin-bottom:6px">📡 Config del tenant (legacy)</div>';
             container.innerHTML = `
+                ${srcNote}${sfInfo}
                 <div class="form-row">
-                    <div class="form-group"><label>Top K</label><input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="50"></div>
-                    <div class="form-group"><label>Umbral Similitud</label><input type="number" value="${rc.similarity_threshold||0.7}" id="rcThreshold" min="0" max="1" step="0.05"></div>
+                    <div class="form-group"><label>Top K</label><input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="20"></div>
+                    <div class="form-group"><label>Umbral Similitud</label><input type="number" value="${rc.similarity_threshold||0.5}" id="rcThreshold" min="0" max="1" step="0.05"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Chunk Size</label><input type="number" value="${rc.chunk_size||500}" id="rcChunkSize" min="100" max="5000"></div>
                     <div class="form-group"><label>Chunk Overlap</label><input type="number" value="${rc.chunk_overlap||50}" id="rcOverlap" min="0" max="500"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Modelo LLM</label><input type="text" value="${rc.llm_model||'anthropic/claude-3-haiku'}" id="rcModel" style="font-size:11px"></div>
+                    <div class="form-group"><label>Idioma Respuesta</label><input type="text" value="${rc.response_language||'auto'}" id="rcLang" placeholder="auto, es, en"></div>
                 </div>
                 <button class="btn btn-primary btn-sm" onclick="Config.saveRetrieval()">💾 Guardar</button>`;
         } catch (e) { container.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`; }
@@ -1852,13 +1961,31 @@ const Config = {
 
     async saveRetrieval() {
         try {
-            await api.updateTenant(App.tenantId, { retrieval_config: {
+            const config = {
                 top_k: parseInt(document.getElementById('rcTopK').value),
                 similarity_threshold: parseFloat(document.getElementById('rcThreshold').value),
                 chunk_size: parseInt(document.getElementById('rcChunkSize').value),
-                chunk_overlap: parseInt(document.getElementById('rcOverlap').value)
-            }});
-            toast('Retrieval config guardado', 'success');
+                chunk_overlap: parseInt(document.getElementById('rcOverlap').value),
+                llm_model: document.getElementById('rcModel').value.trim(),
+                response_language: document.getElementById('rcLang').value.trim() || 'auto'
+            };
+            // Try saving as DRAGA config first (backend #283)
+            try {
+                await api.createAgent({
+                    tenant_id: App.tenantId,
+                    agent_id: App.agentId || 'default',
+                    name: App.agentId || 'default',
+                    config
+                });
+                toast('Configuración RAG guardada (DRAGA)', 'success');
+                return;
+            } catch (e) {
+                // If agent already exists (400), fall back to tenant update
+                if (e.status !== 400) throw e;
+            }
+            // Fallback: update tenant retrieval_config (legacy)
+            await api.updateTenant(App.tenantId, { retrieval_config: config });
+            toast('Configuración guardada (tenant)', 'success');
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
