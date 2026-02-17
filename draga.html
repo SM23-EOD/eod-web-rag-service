@@ -306,7 +306,7 @@ tr:hover td{background:var(--bg-card);}
 
 <!-- ── OVERVIEW ── -->
 <div class="module active" id="mod-overview">
-    <h1 class="page-title" id="overviewTitle">DRAGA Instance</h1>
+    <h1 class="page-title" id="overviewTitle">DRAGA Dashboard</h1>
     <p class="page-desc">Anatomía, arquitectura y estado del DRAGA</p>
 
     <div class="stats-grid" id="overviewStats">
@@ -1025,10 +1025,12 @@ const App = {
             const data = await api.listAgents(tenantId);
             this.agents = data.agents || data || [];
         } catch {
-            this.agents = [{ agent_id: 'default', name: 'Default' }];
+            this.agents = [];
         }
-        // Ensure at least one agent
-        if (!this.agents.length) this.agents = [{ agent_id: 'default', name: 'Default' }];
+        // Track if no DRAGAs exist for this tenant
+        this._noDragas = !this.agents.length;
+        // Ensure at least one entry for functionality
+        if (!this.agents.length) this.agents = [{ agent_id: 'default', name: '(sin DRAGA)' }];
         sel.innerHTML = this.agents.map(a => {
             const label = a.name || a.agent_id;
             return `<option value="${a.agent_id}">${label}</option>`;
@@ -1109,6 +1111,25 @@ const Overview = {
     async load() {
         const t = App.tenantData;
         document.getElementById('overviewTitle').innerHTML = `<i class="di" style="font-size:28px;width:28px;height:28px;vertical-align:-4px"></i> ${t.name || App.tenantId}`;
+
+        // Show banner if no DRAGAs exist for this tenant
+        let banner = document.getElementById('noDragaBanner');
+        if (App._noDragas) {
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'noDragaBanner';
+                banner.style.cssText = 'padding:16px 20px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;margin-bottom:20px;display:flex;align-items:center;gap:12px;';
+                banner.innerHTML = `<span style="font-size:24px">⚠️</span>
+                    <div style="flex:1"><strong style="color:var(--warning)">Sin DRAGAs configurados</strong>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Este tenant no tiene DRAGAs. Crea uno desde la <a href="admin.html#agents" style="color:var(--draga-accent-light)">consola admin</a> para habilitar chat, pipeline y calidad.</div></div>`;
+                const titleEl = document.getElementById('overviewTitle');
+                titleEl.parentNode.insertBefore(banner, titleEl.nextSibling);
+            }
+            banner.style.display = 'flex';
+        } else if (banner) {
+            banner.style.display = 'none';
+        }
+
         document.getElementById('ovDocs').textContent = t.document_count ?? '—';
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
         document.getElementById('ovLang').textContent = t.response_language || '—';

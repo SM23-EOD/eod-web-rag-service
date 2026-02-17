@@ -233,7 +233,7 @@ tr:hover td{background:var(--bg-card);}
             <span class="badge" id="tenantCount">—</span>
         </a>
         <a class="nav-item" onclick="nav('agents')" data-mod="agents">
-            <span class="icon">🤖</span> Agents
+            <span class="icon"><i class="di"></i></span> DRAGAs
             <span class="badge" id="agentCount">—</span>
         </a>
         <a class="nav-item" onclick="nav('apikeys')" data-mod="apikeys">
@@ -273,7 +273,7 @@ tr:hover td{background:var(--bg-card);}
     <div class="stats-grid" id="heroStats">
         <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
         <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
-        <div class="stat-card"><div class="label">Agents</div><div class="value" id="statAgents" style="color:var(--info)">—</div></div>
+        <div class="stat-card"><div class="label">Tenants</div><div class="value" id="statAgents" style="color:var(--info)">—</div></div>
         <div class="stat-card"><div class="label">API Keys</div><div class="value" id="statKeys" style="color:var(--warning)">—</div></div>
         <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
         <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" style="color:var(--success)">98%</div></div>
@@ -305,10 +305,10 @@ tr:hover td{background:var(--bg-card);}
 <div class="module" id="mod-agents">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
         <div>
-            <h1 class="page-title">Gestión de Agentes</h1>
-            <p class="page-desc" style="margin-bottom:0">Agentes DRAGA asociados a tenants</p>
+            <h1 class="page-title">Gestión de DRAGAs</h1>
+            <p class="page-desc" style="margin-bottom:0">DRAGAs asociados a tenants</p>
         </div>
-        <button class="btn btn-primary" onclick="showAgentModal()">➕ Nuevo Agente</button>
+        <button class="btn btn-primary" onclick="showAgentModal()">➕ Nueva DRAGA</button>
     </div>
     <div class="card-grid" id="agentCards">
         <div class="loading"><div class="spinner"></div> Cargando...</div>
@@ -691,6 +691,26 @@ tr:hover td{background:var(--bg-card);}
             </div>
         </div>
 
+        <!-- DRAGA (Agent) Fields -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px"><i class="di" style="width:14px;height:14px;vertical-align:-2px"></i> Datos del DRAGA</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>DRAGA ID <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="dragaAgentId" placeholder="soporte-v1" pattern="[a-z0-9_\-]+">
+                    <small style="color:var(--text-muted);font-size:10px">Solo minúsculas, números, guiones</small>
+                </div>
+                <div class="form-group">
+                    <label>Nombre <span style="color:var(--danger)">*</span></label>
+                    <input type="text" id="dragaAgentName" placeholder="Soporte v1">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Descripción (opcional)</label>
+                <input type="text" id="dragaAgentDesc" placeholder="Descripción del DRAGA...">
+            </div>
+        </div>
+
         <div class="modal-footer">
             <button class="btn" onclick="closeModal('dragaModal')">Cancelar</button>
             <button class="btn btn-primary" id="dragaCreateBtn" onclick="createDraga()">
@@ -746,14 +766,14 @@ tr:hover td{background:var(--bg-card);}
 <!-- ═══ AGENT MODAL ═══ -->
 <div class="modal-overlay" id="agentModal">
     <div class="modal">
-        <div class="modal-title">🤖 Nuevo Agente (DRAGA)</div>
+        <div class="modal-title"><i class="di" style="width:20px;height:20px;vertical-align:middle"></i> Nueva DRAGA</div>
         <div class="form-row">
             <div class="form-group">
                 <label>Tenant</label>
                 <select id="agentTenantSelect"><option value="">Cargando...</option></select>
             </div>
             <div class="form-group">
-                <label>Agent ID</label>
+                <label>DRAGA ID</label>
                 <input type="text" id="agentIdInput" placeholder="soporte-v1" pattern="[a-z0-9_\-]+">
                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Solo minúsculas, números, guiones</div>
             </div>
@@ -761,12 +781,12 @@ tr:hover td{background:var(--bg-card);}
         <div class="form-row">
             <div class="form-group">
                 <label>Nombre</label>
-                <input type="text" id="agentNameInput" placeholder="Agente de Soporte">
+                <input type="text" id="agentNameInput" placeholder="Soporte v1">
             </div>
         </div>
         <div class="form-group">
             <label>Descripción</label>
-            <textarea id="agentDescInput" placeholder="Descripción del agente..."></textarea>
+            <textarea id="agentDescInput" placeholder="Descripción del DRAGA..."></textarea>
         </div>
         <div class="modal-footer">
             <button class="btn" onclick="closeModal('agentModal')">Cancelar</button>
@@ -893,6 +913,11 @@ async function showDragaModal() {
     document.getElementById('dragaNewTenantLang').value = 'es';
     document.getElementById('dragaNewTenantPrompt').value = '';
 
+    // Clear DRAGA fields
+    document.getElementById('dragaAgentId').value = '';
+    document.getElementById('dragaAgentName').value = '';
+    document.getElementById('dragaAgentDesc').value = '';
+
     openModal('dragaModal');
 }
 
@@ -996,10 +1021,30 @@ async function createDraga() {
             toast(`Tenant "${name}" creado exitosamente`, 'success');
         }
 
+        // Create the DRAGA (agent) within the tenant
+        const dragaId = document.getElementById('dragaAgentId').value.trim();
+        const dragaName = document.getElementById('dragaAgentName').value.trim();
+        const dragaDesc = document.getElementById('dragaAgentDesc').value.trim();
+
+        if (!dragaId || !dragaName) {
+            toast('DRAGA ID y Nombre son requeridos', 'error');
+            return;
+        }
+        if (!/^[a-z0-9][a-z0-9_\-]*$/.test(dragaId)) {
+            toast('DRAGA ID inválido: solo minúsculas, números, guiones', 'error');
+            return;
+        }
+
+        await api.createAgent({
+            tenant_id: tenantId, agent_id: dragaId,
+            name: dragaName, description: dragaDesc || ''
+        });
+        toast(`DRAGA "${dragaName}" creada`, 'success');
+
         closeModal('dragaModal');
-        toast(`DRAGA inicializada — redirigiendo al dashboard...`, 'success', 2000);
+        toast('Redirigiendo al dashboard...', 'info', 2000);
         setTimeout(() => {
-            window.location.href = `draga.html?tenant=${tenantId}`;
+            window.location.href = `draga.html?tenant=${tenantId}&agent=${dragaId}`;
         }, 800);
 
     } catch (e) {
@@ -1027,8 +1072,8 @@ async function loadDashboard() {
 
         document.getElementById('tenantCount').textContent = tenants.length;
         document.getElementById('agentCount').textContent = agents.length;
-        document.getElementById('statDragas').textContent = tenants.length;
-        document.getElementById('statAgents').textContent = agents.length;
+        document.getElementById('statDragas').textContent = agents.length;
+        document.getElementById('statAgents').textContent = tenants.length;
 
         let totalDocs = 0;
         tenants.forEach(t => { totalDocs += t.document_count || 0; });
@@ -1202,8 +1247,9 @@ async function loadAgents() {
         document.getElementById('agentCount').textContent = agents.length;
 
         if (agents.length === 0) {
-            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🤖</div>
-                <h3>Sin agentes</h3><p>Crea un agente RAG</p></div>`;
+            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
+                <h3>Sin DRAGAs</h3><p>Crea tu primera DRAGA para comenzar</p>
+                <button class="btn btn-primary" onclick="showAgentModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
             return;
         }
 
@@ -1263,23 +1309,23 @@ async function saveAgent() {
     const name = document.getElementById('agentNameInput').value.trim();
     const desc = document.getElementById('agentDescInput').value.trim();
     if (!tenantId) { toast('Selecciona un tenant', 'error'); return; }
-    if (!agentId || !name) { toast('Agent ID y Nombre son requeridos', 'error'); return; }
+    if (!agentId || !name) { toast('DRAGA ID y Nombre son requeridos', 'error'); return; }
     if (!/^[a-z0-9][a-z0-9_\-]*$/.test(agentId)) {
-        toast('Agent ID inválido: solo minúsculas, números, guiones', 'error'); return;
+        toast('DRAGA ID inválido: solo minúsculas, números, guiones', 'error'); return;
     }
     try {
         await api.createAgent({ tenant_id: tenantId, agent_id: agentId, name, description: desc || '' });
-        toast(`Agente "${name}" creado en tenant "${tenantId}"`, 'success');
+        toast(`DRAGA "${name}" creada en tenant "${tenantId}"`, 'success');
         closeModal('agentModal');
         loadAgents();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function deleteAgentAction(tenantId, agentId, name) {
-    if (!confirm(`¿Eliminar agente "${name}" (${agentId}) del tenant "${tenantId}"?`)) return;
+    if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId}) del tenant "${tenantId}"?`)) return;
     try {
         await api.deleteAgent(tenantId, agentId);
-        toast(`Agente "${name}" eliminado`, 'success');
+        toast(`DRAGA "${name}" eliminada`, 'success');
         loadAgents();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
