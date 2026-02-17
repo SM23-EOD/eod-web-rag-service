@@ -193,7 +193,7 @@ class DragaFeedbackSender {
     const h = { 'Content-Type': 'application/json' };
     if (this.apiKey) h['X-API-Key'] = this.apiKey;
     const body = { query, response, rating, tenant_id: tenantId, session_id: sessionId };
-    if (agentId && agentId !== 'default') body.agent_id = agentId;
+    body.agent_id = agentId || 'default';
     if (comment) body.comment = comment;
     const res = await fetch(`${this.baseUrl}/feedback`, { method: 'POST', headers: h, body: JSON.stringify(body) });
     return res.ok;
@@ -237,7 +237,7 @@ class DragaProtocolOpenAI {
       similarity_threshold: opts.similarityThreshold ?? 0.3,
       include_sources: opts.includeSources !== false,
     };
-    if (opts.agentId && opts.agentId !== 'default') body.agent_id = opts.agentId;
+    body.agent_id = opts.agentId || 'default';
     if (opts.sessionId) body.session_id = opts.sessionId;
     if (opts.documentIds) body.document_ids = opts.documentIds;
     return body;
@@ -371,7 +371,7 @@ class DragaProtocolRAG {
       session_id: opts.sessionId,
       ab_session_id: opts.abSessionId,
     };
-    if (opts.agentId && opts.agentId !== 'default') body.agent_id = opts.agentId;
+    body.agent_id = opts.agentId || 'default';
     if (opts.documentIds) body.document_ids = opts.documentIds;
 
     const url = `${this.baseUrl}/agents/${opts.tenantId}/query`;
@@ -394,6 +394,8 @@ class DragaProtocolRAG {
       itemsEvaluated: data.metadata?.items_evaluated || [],
       cached: data.cached ?? false,
       processingTime: data.processing_time_ms ?? null,
+      errorStep: data.metadata?.error_step ?? null,
+      errorDetail: data.metadata?.error_detail ?? null,
     };
   }
 
@@ -478,7 +480,7 @@ class DragaProtocolMCP {
       include_sources: opts.includeSources !== false,
       session_id: opts.sessionId,
     };
-    if (opts.agentId && opts.agentId !== 'default') args.agent_id = opts.agentId;
+    args.agent_id = opts.agentId || 'default';
     if (opts.documentIds) args.document_ids = opts.documentIds;
     const body = { tool_name: 'generate_rag_answer', arguments: args };
 

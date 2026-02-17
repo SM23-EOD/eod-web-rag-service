@@ -3,19 +3,13 @@
  * Cliente centralizado para todos los endpoints de la API v2
  * Base URL: /api/v2/ (via Traefik reverse proxy)
  *
- * Endpoint alignment verified against FRONTEND-API-REFERENCE.md (2026-02-16):
- *   ✅ All endpoints operational — backend bugs #252-#255 resolved.
- *   ✅ Metrics/Feedback: graceful degradation on DB failure (backend #270).
- *   ✅ Retrieval: fallback for legacy chunks without tenant_id filter (#261).
- *   ✅ document_ids filter: POST /query accepts document_ids[] (#266).
- *   ✅ Document labels: CRUD + assignments (#276).
- *   ✅ Document rename: PATCH /documents/{id}/rename (#267).
- *
- * ADR-018 Multi-DRAGA: All methods that accept tenantId now also accept
- * optional agentId (defaults to 'default'). Scope key: (tenant_id, agent_id).
- *
- * BREAKING (backend #283): Tenant is now lightweight org. DRAGA owns
- * all RAG config (system_prompt, top_k, similarity_threshold, etc.).
+ * Aligned with FRONTEND-API-REFERENCE.md (Febrero 2026):
+ *   - Tenant = organización ligera, DRAGA = dueño de config RAG
+ *   - Al crear tenant se auto-provisiona DRAGA 'default'
+ *   - agent_id SIEMPRE se envía (incluso 'default')
+ *   - Scope key: (tenant_id, agent_id) en todos los endpoints
+ *   - Config RAG se lee/escribe en el DRAGA, no en el tenant
+ *   - ~97 endpoints cubiertos
  */
 class RAGApiClient {
     constructor(baseUrl = '/api/v2') {
@@ -27,12 +21,12 @@ class RAGApiClient {
 
     /**
      * Build URLSearchParams with (tenant_id, agent_id) scope.
-     * agent_id is optional — omitted when 'default' to maintain backward compat.
+     * agent_id is ALWAYS sent (API requires it for DRAGA scoping).
      */
     _scopeParams(tenantId, agentId = null) {
         const params = new URLSearchParams();
         if (tenantId) params.set('tenant_id', tenantId);
-        if (agentId && agentId !== 'default') params.set('agent_id', agentId);
+        params.set('agent_id', agentId || 'default');
         return params;
     }
 
@@ -127,25 +121,27 @@ class RAGApiClient {
         return this.get(`/agents${q}`);
     }
     async getAgent(tenantId, agentId = null) {
-        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
-        return this.get(`/agents/${tenantId}${q}`);
+        const p = new URLSearchParams({ agent_id: agentId || 'default' });
+        return this.get(`/agents/${tenantId}?${p}`);
+    }
+    async updateAgent(tenantId, agentId, data) {
+        return this.put(`/agents/${tenantId}?agent_id=${agentId || 'default'}`, data);
     }
     async deleteAgent(tenantId, agentId = null) {
-        const p = new URLSearchParams({ confirm: 'true' });
-        if (agentId && agentId !== 'default') p.set('agent_id', agentId);
+        const p = new URLSearchParams({ confirm: 'true', agent_id: agentId || 'default' });
         return this.del(`/agents/${tenantId}?${p}`);
     }
     async queryAgent(tenantId, data, agentId = null) {
-        if (agentId && agentId !== 'default') data.agent_id = agentId;
+        data.agent_id = agentId || 'default';
         return this.post(`/agents/${tenantId}/query`, data);
     }
     async ingestAgent(tenantId, docs, agentId = null) {
-        if (agentId && agentId !== 'default') docs.agent_id = agentId;
+        docs.agent_id = agentId || 'default';
         return this.post(`/agents/${tenantId}/ingest`, docs);
     }
     async agentStats(tenantId, agentId = null) {
-        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
-        return this.get(`/agents/${tenantId}/stats${q}`);
+        const p = new URLSearchParams({ agent_id: agentId || 'default' });
+        return this.get(`/agents/${tenantId}/stats?${p}`);
     }
 
     // ── API Keys ─────────────────────────────────────────────────
@@ -180,16 +176,13 @@ class RAGApiClient {
     // ── Widget Config ─────────────────────────────────────────────
 
     async getWidgetConfig(tenantId, agentId = null) {
-        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
-        return this.get(`/agents/${tenantId}/widget-config${q}`);
+        return this.get(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`);
     }
     async updateWidgetConfig(tenantId, data, agentId = null) {
-        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
-        return this.put(`/agents/${tenantId}/widget-config${q}`, data);
+        return this.put(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`, data);
     }
     async resetWidgetConfig(tenantId, agentId = null) {
-        const q = agentId && agentId !== 'default' ? `?agent_id=${agentId}` : '';
-        return this.del(`/agents/${tenantId}/widget-config${q}`);
+        return this.del(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`);
     }
 
     // ── Tasks ──────────────────────────────────────────────────────
@@ -241,7 +234,7 @@ class RAGApiClient {
             throw new ApiError(400, 'tenant_id is required for document upload');
         }
         const params = new URLSearchParams({ tenant_id: tenantId, auto_index: autoIndex, background });
-        if (agentId && agentId !== 'default') params.set('agent_id', agentId);
+        params.set('agent_id', agentId || 'default');
         const url = `${this.baseUrl}/documents/upload?${params}`;
         const form = new FormData();
         files.forEach(f => form.append('files', f));
@@ -328,7 +321,7 @@ class RAGApiClient {
             top_k: Math.min(topK, 20),
             use_cache: false
         };
-        if (agentId && agentId !== 'default') queryParams.agent_id = agentId;
+        queryParams.agent_id = agentId || 'default';
         const res = await this.query(queryParams);
         const all = res.retrieved_chunks || [];
         // Filter strictly to only chunks from this document
@@ -425,7 +418,10 @@ class RAGApiClient {
 
     // ── Feedback ──────────────────────────────────────────────────
 
-    async submitFeedback(data) { return this.post('/feedback', data); }
+    async submitFeedback(data, tenantId = null, agentId = null) {
+        const q = this._scopeQuery(tenantId, agentId);
+        return this.post(`/feedback${q}`, data);
+    }
     async listFeedback(filters = {}, tenantId = null, agentId = null) {
         const params = this._scopeParams(tenantId, agentId);
         if (filters.rating) params.set('rating', filters.rating);

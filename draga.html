@@ -1497,11 +1497,40 @@ const KB = {
         try {
             const autoIdx = document.getElementById('optAutoIdx').checked;
             const bg = document.getElementById('optBg').checked;
-            await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg, App.agentId);
-            toast(`${this.uploadFiles.length} documento(s) subidos`, 'success');
-            setTimeout(() => { closeModal('uploadModal'); this.load(); }, 600);
+            const res = await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg, App.agentId);
+
+            // If background upload, poll task status
+            if (bg && res.task_id) {
+                toast(`Upload en background iniciado (task: ${res.task_id})`, 'info');
+                closeModal('uploadModal');
+                this._pollTask(res.task_id);
+            } else {
+                const ok = res.successful || res.total || this.uploadFiles.length;
+                toast(`${ok} documento(s) subidos`, 'success');
+                setTimeout(() => { closeModal('uploadModal'); this.load(); }, 600);
+            }
         } catch (e) { toast('Error: ' + e.message, 'error'); }
         finally { this.uploading = false; btn.disabled = false; btn.innerHTML = '📤 Subir'; }
+    },
+
+    async _pollTask(taskId) {
+        const poll = async () => {
+            try {
+                const task = await api.getTask(taskId);
+                if (task.state === 'completed') {
+                    const r = task.result || {};
+                    toast(`Upload completado: ${r.successful || 0} ok, ${r.failed || 0} errores`, r.failed ? 'warning' : 'success');
+                    this.load();
+                    return;
+                }
+                if (task.state === 'failed') {
+                    toast('Upload en background falló', 'error');
+                    return;
+                }
+                setTimeout(poll, 3000); // poll every 3s
+            } catch { setTimeout(poll, 5000); }
+        };
+        setTimeout(poll, 2000); // first poll after 2s
     }
 };
 
@@ -1522,12 +1551,21 @@ const Pipeline = {
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
 
+            // Check for pipeline errors (error_step / error_detail from backend)
+            const errorStep = res.metadata?.error_step;
+            const errorDetail = res.metadata?.error_detail;
+            const errorBanner = errorStep ? `<div class="card" style="border-left:3px solid var(--danger);margin-bottom:12px;padding:10px 14px">
+                <div style="font-size:12px;color:var(--danger)">⚠️ Pipeline falló en paso: <strong>${esc(errorStep)}</strong></div>
+                ${errorDetail ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">${esc(errorDetail)}</div>` : ''}
+            </div>` : '';
+
             // Store chunks for viewer access
             Pipeline._lastChunks = res.retrieved_chunks || [];
             const sourcesHtml = (res.sources || []).map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')" title="Ver documento fuente">📄 ${esc(s)}</span>`).join('');
             const chunksViewBtn = Pipeline._lastChunks.length ? `<button class="btn btn-sm" style="margin-top:10px" onclick="DocViewer.openWithChunks('Chunks Recuperados', Pipeline._lastChunks)">👁️ Ver ${Pipeline._lastChunks.length} chunks recuperados</button>` : '';
 
             result.innerHTML = `
+                ${errorBanner}
                 <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
                     <div class="stat-card"><div class="label">Confianza</div><div class="value" style="color:${confColor}">${conf}%</div></div>
                     <div class="stat-card"><div class="label">Fuentes</div><div class="value">${res.sources?.length || 0}</div></div>
@@ -1779,7 +1817,7 @@ const Chat = {
             };
             if (comment) payload.comment = comment;
 
-            await api.submitFeedback(payload);
+            await api.submitFeedback(payload, App.tenantId, App.agentId);
 
             const icon = rating === 'positive' ? '👍' : '👎';
             container.innerHTML = `<div class="chat-fb-sent">
@@ -1928,15 +1966,27 @@ const Config = {
     async loadRetrieval() {
         const container = document.getElementById('retrievalConfig');
         try {
-            // Load config from tenant (works with or without DRAGAs)
+            // DRAGA owns ALL RAG config (per API reference)
+            // Read from agent first, fall back to tenant for legacy
             let rc = {};
+            let configSource = 'tenant';
             try {
-                const tenant = await api.getTenant(App.tenantId);
-                rc = tenant.retrieval_config || tenant.config || {};
-            } catch { /* use defaults */ }
+                const agent = await api.getAgent(App.tenantId, App.agentId);
+                rc = agent.config || {};
+                configSource = 'draga';
+            } catch {
+                try {
+                    const tenant = await api.getTenant(App.tenantId);
+                    rc = tenant.retrieval_config || tenant.config || {};
+                } catch { /* use defaults */ }
+            }
             const sf = SourceFilter.getActiveIds();
             const sfInfo = sf ? `<div style="font-size:11px;color:var(--warning);margin-bottom:8px">🔍 Filtro de fuentes activo: ${sf.length} docs seleccionados <button class="btn btn-sm" onclick="SourceFilter.reset();Config.loadRetrieval()">Limpiar filtro</button></div>` : '';
+            const srcBadge = configSource === 'draga'
+                ? '<span style="font-size:10px;background:rgba(34,197,94,0.15);color:var(--success);padding:2px 8px;border-radius:8px">🧬 DRAGA</span>'
+                : '<span style="font-size:10px;background:rgba(156,163,175,0.15);color:var(--text-muted);padding:2px 8px;border-radius:8px">🏢 Tenant (legacy)</span>';
             container.innerHTML = `
+                <div style="margin-bottom:8px">${srcBadge}</div>
                 ${sfInfo}
                 <div class="form-row">
                     <div class="form-group"><label>Top K</label><input type="number" value="${rc.top_k||5}" id="rcTopK" min="1" max="20"></div>
@@ -1964,18 +2014,25 @@ const Config = {
                 llm_model: document.getElementById('rcModel').value.trim(),
                 response_language: document.getElementById('rcLang').value.trim() || 'auto'
             };
-            // Save to tenant retrieval_config (works with or without DRAGAs)
-            await api.updateTenant(App.tenantId, { retrieval_config: config });
-            toast('Configuración guardada', 'success');
+            // Try saving to DRAGA agent first (DRAGA owns RAG config)
+            try {
+                await api.updateAgent(App.tenantId, App.agentId || 'default', { config });
+                toast('Configuración guardada en DRAGA', 'success');
+                return;
+            } catch {
+                // Fallback: save to tenant (legacy)
+                await api.updateTenant(App.tenantId, { retrieval_config: config });
+                toast('Configuración guardada en tenant', 'success');
+            }
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     generateEmbed() {
         const baseUrl = location.origin;
         const tid = App.tenantId;
-        const aid = App.agentId && App.agentId !== 'default' ? App.agentId : '';
-        const agentAttr = aid ? ` agent-id="${aid}"` : '';
-        const agentParam = aid ? `&agent=${aid}` : '';
+        const aid = App.agentId || 'default';
+        const agentAttr = ` agent-id="${aid}"`;
+        const agentParam = `&agent=${aid}`;
         document.getElementById('embedCodes').innerHTML = `
             <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">Script Tag</div>
                 <pre id="embedScript">&lt;script src="${baseUrl}/src/draga-chat.js"&gt;&lt;/script&gt;
