@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "npx serve . -p 3000",
     "build": "mkdir -p dist && cp src/assistant-widget.js dist/",
+    "build:standalone": "node scripts/build-standalone.js",
     "minify": "npx terser src/assistant-widget.js -o dist/assistant-widget.min.js -c -m"
   },
   "keywords": [
