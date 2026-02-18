@@ -763,7 +763,7 @@ tr:hover td{background:var(--bg-card);}
                         <input type="text" id="wgBaseUrl" class="form-input" style="font-family:monospace;font-size:11px;" oninput="Widgets.onConfigChange()">
                     </label>
                 </div>
-                <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">URL donde está desplegado el backend RAG. Dejar vacío para usar la URL actual.</p>
+                <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">URL base del API (incluye <code>/api/v2</code>). El widget la usa para conectarse al backend.</p>
             </div>
         </div>
 
@@ -2837,9 +2837,9 @@ const Widgets = {
         document.getElementById('wgPreviewMockup').innerHTML = '';
         document.getElementById('wgEmbedCode').textContent = '';
         document.getElementById('wgIframeCode').textContent = '';
-        // Default base URL
+        // Default base URL (includes /api/v2 — what draga-chat.js expects)
         const origin = window.location.origin;
-        document.getElementById('wgBaseUrl').value = origin;
+        document.getElementById('wgBaseUrl').value = origin + '/api/v2';
     },
 
     create() {
@@ -2857,7 +2857,7 @@ const Widgets = {
             feedback: true,
             tokenEnabled: false,
             apiKey: '',
-            baseUrl: window.location.origin,
+            baseUrl: window.location.origin + '/api/v2',
             createdAt: new Date().toISOString()
         };
         this.widgets.push(w);
@@ -2886,7 +2886,7 @@ const Widgets = {
         document.getElementById('wgTokenEnabled').checked = w.tokenEnabled;
         document.getElementById('wgTokenConfig').style.display = w.tokenEnabled ? '' : 'none';
         document.getElementById('wgApiKey').value = w.apiKey || '';
-        document.getElementById('wgBaseUrl').value = w.baseUrl || window.location.origin;
+        document.getElementById('wgBaseUrl').value = w.baseUrl || (window.location.origin + '/api/v2');
 
         this._generateCode();
     },
@@ -3001,8 +3001,10 @@ const Widgets = {
         const w = this.widgets.find(x => x.id === this.selectedId);
         if (!w) return;
 
-        const baseUrl = w.baseUrl || window.location.origin;
-        const scriptUrl = baseUrl.replace(/\/+$/, '') + '/src/draga-chat.js';
+        const baseUrl = w.baseUrl || (window.location.origin + '/api/v2');
+        // Script URL uses the origin (strip /api/v2 if present)
+        const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
+        const scriptUrl = originUrl + '/src/draga-chat.js';
         const agentId = App.agentId || 'default';
 
         // Build attributes
@@ -3043,7 +3045,7 @@ const Widgets = {
             feedback: w.feedback,
         });
         if (w.tokenEnabled && w.apiKey) iframeParams.set('apiKey', w.apiKey);
-        const iframeSrc = baseUrl.replace(/\/+$/, '') + '/demo-draga-chat.html?' + iframeParams.toString();
+        const iframeSrc = originUrl + '/demo-draga-chat.html?' + iframeParams.toString();
         const iframeCode = `<!-- DRAGA Chat iFrame — ${esc(w.name)} -->\n<iframe\n    src="${esc(iframeSrc)}"\n    style="border:none; position:fixed; bottom:0; right:0; width:420px; height:600px; z-index:9999;"\n    allow="clipboard-write"\n    title="DRAGA Chat"\n></iframe>`;
         document.getElementById('wgIframeCode').textContent = iframeCode;
 
@@ -3068,7 +3070,9 @@ const Widgets = {
     _renderLivePreview(w, baseUrl) {
         const container = document.getElementById('wgPreviewLive');
         const agentId = App.agentId || 'default';
-        const scriptUrl = baseUrl.replace(/\/+$/, '') + '/src/draga-chat.js';
+        // Script URL uses origin (strip /api/v2 if present)
+        const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
+        const scriptUrl = originUrl + '/src/draga-chat.js';
         const color = w.color || '#7c3aed';
 
         // Build the attributes for the live widget
@@ -3129,7 +3133,7 @@ const Widgets = {
             id="wgLiveIframe"
             srcdoc="${srcdoc.replace(/"/g, '&quot;')}"
             style="width:100%;height:520px;border:none;border-radius:var(--radius);background:#f3f4f6;"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
             title="Widget Preview"
         ></iframe>`;
     },
