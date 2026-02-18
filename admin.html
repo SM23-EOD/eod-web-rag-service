@@ -273,10 +273,10 @@ tr:hover td{background:var(--bg-card);}
     <div class="stats-grid" id="heroStats">
         <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
         <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
-        <div class="stat-card"><div class="label">Tenants</div><div class="value" id="statAgents" style="color:var(--info)">—</div></div>
+        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="statChunks" style="color:var(--info)">—</div></div>
         <div class="stat-card"><div class="label">API Keys</div><div class="value" id="statKeys" style="color:var(--warning)">—</div></div>
-        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
-        <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" style="color:var(--success)">98%</div></div>
+        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" id="statPipelineSteps" style="color:var(--info)">—</div></div>
+        <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" id="statAntiHalluc" style="color:var(--success)">—</div></div>
     </div>
 
     <div class="section">
@@ -442,7 +442,7 @@ tr:hover td{background:var(--bg-card);}
                         <li><span class="task-check">⬜</span><span class="task-text">Alembic migrations (tenants, documents, feedback, sessions)</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">pgvector extension + hybrid search adapter</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Redis cache adapter (reemplaza in-memory)</span><span class="task-actor actor-copilot">Copilot</span></li>
-                        <li><span class="task-check">⬜</span><span class="task-text">Migración de datos ChromaDB → pgvector</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Migración de datos vector DB → pgvector</span><span class="task-actor actor-hybrid">Hybrid</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Tests de integración DB</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Docker compose con PG + Redis</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">ADR-017: Decision PostgreSQL + pgvector</span><span class="task-actor actor-human">Human</span></li>
@@ -1063,21 +1063,43 @@ async function loadDashboard() {
     grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando instancias...</div>';
 
     try {
-        const [tenantsData, agentsData] = await Promise.all([
+        // Fetch tenants + overview (real counts from backend)
+        const [tenantsData, overview, grounding] = await Promise.all([
             api.listTenants(true),
-            api.listAgents().catch(() => [])
+            api.adminDashboardOverview().catch(() => null),
+            api.metricsGrounding().catch(() => null)
         ]);
         const tenants = tenantsData.tenants || [];
-        const agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
 
-        document.getElementById('tenantCount').textContent = tenants.length;
-        document.getElementById('agentCount').textContent = agents.length;
-        document.getElementById('statDragas').textContent = agents.length;
-        document.getElementById('statAgents').textContent = tenants.length;
+        // ── Hero stats (from backend overview, not hardcoded) ──
+        // Each tenant = 1 DRAGA instance
+        const dragaCount = tenants.length;
+        const totalDocs = overview?.platform?.total_documents ?? tenants.reduce((s, t) => s + (t.document_count || 0), 0);
+        const totalChunks = overview?.platform?.total_chunks ?? 0;
 
-        let totalDocs = 0;
-        tenants.forEach(t => { totalDocs += t.document_count || 0; });
+        document.getElementById('tenantCount').textContent = dragaCount;
+        document.getElementById('agentCount').textContent = dragaCount;
+        document.getElementById('statDragas').textContent = dragaCount;
         document.getElementById('statDocs').textContent = totalDocs;
+        document.getElementById('statChunks').textContent = totalChunks;
+
+        // Pipeline steps — from backend health/deep
+        try {
+            const deep = await api.healthDeep();
+            const steps = deep?.pipeline_steps ?? deep?.steps ?? null;
+            document.getElementById('statPipelineSteps').textContent = steps ?? '—';
+        } catch { document.getElementById('statPipelineSteps').textContent = '—'; }
+
+        // Anti-hallucination — from grounding metrics
+        const groundingRate = grounding?.avg_grounding_rate;
+        const hallucinationRate = grounding?.avg_nli_hallucination_rate;
+        if (groundingRate != null) {
+            document.getElementById('statAntiHalluc').textContent = `${(groundingRate * 100).toFixed(0)}%`;
+        } else if (hallucinationRate != null) {
+            document.getElementById('statAntiHalluc').textContent = `${((1 - hallucinationRate) * 100).toFixed(0)}%`;
+        } else {
+            document.getElementById('statAntiHalluc').textContent = '—';
+        }
 
         // Load API keys count across all tenants (parallelized)
         let totalKeys = 0;
@@ -1095,8 +1117,13 @@ async function loadDashboard() {
             return;
         }
 
+        // Build per-tenant doc/chunk counts from overview data
+        const overviewTenants = (overview?.tenants || []).reduce((m, t) => { m[t.tenant_id] = t; return m; }, {});
+
         grid.innerHTML = tenants.map(t => {
-            const tAgents = agents.filter(a => a.tenant_id === t.tenant_id);
+            const ov = overviewTenants[t.tenant_id] || {};
+            const docCount = ov.document_count ?? t.document_count ?? 0;
+            const chunkCount = ov.chunk_count ?? 0;
             return `<div class="draga-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <div class="dc-name">${t.name}</div>
@@ -1105,9 +1132,8 @@ async function loadDashboard() {
                 <div class="dc-id">${t.tenant_id}</div>
                 <div class="dc-anatomy">
                     <div class="dc-part"><span class="icon">🏢</span>Tenant</div>
-                    <div class="dc-part"><span class="icon">📚</span>${t.document_count || 0} docs</div>
-                    <div class="dc-part"><span class="icon">⚙️</span>14 steps</div>
-                    <div class="dc-part"><span class="icon">🤖</span>${tAgents.length} agents</div>
+                    <div class="dc-part"><span class="icon">📄</span>${docCount} docs</div>
+                    <div class="dc-part"><span class="icon">📚</span>${chunkCount} chunks</div>
                 </div>
                 <div class="dc-meta">
                     <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
@@ -1227,7 +1253,7 @@ async function saveTenant() {
 
 async function deleteTenantAction(id, name) {
     if (!confirm(`¿Eliminar tenant "${name}" (${id})?`)) return;
-    const delCol = confirm('¿Eliminar también la colección ChromaDB? (DESTRUCTIVO)');
+    const delCol = confirm('¿Eliminar también la colección vectorial? (DESTRUCTIVO)');
     try {
         await api.deleteTenant(id, delCol);
         toast(`Tenant "${name}" eliminado`, 'success');
@@ -1242,49 +1268,49 @@ async function loadAgents() {
     const container = document.getElementById('agentCards');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-        const data = await api.listAgents();
-        const agents = Array.isArray(data) ? data : (data.agents || []);
-        document.getElementById('agentCount').textContent = agents.length;
+        // Each tenant = 1 DRAGA instance. Use overview for real counts.
+        const [tenantsData, overview] = await Promise.all([
+            api.listTenants(true),
+            api.adminDashboardOverview().catch(() => null)
+        ]);
+        const tenants = tenantsData.tenants || [];
+        const overviewTenants = (overview?.tenants || []).reduce((m, t) => { m[t.tenant_id] = t; return m; }, {});
+        document.getElementById('agentCount').textContent = tenants.length;
 
-        if (agents.length === 0) {
+        if (tenants.length === 0) {
             container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
                 <h3>Sin DRAGAs</h3><p>Crea tu primera DRAGA para comenzar</p>
-                <button class="btn btn-primary" onclick="showAgentModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
+                <button class="btn btn-primary" onclick="showDragaModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
             return;
         }
 
-        container.innerHTML = agents.map(a => {
-            const statusClass = a.status === 'active' ? 'badge-success' : a.status === 'error' ? 'badge-danger' : 'badge-warning';
-            const cfg = a.config || {};
-            const stats = a.stats || {};
-            const aid = a.agent_id || 'default';
-            const agentParam = aid !== 'default' ? `&agent=${aid}` : '';
+        container.innerHTML = tenants.map(t => {
+            const ov = overviewTenants[t.tenant_id] || {};
+            const docCount = ov.document_count ?? t.document_count ?? 0;
+            const chunkCount = ov.chunk_count ?? 0;
             return `<div class="card">
                 <div class="card-header">
-                    <span class="card-title">${a.name}</span>
-                    <span class="badge ${statusClass}">${a.status || '?'}</span>
+                    <span class="card-title">${t.name}</span>
+                    ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
                 </div>
                 <div class="card-meta">
-                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${a.tenant_id}</code>
-                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;margin-left:4px">🤖 ${aid}</code>
-                    ${a.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${a.description}</div>` : ''}
+                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${t.tenant_id}</code>
+                    ${t.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${t.description}</div>` : ''}
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
-                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🧠 ${(cfg.llm_model || '—').split('/').pop()}</span>
-                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">Top K: ${cfg.top_k || 5}</span>
-                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🎯 Sim: ${cfg.similarity_threshold || 0.5}</span>
-                    ${cfg.use_cache ? '<span style="background:rgba(34,197,94,0.1);padding:2px 8px;border-radius:12px;color:var(--success)">Cache ✓</span>' : ''}
+                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🧠 ${(t.default_model || '—').split('/').pop()}</span>
+                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🌐 ${t.response_language || '—'}</span>
                 </div>
                 <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:12px">
-                    <span>💬 ${stats.total_queries || 0} queries</span>
-                    <span>📄 ${stats.total_documents || 0} docs</span>
-                    <span>📦 ${stats.total_chunks || 0} chunks</span>
+                    <span>📄 ${docCount} docs</span>
+                    <span>📚 ${chunkCount} chunks</span>
+                    <span>📦 ${t.collection_name || '—'}</span>
                 </div>
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${t.created_at ? new Date(t.created_at).toLocaleDateString('es') : '—'}</div>
                 <div class="card-actions">
-                    <a href="draga.html?tenant=${a.tenant_id}${agentParam}#chat" class="btn btn-sm btn-primary" style="text-decoration:none">💬 Chat</a>
-                    <button class="btn btn-sm" onclick="viewAgentStats('${a.tenant_id}','${aid}')">📊 Stats</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteAgentAction('${a.tenant_id}','${aid}','${(a.name||'').replace(/'/g,"\\'")}')">🗑️</button>
+                    <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary" style="text-decoration:none"><i class="di"></i> Dashboard</a>
+                    <a href="draga.html?tenant=${t.tenant_id}#chat" class="btn btn-sm" style="text-decoration:none">💬 Chat</a>
+                    <a href="draga.html?tenant=${t.tenant_id}#knowledge" class="btn btn-sm" style="text-decoration:none">📚 KB</a>
                 </div>
             </div>`;
         }).join('');
@@ -1495,11 +1521,13 @@ async function loadSystemStats() {
     const panel = document.getElementById('systemPanel');
     try {
         const overview = await api.adminDashboardOverview();
+        const p = overview.platform || {};
+        const op = overview.operational || {};
         const items = [
-            ['Tenants', overview.total_tenants ?? overview.tenants ?? '—'],
-            ['DRAGAs', overview.total_agents ?? overview.agents ?? '—'],
-            ['Documentos', overview.total_documents ?? overview.documents ?? '—'],
-            ['Queries (24h)', overview.queries_24h ?? '—'],
+            ['DRAGAs', p.total_tenants ?? overview.tenants?.length ?? '—'],
+            ['Documentos', p.total_documents ?? '—'],
+            ['Chunks', p.total_chunks ?? '—'],
+            ['Requests', op.total_requests ?? '—'],
         ];
         panel.innerHTML = `<div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
             ${items.map(([k, v]) => `<div><span style="color:var(--text-muted)">${k}:</span> <strong>${v}</strong></div>`).join('')}

@@ -295,6 +295,29 @@ tr:hover td{background:var(--bg-card);}
 
 /* ═══ DRAGA CATALOG ═══ */
 .draga-catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+
+/* ═══ WIDGET GENERATOR ═══ */
+.wg-layout{display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start;}
+.wg-config .section{margin-bottom:16px;}
+.wg-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;}
+.wg-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);font-size:13px;}
+.wg-item:hover{background:var(--bg-card-hover);border-color:var(--draga-accent-light);}
+.wg-item.active{border-color:var(--draga-accent);background:var(--draga-accent-alpha);}
+.wg-item .wg-item-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.wg-item .wg-item-name{font-weight:700;color:var(--text-primary);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wg-item .wg-item-proto{font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
+.wg-item .wg-item-proto.openai{background:rgba(34,197,94,.15);color:var(--success);}
+.wg-item .wg-item-proto.rag{background:rgba(59,130,246,.15);color:var(--info);}
+.wg-item .wg-item-proto.mcp{background:rgba(168,85,247,.15);color:#a855f7;}
+.wg-item .wg-item-lock{font-size:11px;flex-shrink:0;}
+.wg-preview-box{background:var(--bg-main);border:2px dashed var(--border);border-radius:var(--radius);min-height:420px;position:relative;overflow:hidden;}
+.wg-preview-box iframe{display:block;}
+.wg-code{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;font-size:11px;line-height:1.6;font-family:'Consolas','Monaco',monospace;color:var(--text-secondary);overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:500px;overflow-y:auto;}
+.wg-tab{display:none;}.wg-tab.active{display:block;}
+.wg-token-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:700;}
+.wg-token-badge.on{background:rgba(34,197,94,.15);color:var(--success);}
+.wg-token-badge.off{background:rgba(100,116,139,.15);color:var(--text-muted);}
+@media(max-width:900px){.wg-layout{grid-template-columns:1fr;}}
 .draga-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:var(--transition);position:relative;overflow:hidden;}
 .draga-card:hover{background:var(--bg-card-hover);border-color:var(--draga-accent-light);transform:translateY(-2px);box-shadow:var(--draga-glow);}
 .draga-card.active{border-color:var(--draga-accent);background:var(--draga-accent-alpha);}
@@ -359,6 +382,7 @@ tr:hover td{background:var(--bg-card);}
     <a class="nav-item" onclick="App.nav('quality')" data-mod="quality"><span class="icon">🛡️</span> Quality</a>
     <div class="nav-sep"></div>
     <a class="nav-item" onclick="App.nav('chat')" data-mod="chat"><span class="icon">💬</span> Chat</a>
+    <a class="nav-item" onclick="App.nav('widgets')" data-mod="widgets"><span class="icon">🧩</span> Widgets</a>
     <a class="nav-item" onclick="App.nav('config')" data-mod="config"><span class="icon">🔧</span> Config</a>
 </nav>
 
@@ -373,7 +397,7 @@ tr:hover td{background:var(--bg-card);}
     <div class="stats-grid" id="overviewStats">
         <div class="stat-card"><div class="label">Documentos</div><div class="value" id="ovDocs">—</div></div>
         <div class="stat-card"><div class="label">Chunks</div><div class="value" id="ovChunks">—</div></div>
-        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
+        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)" id="ovPipelineSteps">—</div></div>
         <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="ovModel">—</div></div>
         <div class="stat-card"><div class="label">Idioma</div><div class="value" id="ovLang">—</div></div>
         <div class="stat-card"><div class="label">Colección</div><div class="value" style="font-size:14px" id="ovCollection">—</div></div>
@@ -636,6 +660,157 @@ tr:hover td{background:var(--bg-card);}
     </div>
 </div>
 
+<!-- ── WIDGETS ── -->
+<div class="module" id="mod-widgets">
+    <h1 class="page-title">🧩 Widget Generator</h1>
+    <p class="page-desc">Genera widgets embebibles para integrar este DRAGA en cualquier página web</p>
+
+    <div class="wg-layout">
+        <!-- LEFT: Config panel -->
+        <div class="wg-config">
+            <div class="section">
+                <div class="section-title"><span class="icon">📋</span> Mis Widgets</div>
+                <div id="wgWidgetList" class="wg-list"></div>
+                <button class="btn btn-primary" onclick="Widgets.create()" style="width:100%;margin-top:10px;">+ Nuevo Widget</button>
+            </div>
+
+            <div class="section" id="wgEditorSection" style="display:none;">
+                <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span><span class="icon">⚙️</span> Configuración</span>
+                    <button class="btn btn-sm btn-danger" onclick="Widgets.deleteSelected()" title="Eliminar widget">🗑️</button>
+                </div>
+
+                <div class="form-row" style="grid-template-columns:1fr;">
+                    <label class="form-label">Nombre del Widget
+                        <input type="text" id="wgName" class="form-input" placeholder="Mi Widget de Soporte" oninput="Widgets.onConfigChange()">
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label">Protocolo
+                        <select id="wgProtocol" class="form-input" onchange="Widgets.onConfigChange()">
+                            <option value="openai">OpenAI (streaming chat)</option>
+                            <option value="rag">RAG Query (directo)</option>
+                            <option value="mcp">MCP Tool Call</option>
+                        </select>
+                    </label>
+                    <label class="form-label">Modelo
+                        <input type="text" id="wgModel" class="form-input" value="eod-rag" oninput="Widgets.onConfigChange()">
+                    </label>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label">Posición
+                        <select id="wgPosition" class="form-input" onchange="Widgets.onConfigChange()">
+                            <option value="bottom-right">Abajo-Derecha</option>
+                            <option value="bottom-left">Abajo-Izquierda</option>
+                        </select>
+                    </label>
+                    <label class="form-label">Idioma
+                        <select id="wgLocale" class="form-input" onchange="Widgets.onConfigChange()">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="form-row" style="grid-template-columns:1fr;">
+                    <label class="form-label">Color principal
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="color" id="wgColor" value="#7c3aed" onchange="Widgets.onConfigChange()" style="width:40px;height:32px;border:none;cursor:pointer;background:none;">
+                            <span id="wgColorHex" style="font-size:11px;color:var(--text-muted);font-family:monospace;">#7c3aed</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+                        <input type="checkbox" id="wgStream" checked onchange="Widgets.onConfigChange()"> Streaming
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+                        <input type="checkbox" id="wgSources" checked onchange="Widgets.onConfigChange()"> Fuentes
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;">
+                        <input type="checkbox" id="wgFeedback" checked onchange="Widgets.onConfigChange()"> Feedback
+                    </label>
+                </div>
+
+                <div class="nav-sep" style="margin:16px 0;"></div>
+
+                <!-- Security Token -->
+                <div class="section-title" style="font-size:13px;"><span class="icon">🔐</span> Seguridad</div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer;margin-bottom:10px;">
+                    <input type="checkbox" id="wgTokenEnabled" onchange="Widgets.toggleToken()"> Habilitar token de seguridad
+                </label>
+                <div id="wgTokenConfig" style="display:none;">
+                    <div class="form-row" style="grid-template-columns:1fr;">
+                        <label class="form-label">API Key
+                            <div style="display:flex;gap:6px;">
+                                <input type="text" id="wgApiKey" class="form-input" placeholder="sk-..." style="font-family:monospace;font-size:11px;" oninput="Widgets.onConfigChange()">
+                                <button class="btn btn-sm" onclick="Widgets.useExistingKey()" title="Usar una key existente de este DRAGA">📋 Usar existente</button>
+                            </div>
+                        </label>
+                    </div>
+                    <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">⚠️ El token se incluirá en el código embed. Para producción, usa un proxy backend que inyecte las credenciales.</p>
+                </div>
+
+                <div class="nav-sep" style="margin:16px 0;"></div>
+
+                <!-- Base URL -->
+                <div class="section-title" style="font-size:13px;"><span class="icon">🌐</span> Conexión</div>
+                <div class="form-row" style="grid-template-columns:1fr;">
+                    <label class="form-label">Base URL del backend
+                        <input type="text" id="wgBaseUrl" class="form-input" style="font-family:monospace;font-size:11px;" oninput="Widgets.onConfigChange()">
+                    </label>
+                </div>
+                <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">URL base del API (incluye <code>/api/v2</code>). El widget la usa para conectarse al backend.</p>
+            </div>
+        </div>
+
+        <!-- RIGHT: Preview + Code -->
+        <div class="wg-output">
+            <div class="section">
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button class="filter-pill active" data-wgtab="preview" onclick="Widgets.switchTab('preview',this)">👁️ Preview</button>
+                    <button class="filter-pill" data-wgtab="embed" onclick="Widgets.switchTab('embed',this)">📋 Embed Code</button>
+                    <button class="filter-pill" data-wgtab="iframe" onclick="Widgets.switchTab('iframe',this)">🖼️ iFrame</button>
+                </div>
+
+                <div id="wgTabPreview" class="wg-tab active">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div class="section-title" style="margin:0;"><span class="icon">👁️</span> Vista Previa</div>
+                        <div style="display:flex;gap:4px;" id="wgPreviewModeBar">
+                            <button class="filter-pill active" data-wgprev="live" onclick="Widgets.switchPreviewMode('live',this)">🟢 En Vivo</button>
+                            <button class="filter-pill" data-wgprev="mockup" onclick="Widgets.switchPreviewMode('mockup',this)">🎨 Mockup</button>
+                        </div>
+                    </div>
+                    <div id="wgPreviewLive" class="wg-preview-box" style="padding:0;">
+                        <p style="color:var(--text-muted);text-align:center;padding:40px;">Selecciona o crea un widget para probarlo en vivo</p>
+                    </div>
+                    <div id="wgPreviewMockup" class="wg-preview-box" style="display:none;">
+                    </div>
+                </div>
+
+                <div id="wgTabEmbed" class="wg-tab">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div class="section-title" style="margin:0;"><span class="icon">📋</span> Código Embed (Web Component)</div>
+                        <button class="btn btn-sm btn-primary" onclick="Widgets.copyCode('embed')">📋 Copiar</button>
+                    </div>
+                    <pre id="wgEmbedCode" class="wg-code"></pre>
+                </div>
+
+                <div id="wgTabIframe" class="wg-tab">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div class="section-title" style="margin:0;"><span class="icon">🖼️</span> Código iFrame</div>
+                        <button class="btn btn-sm btn-primary" onclick="Widgets.copyCode('iframe')">📋 Copiar</button>
+                    </div>
+                    <pre id="wgIframeCode" class="wg-code"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── CONFIG ── -->
 <div class="module" id="mod-config">
     <h1 class="page-title">Configuración</h1>
@@ -821,7 +996,7 @@ tr:hover td{background:var(--bg-card);}
 // DRAGA INSTANCE DASHBOARD — JavaScript
 // ══════════════════════════════════════════════════════════════
 
-const MODULES = ['overview','knowledge','pipeline','quality','chat','config'];
+const MODULES = ['overview','knowledge','pipeline','quality','chat','widgets','config'];
 
 // ══════════════════════════════════════════════════════════════
 // DOCUMENT VIEWER — View source document chunks
@@ -1235,6 +1410,7 @@ const App = {
             pipeline: () => {},
             quality: () => Quality.load(),
             chat: () => ConvHistory.load(),
+            widgets: () => Widgets.load(),
             config: () => Config.load()
         };
         loaders[mod]?.();
@@ -1285,6 +1461,13 @@ const Overview = {
 
         // Check protocols
         this.checkProtocols();
+
+        // Pipeline steps — from backend deep health
+        try {
+            const deep = await api.healthDeep();
+            const steps = deep?.pipeline_steps ?? deep?.steps ?? null;
+            document.getElementById('ovPipelineSteps').textContent = steps ?? '—';
+        } catch { document.getElementById('ovPipelineSteps').textContent = '—'; }
 
         // Load DRAGA catalog
         this.loadCatalog();
@@ -2102,24 +2285,58 @@ const KB = {
 
     async _pollIngest(taskId) {
         if (this._pollTimer) clearTimeout(this._pollTimer);
+        let consecutive404 = 0;
+        const MAX_404 = 8;          // stop after 8 consecutive 404s (~32s)
+        const MAX_POLL_TIME = 300000; // 5 min absolute timeout
+        const startTime = Date.now();
+
         const poll = async () => {
+            // Absolute timeout guard
+            if (Date.now() - startTime > MAX_POLL_TIME) {
+                this._pollTimer = null;
+                toast('⏱️ Timeout — la tarea tardó demasiado. Revisa en Configuración > Tareas.', 'warning');
+                await this.loadAndStabilize();
+                return;
+            }
             try {
                 const task = await api.getTask(taskId);
+                consecutive404 = 0; // reset on success
                 this._updateTracker(task);
 
                 if (task.state === 'completed' || task.state === 'failed') {
                     this._pollTimer = null;
-                    // Refresh doc list to show new state
                     await this.loadAndStabilize();
                     return;
                 }
-                // Keep polling
                 this._pollTimer = setTimeout(poll, 2000);
-            } catch {
-                this._pollTimer = setTimeout(poll, 4000);
+            } catch (err) {
+                const is404 = err && (err.status === 404 || (err.message && err.message.includes('404')));
+                if (is404) {
+                    consecutive404++;
+                    if (consecutive404 >= MAX_404) {
+                        this._pollTimer = null;
+                        // Fallback: try listing tasks to find this one
+                        try {
+                            const list = await api.listTasks(App.tenantId, null, 5, App.agentId);
+                            const found = (list.tasks || []).find(t => t.task_id === taskId);
+                            if (found) {
+                                this._updateTracker(found);
+                                if (found.state !== 'completed' && found.state !== 'failed') {
+                                    // Task exists but GET by ID fails — retry with list polling
+                                    consecutive404 = 0;
+                                    this._pollTimer = setTimeout(poll, 3000);
+                                    return;
+                                }
+                            }
+                        } catch { /* ignore */ }
+                        toast('❌ No se pudo rastrear la tarea de ingesta. Revisa la lista de documentos.', 'error');
+                        await this.loadAndStabilize();
+                        return;
+                    }
+                }
+                this._pollTimer = setTimeout(poll, is404 ? 4000 : 3000);
             }
         };
-        // First poll after 1s
         this._pollTimer = setTimeout(poll, 1000);
     }
 };
@@ -2601,6 +2818,407 @@ const ConvHistory = {
             messages.forEach(m => Chat.addBubble(m.role, m.content));
             toast(`Sesión cargada: ${messages.length} mensajes`, 'success', 2000);
         } catch (e) { toast('Error al cargar sesión: ' + e.message, 'error'); }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// WIDGETS GENERATOR
+// ══════════════════════════════════════════════════════════════
+const Widgets = {
+    widgets: [],
+    selectedId: null,
+
+    _storageKey() {
+        return `draga-widgets-${App.tenantId}-${App.agentId}`;
+    },
+
+    async load() {
+        try {
+            const raw = localStorage.getItem(this._storageKey());
+            this.widgets = raw ? JSON.parse(raw) : [];
+        } catch { this.widgets = []; }
+        this.selectedId = null;
+        this._renderList();
+        document.getElementById('wgEditorSection').style.display = 'none';
+        document.getElementById('wgPreviewLive').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Selecciona o crea un widget para probarlo en vivo</p>';
+        document.getElementById('wgPreviewMockup').innerHTML = '';
+        document.getElementById('wgEmbedCode').textContent = '';
+        document.getElementById('wgIframeCode').textContent = '';
+        // Default base URL (includes /api/v2 — what draga-chat.js expects)
+        const origin = window.location.origin;
+        document.getElementById('wgBaseUrl').value = origin + '/api/v2';
+    },
+
+    create() {
+        const id = 'w_' + Date.now();
+        const w = {
+            id,
+            name: `Widget ${this.widgets.length + 1}`,
+            protocol: 'openai',
+            model: 'eod-rag',
+            position: 'bottom-right',
+            locale: 'es',
+            color: '#7c3aed',
+            stream: true,
+            sources: true,
+            feedback: true,
+            tokenEnabled: false,
+            apiKey: '',
+            baseUrl: window.location.origin + '/api/v2',
+            createdAt: new Date().toISOString()
+        };
+        this.widgets.push(w);
+        this._save();
+        this.select(id);
+    },
+
+    select(id) {
+        const w = this.widgets.find(x => x.id === id);
+        if (!w) return;
+        this.selectedId = id;
+        this._renderList();
+        document.getElementById('wgEditorSection').style.display = '';
+
+        // Populate form
+        document.getElementById('wgName').value = w.name;
+        document.getElementById('wgProtocol').value = w.protocol;
+        document.getElementById('wgModel').value = w.model;
+        document.getElementById('wgPosition').value = w.position;
+        document.getElementById('wgLocale').value = w.locale;
+        document.getElementById('wgColor').value = w.color;
+        document.getElementById('wgColorHex').textContent = w.color;
+        document.getElementById('wgStream').checked = w.stream;
+        document.getElementById('wgSources').checked = w.sources;
+        document.getElementById('wgFeedback').checked = w.feedback;
+        document.getElementById('wgTokenEnabled').checked = w.tokenEnabled;
+        document.getElementById('wgTokenConfig').style.display = w.tokenEnabled ? '' : 'none';
+        document.getElementById('wgApiKey').value = w.apiKey || '';
+        document.getElementById('wgBaseUrl').value = w.baseUrl || (window.location.origin + '/api/v2');
+
+        this._generateCode();
+    },
+
+    deleteSelected() {
+        if (!this.selectedId) return;
+        const w = this.widgets.find(x => x.id === this.selectedId);
+        if (!confirm(`¿Eliminar widget "${w?.name || ''}"?`)) return;
+        this.widgets = this.widgets.filter(x => x.id !== this.selectedId);
+        this.selectedId = null;
+        this._save();
+        this._renderList();
+        document.getElementById('wgEditorSection').style.display = 'none';
+        document.getElementById('wgPreviewLive').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Selecciona o crea un widget para probarlo en vivo</p>';
+        document.getElementById('wgPreviewMockup').innerHTML = '';
+        document.getElementById('wgEmbedCode').textContent = '';
+        document.getElementById('wgIframeCode').textContent = '';
+    },
+
+    onConfigChange() {
+        if (!this.selectedId) return;
+        const w = this.widgets.find(x => x.id === this.selectedId);
+        if (!w) return;
+
+        w.name = document.getElementById('wgName').value.trim() || 'Widget';
+        w.protocol = document.getElementById('wgProtocol').value;
+        w.model = document.getElementById('wgModel').value.trim() || 'eod-rag';
+        w.position = document.getElementById('wgPosition').value;
+        w.locale = document.getElementById('wgLocale').value;
+        w.color = document.getElementById('wgColor').value;
+        w.stream = document.getElementById('wgStream').checked;
+        w.sources = document.getElementById('wgSources').checked;
+        w.feedback = document.getElementById('wgFeedback').checked;
+        w.apiKey = document.getElementById('wgApiKey').value.trim();
+        w.baseUrl = document.getElementById('wgBaseUrl').value.trim();
+
+        document.getElementById('wgColorHex').textContent = w.color;
+
+        this._save();
+        this._renderList();
+        this._generateCode();
+    },
+
+    toggleToken() {
+        const enabled = document.getElementById('wgTokenEnabled').checked;
+        document.getElementById('wgTokenConfig').style.display = enabled ? '' : 'none';
+        if (this.selectedId) {
+            const w = this.widgets.find(x => x.id === this.selectedId);
+            if (w) {
+                w.tokenEnabled = enabled;
+                if (!enabled) w.apiKey = '';
+                this._save();
+                this._generateCode();
+            }
+        }
+    },
+
+    async useExistingKey() {
+        try {
+            const data = await api.listApiKeys(App.tenantId);
+            const keys = data.keys || [];
+            if (keys.length === 0) {
+                toast('No hay API Keys. Crea una en la sección Configuración.', 'warning');
+                return;
+            }
+            const options = keys.map((k, i) => `${i + 1}. ${k.label || 'Sin label'} (${k.key_prefix}...)`).join('\n');
+            const choice = prompt(`Selecciona una key (número):\n\n${options}`);
+            if (!choice) return;
+            const idx = parseInt(choice) - 1;
+            if (idx < 0 || idx >= keys.length) { toast('Selección inválida', 'error'); return; }
+            // API keys are created and the raw key is only shown once.
+            // We can only paste the prefix as a hint — the user must paste the actual key.
+            toast('⚠️ Las API Keys no se pueden recuperar después de creadas. Pega la key que guardaste al crearla.', 'warning');
+            document.getElementById('wgApiKey').focus();
+        } catch (e) {
+            toast('Error al cargar keys: ' + e.message, 'error');
+        }
+    },
+
+    switchTab(tab, btn) {
+        // Hide all tabs
+        ['Preview', 'Embed', 'Iframe'].forEach(t => {
+            document.getElementById('wgTab' + t).classList.remove('active');
+        });
+        // Deactivate all pills
+        document.querySelectorAll('[data-wgtab]').forEach(b => b.classList.remove('active'));
+        // Show selected
+        const tabMap = { preview: 'Preview', embed: 'Embed', iframe: 'Iframe' };
+        document.getElementById('wgTab' + tabMap[tab]).classList.add('active');
+        btn.classList.add('active');
+    },
+
+    copyCode(type) {
+        const el = type === 'embed' ? document.getElementById('wgEmbedCode') : document.getElementById('wgIframeCode');
+        const text = el.textContent;
+        if (!text.trim()) { toast('No hay código para copiar', 'warning'); return; }
+        navigator.clipboard.writeText(text).then(() => {
+            toast('Código copiado al portapapeles', 'success');
+        }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta);
+            ta.select(); document.execCommand('copy');
+            document.body.removeChild(ta);
+            toast('Código copiado', 'success');
+        });
+    },
+
+    // ── Internal ──
+
+    _generateCode() {
+        const w = this.widgets.find(x => x.id === this.selectedId);
+        if (!w) return;
+
+        const baseUrl = w.baseUrl || (window.location.origin + '/api/v2');
+        // Script URL uses the origin (strip /api/v2 if present)
+        const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
+        const scriptUrl = originUrl + '/src/draga-chat.js';
+        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
+        const tenantId = App.tenantId;
+
+        // Build attributes
+        const attrs = [];
+        attrs.push(`agent="${esc(tenantId)}"`);
+        attrs.push(`base-url="${esc(baseUrl)}"`);
+        attrs.push(`protocol="${w.protocol}"`);
+        attrs.push(`model="${esc(w.model)}"`);
+        attrs.push(`position="${w.position}"`);
+        attrs.push(`locale="${w.locale}"`);
+        attrs.push(`theme="auto"`);
+        attrs.push(`streaming="${w.stream}"`);
+        attrs.push(`show-sources="${w.sources}"`);
+        attrs.push(`feedback="${w.feedback}"`);
+        if (w.tokenEnabled && w.apiKey) {
+            attrs.push(`api-key="${esc(w.apiKey)}"`);
+        }
+
+        // Embed code (Web Component)
+        const embed = `<!-- DRAGA Chat Widget — ${esc(w.name)} -->\n<script src="${esc(scriptUrl)}"><\/script>\n<draga-chat\n    ${attrs.join('\n    ')}\n><\/draga-chat>`;
+
+        // Custom CSS override (color)
+        const cssSnippet = w.color !== '#7c3aed'
+            ? `\n\n<!-- Color personalizado -->\n<style>\n  draga-chat { --draga-primary: ${w.color}; }\n</style>`
+            : '';
+
+        document.getElementById('wgEmbedCode').textContent = embed + cssSnippet;
+
+        // iFrame code
+        const iframeParams = new URLSearchParams({
+            tenant: tenantId || '',
+            agent: App.agentId || 'default',
+            protocol: w.protocol,
+            model: w.model,
+            locale: w.locale,
+            streaming: w.stream,
+            sources: w.sources,
+            feedback: w.feedback,
+        });
+        if (w.tokenEnabled && w.apiKey) iframeParams.set('apiKey', w.apiKey);
+        const iframeSrc = originUrl + '/demo-draga-chat.html?' + iframeParams.toString();
+        const iframeCode = `<!-- DRAGA Chat iFrame — ${esc(w.name)} -->\n<iframe\n    src="${esc(iframeSrc)}"\n    style="border:none; position:fixed; bottom:0; right:0; width:420px; height:600px; z-index:9999;"\n    allow="clipboard-write"\n    title="DRAGA Chat"\n></iframe>`;
+        document.getElementById('wgIframeCode').textContent = iframeCode;
+
+        // Preview
+        this._renderPreview(w, baseUrl);
+    },
+
+    switchPreviewMode(mode, btn) {
+        document.querySelectorAll('[data-wgprev]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('wgPreviewLive').style.display = mode === 'live' ? '' : 'none';
+        document.getElementById('wgPreviewMockup').style.display = mode === 'mockup' ? '' : 'none';
+    },
+
+    _renderPreview(w, baseUrl) {
+        // ── Live preview: real <draga-chat> in an iframe ──
+        this._renderLivePreview(w, baseUrl);
+        // ── Static mockup ──
+        this._renderMockupPreview(w);
+    },
+
+    _renderLivePreview(w, baseUrl) {
+        const container = document.getElementById('wgPreviewLive');
+        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
+        const tenantId = App.tenantId;
+        // Script URL uses origin (strip /api/v2 if present)
+        const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
+        const scriptUrl = originUrl + '/src/draga-chat.js';
+        const color = w.color || '#7c3aed';
+
+        // Build the attributes for the live widget
+        const attrParts = [
+            `agent="${tenantId}"`,
+            `base-url="${baseUrl}"`,
+            `protocol="${w.protocol}"`,
+            `model="${w.model}"`,
+            `position="none"`,  // inline — no floating
+            `locale="${w.locale}"`,
+            `theme="light"`,
+            `streaming="${w.stream}"`,
+            `show-sources="${w.sources}"`,
+            `feedback="${w.feedback}"`,
+        ];
+        if (w.tokenEnabled && w.apiKey) {
+            attrParts.push(`api-key="${w.apiKey}"`);
+        }
+
+        // srcdoc: a self-contained HTML page that loads and renders the widget inline (open)
+        const srcdoc = `<!DOCTYPE html>
+<html lang="${w.locale}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #f3f4f6; font-family: system-ui, sans-serif; }
+  body { display: flex; align-items: stretch; justify-content: center; }
+  draga-chat {
+    --draga-primary: ${color};
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<script src="${scriptUrl}"><\/script>
+<draga-chat ${attrParts.join(' ')}><\/draga-chat>
+<script>
+  // Force the widget to render open & inline (not as a floating bubble)
+  customElements.whenDefined('draga-chat').then(() => {
+    const el = document.querySelector('draga-chat');
+    if (el && el.shadowRoot) {
+      const style = document.createElement('style');
+      style.textContent = ':host { position: static !important; width: 100% !important; height: 100% !important; } .draga-chat-container { position: static !important; width: 100% !important; height: 100% !important; } .draga-toggle { display: none !important; } .draga-window { position: static !important; display: flex !important; flex-direction: column !important; width: 100% !important; height: 100% !important; max-height: 100% !important; border-radius: 0 !important; box-shadow: none !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important; }';
+      el.shadowRoot.appendChild(style);
+      // Click the toggle if the window is still hidden
+      const toggle = el.shadowRoot.querySelector('.draga-toggle');
+      if (toggle) toggle.click();
+    }
+  });
+<\/script>
+</body>
+</html>`;
+
+        container.innerHTML = `<iframe
+            id="wgLiveIframe"
+            srcdoc="${srcdoc.replace(/"/g, '&quot;')}"
+            style="width:100%;height:520px;border:none;border-radius:var(--radius);background:#f3f4f6;"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+            title="Widget Preview"
+        ></iframe>`;
+    },
+
+    _renderMockupPreview(w) {
+        const color = w.color || '#7c3aed';
+        const protocolLabel = { openai: 'OpenAI Streaming', rag: 'RAG Query', mcp: 'MCP Tool Call' }[w.protocol] || w.protocol;
+        const features = [];
+        if (w.stream) features.push('⚡ Streaming');
+        if (w.sources) features.push('📚 Fuentes');
+        if (w.feedback) features.push('👍 Feedback');
+        if (w.tokenEnabled && w.apiKey) features.push('🔐 Token');
+
+        document.getElementById('wgPreviewMockup').innerHTML = `
+            <div style="max-width:340px;margin:0 auto;">
+                <div style="border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.15);border:1px solid #e5e7eb;font-family:system-ui,-apple-system,sans-serif;">
+                    <div style="background:${color};color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;">🐉</div>
+                        <div>
+                            <div style="font-weight:700;font-size:14px;">${esc(w.name)}</div>
+                            <div style="font-size:11px;opacity:0.8;">🟢 En línea · ${protocolLabel}</div>
+                        </div>
+                    </div>
+                    <div style="background:#f9fafb;padding:16px;min-height:140px;display:flex;flex-direction:column;gap:10px;">
+                        <div style="background:#fff;border-radius:12px;padding:10px 14px;font-size:12px;color:#374151;max-width:80%;box-shadow:0 1px 3px rgba(0,0,0,0.06);">¡Hola! ¿En qué puedo ayudarte?</div>
+                        <div style="background:${color};color:#fff;border-radius:12px;padding:10px 14px;font-size:12px;max-width:80%;align-self:flex-end;box-shadow:0 1px 3px rgba(0,0,0,0.06);">¿Cómo funciona este servicio?</div>
+                        <div style="background:#fff;border-radius:12px;padding:10px 14px;font-size:12px;color:#374151;max-width:85%;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                            Este servicio te permite consultar documentos mediante RAG...
+                            ${w.sources ? '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5e7eb;font-size:10px;color:#6b7280;">📚 2 fuentes consultadas</div>' : ''}
+                            ${w.feedback ? '<div style="margin-top:4px;font-size:10px;">👍 👎</div>' : ''}
+                        </div>
+                    </div>
+                    <div style="background:#fff;border-top:1px solid #e5e7eb;padding:10px 14px;display:flex;gap:8px;align-items:center;">
+                        <div style="flex:1;background:#f3f4f6;border-radius:20px;padding:8px 14px;font-size:12px;color:#9ca3af;">${w.locale === 'es' ? 'Escribe tu consulta...' : 'Type your message...'}</div>
+                        <div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;cursor:pointer;">↑</div>
+                    </div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;justify-content:center;">
+                    ${features.map(f => `<span style="font-size:10px;background:var(--surface-bg);color:var(--text-secondary);padding:3px 8px;border-radius:10px;border:1px solid var(--border-color);">${f}</span>`).join('')}
+                    <span style="font-size:10px;background:var(--surface-bg);color:var(--text-secondary);padding:3px 8px;border-radius:10px;border:1px solid var(--border-color);">📍 ${w.position}</span>
+                    <span style="font-size:10px;background:var(--surface-bg);color:var(--text-secondary);padding:3px 8px;border-radius:10px;border:1px solid var(--border-color);">🌐 ${w.locale.toUpperCase()}</span>
+                </div>
+                <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--text-muted);">
+                    🐉 DRAGA: <strong>${esc(App.tenantId)}</strong> / <strong>${esc(App.agentId || 'default')}</strong>
+                </div>
+            </div>`;
+    },
+
+    _save() {
+        try {
+            localStorage.setItem(this._storageKey(), JSON.stringify(this.widgets));
+        } catch (e) {
+            console.warn('Could not save widgets', e);
+        }
+    },
+
+    _renderList() {
+        const container = document.getElementById('wgWidgetList');
+        if (this.widgets.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">Sin widgets. Crea uno con el botón de abajo.</div>';
+            return;
+        }
+        container.innerHTML = this.widgets.map(w => {
+            const isActive = w.id === this.selectedId;
+            const protocolIcon = { openai: '⚡', rag: '🔍', mcp: '🔧' }[w.protocol] || '📦';
+            const tokenBadge = w.tokenEnabled ? '<span class="wg-token-badge on">🔐</span>' : '';
+            return `<div class="wg-item${isActive ? ' active' : ''}" onclick="Widgets.select('${w.id}')">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <strong style="font-size:13px;">${esc(w.name)}</strong>
+                    ${tokenBadge}
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                    ${protocolIcon} ${w.protocol.toUpperCase()} · 📍 ${w.position} · 🌐 ${w.locale.toUpperCase()}
+                </div>
+            </div>`;
+        }).join('');
     }
 };
 
