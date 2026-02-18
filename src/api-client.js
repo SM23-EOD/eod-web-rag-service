@@ -55,6 +55,14 @@ class RAGApiClient {
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ detail: res.statusText }));
                     const apiErr = new ApiError(res.status, err.detail || err.message || res.statusText, err);
+                    // Retry on 429 (rate-limited) — honour Retry-After header
+                    if (res.status === 429 && attempt < maxRetries) {
+                        lastError = apiErr;
+                        const retryAfter = res.headers.get('Retry-After');
+                        const wait = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 10000) : retryDelay * Math.pow(2, attempt + 1);
+                        await new Promise(r => setTimeout(r, wait || 2000));
+                        continue;
+                    }
                     // Retry only on 5xx (server) errors
                     if (res.status >= 500 && attempt < maxRetries) {
                         lastError = apiErr;
@@ -63,6 +71,8 @@ class RAGApiClient {
                     }
                     throw apiErr;
                 }
+                // 204 No Content or empty body — return null
+                if (res.status === 204 || res.headers.get('content-length') === '0') return null;
                 return await res.json();
             } catch (e) {
                 if (e instanceof ApiError) {

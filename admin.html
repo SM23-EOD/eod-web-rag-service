@@ -1437,22 +1437,32 @@ function loadAnalytics() {
 
 async function loadHealthStatus() {
     const grid = document.getElementById('healthGrid');
-    const services = [
-        { name: 'RAG API', icon: '🧠', check: () => api.health() },
-        { name: 'MCP Server', icon: '🔌', check: () => api.mcpHealth() },
-    ];
-    let html = '';
-    for (const svc of services) {
-        try {
-            await svc.check();
-            html += `<div class="stat-card" style="border-left:3px solid var(--success)">
-                <div class="label">${svc.icon} ${svc.name}</div><div class="value" style="color:var(--success);font-size:16px;">✅ Online</div></div>`;
-        } catch {
-            html += `<div class="stat-card" style="border-left:3px solid var(--danger)">
-                <div class="label">${svc.icon} ${svc.name}</div><div class="value" style="color:var(--danger);font-size:16px;">❌ Offline</div></div>`;
+    try {
+        const deep = await api.healthDeep();
+        const status = deep.status || 'unknown';
+        const checks = deep.checks || {};
+        const statusColor = status === 'healthy' ? 'var(--success)' : status === 'degraded' ? 'var(--warning)' : 'var(--danger)';
+        const statusIcon = status === 'healthy' ? '✅' : status === 'degraded' ? '⚠️' : '❌';
+
+        let html = `<div class="stat-card" style="border-left:3px solid ${statusColor}">
+            <div class="label">🧠 DRAGA API</div>
+            <div class="value" style="color:${statusColor};font-size:16px;">${statusIcon} ${status.charAt(0).toUpperCase() + status.slice(1)}</div></div>`;
+
+        for (const [name, info] of Object.entries(checks)) {
+            const ok = info.ok;
+            const color = ok ? 'var(--success)' : 'var(--danger)';
+            const icon = ok ? '✅' : '❌';
+            const latency = info.latency_ms != null ? `${info.latency_ms.toFixed(0)}ms` : '';
+            const error = !ok && info.error ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${info.error}</div>` : '';
+            html += `<div class="stat-card" style="border-left:3px solid ${color}">
+                <div class="label">${name}</div>
+                <div class="value" style="color:${color};font-size:14px;">${icon} ${ok ? 'OK' : 'Error'} ${latency ? '<span style="font-size:11px;color:var(--text-muted);font-weight:400">' + latency + '</span>' : ''}</div>${error}</div>`;
         }
+        grid.innerHTML = html;
+    } catch {
+        grid.innerHTML = `<div class="stat-card" style="border-left:3px solid var(--danger)">
+            <div class="label">🧠 DRAGA API</div><div class="value" style="color:var(--danger);font-size:16px;">❌ Offline</div></div>`;
     }
-    grid.innerHTML = html;
 }
 
 async function loadFeedbackStats() {
@@ -1484,16 +1494,20 @@ async function loadFeedbackStats() {
 async function loadSystemStats() {
     const panel = document.getElementById('systemPanel');
     try {
-        // Use first available tenant instead of 'default'
-        const tenantsData = await api.listTenants(true).catch(() => ({ tenants: [] }));
-        const tenants = tenantsData.tenants || [];
-        const tenantId = tenants[0]?.tenant_id || null;
-        const stats = await api.getStats(tenantId);
-        panel.innerHTML = `<div style="font-size:12px">
-            <div style="margin-bottom:6px"><strong>Tenant:</strong> ${stats.tenant_id || '—'}</div>
-            <pre style="background:var(--bg-input);padding:10px;border-radius:6px;font-size:11px;overflow-x:auto;color:var(--text-secondary);max-height:200px;">${JSON.stringify(stats, null, 2)}</pre></div>`;
-    } catch (e) {
-        panel.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+        const overview = await api.adminDashboardOverview();
+        const items = [
+            ['Tenants', overview.total_tenants ?? overview.tenants ?? '—'],
+            ['DRAGAs', overview.total_agents ?? overview.agents ?? '—'],
+            ['Documentos', overview.total_documents ?? overview.documents ?? '—'],
+            ['Queries (24h)', overview.queries_24h ?? '—'],
+        ];
+        panel.innerHTML = `<div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            ${items.map(([k, v]) => `<div><span style="color:var(--text-muted)">${k}:</span> <strong>${v}</strong></div>`).join('')}
+        </div>`;
+    } catch {
+        panel.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <div style="font-size:20px;margin-bottom:6px">📊</div>
+            <div style="font-size:12px">Dashboard no disponible</div></div>`;
     }
 }
 

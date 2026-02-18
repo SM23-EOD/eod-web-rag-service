@@ -57,6 +57,7 @@ body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color
 .main{overflow-y:auto;padding:24px 28px;}
 .module{display:none;}
 .module.active{display:block;}
+#mod-chat.active{padding-top:0;}
 .page-title{font-size:22px;font-weight:900;margin-bottom:4px;}
 .page-desc{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
 .section{margin-bottom:28px;}
@@ -170,7 +171,7 @@ tr:hover td{background:var(--bg-card);}
 .upload-file-item .uf-remove{background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;padding:2px 6px;}
 
 /* ═══ CHAT ═══ */
-.chat-container{display:flex;flex-direction:column;height:calc(100vh - 160px);max-height:700px;}
+.chat-container{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:300px;}
 .chat-messages{flex:1;overflow-y:auto;padding:16px 0;}
 .chat-msg{margin-bottom:14px;padding:12px 16px;border-radius:var(--radius);max-width:85%;font-size:13px;line-height:1.6;}
 .chat-msg.user{background:var(--draga-accent-alpha);margin-left:auto;border-bottom-right-radius:4px;}
@@ -250,6 +251,27 @@ tr:hover td{background:var(--bg-card);}
 .source-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:var(--draga-accent-alpha);color:var(--draga-accent-light);cursor:pointer;transition:var(--transition);margin:2px 2px;border:1px solid transparent;}
 .source-chip:hover{border-color:var(--draga-accent);background:rgba(124,58,237,0.25);}
 
+/* ═══ LABELS ═══ */
+.label-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);}
+.label-bar .lb-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:4px;}
+.label-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:var(--transition);white-space:nowrap;}
+.label-pill:hover{opacity:0.85;}
+.label-pill .lp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.label-pill .lp-x{margin-left:2px;font-size:13px;opacity:0.5;cursor:pointer;line-height:1;}
+.label-pill .lp-x:hover{opacity:1;color:var(--danger);}
+.label-add-btn{padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;background:var(--bg-input);color:var(--text-muted);border:1px dashed var(--border);cursor:pointer;transition:var(--transition);}
+.label-add-btn:hover{border-color:var(--draga-accent);color:var(--draga-accent-light);}
+.label-picker{position:absolute;top:100%;left:0;z-index:50;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);max-height:240px;overflow-y:auto;}
+.label-picker-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;transition:var(--transition);}
+.label-picker-item:hover{background:var(--bg-card-hover);}
+.label-picker-item .lpi-check{width:16px;height:16px;border:1px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;}
+.label-picker-item .lpi-check.checked{background:var(--draga-accent);border-color:var(--draga-accent);color:#fff;}
+.doc-labels-cell{position:relative;}
+.doc-labels-wrap{display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
+.doc-label-mini{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:600;white-space:nowrap;}
+.doc-label-add{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--bg-input);border:1px dashed var(--border);color:var(--text-muted);cursor:pointer;flex-shrink:0;transition:var(--transition);}
+.doc-label-add:hover{border-color:var(--draga-accent);color:var(--draga-accent-light);}
+
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px){
     .app{grid-template-columns:1fr;grid-template-rows:56px 44px 1fr;}
@@ -260,7 +282,7 @@ tr:hover td{background:var(--bg-card);}
     .main{padding:14px;}
     .pipeline-phases{grid-template-columns:1fr 1fr;}
     .form-row{grid-template-columns:1fr;}
-    .chat-container{height:calc(100vh - 180px);}
+    .chat-container{height:calc(100vh - 120px);}
     #mod-chat > div:nth-child(3){grid-template-columns:1fr !important;}
     #mod-chat > div:nth-child(3) > .card{display:none;}
 }
@@ -400,6 +422,15 @@ tr:hover td{background:var(--bg-card);}
                 <button class="filter-pill" data-f="error" onclick="KB.setFilter('error',this)">Errores</button>
             </div>
         </div>
+        <!-- Label Management Bar (DISABLED — pending rate-limit solution) -->
+        <!--
+        <div class="label-bar" id="labelBar">
+            <span class="lb-title">🏷️ Etiquetas</span>
+            <div id="labelPills" style="display:contents;"></div>
+            <button class="label-add-btn" onclick="KB.openLabelModal()">+ Nueva Etiqueta</button>
+        </div>
+        -->
+
         <div style="overflow-x:auto;">
             <table>
                 <thead><tr><th>Archivo</th><th>Estado</th><th>Categoría</th><th>Chunks</th><th>Tamaño</th><th>Fecha</th><th>Acciones</th></tr></thead>
@@ -517,19 +548,25 @@ tr:hover td{background:var(--bg-card);}
 
 <!-- ── CHAT ── -->
 <div class="module" id="mod-chat">
-    <h1 class="page-title">Chat</h1>
-    <p class="page-desc">Conversación streaming con este DRAGA</p>
-
-    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;">
-        <div class="form-group" style="margin:0;flex:1;max-width:200px;">
-            <label>Modelo</label>
-            <select id="chatModel"><option value="eod-rag">DRAGA RAG</option><option value="anthropic/claude-3-haiku">Claude 3 Haiku</option></select>
-        </div>
-        <div class="form-group" style="margin:0;width:80px;">
-            <label>Top K</label>
-            <input type="number" id="chatTopK" value="5" min="1" max="50">
-        </div>
-        <button class="btn btn-sm" onclick="Chat.clear()" style="align-self:flex-end;margin-bottom:2px;">🗑️ Limpiar</button>
+    <div style="display:flex;gap:10px;margin-bottom:8px;align-items:center;flex-wrap:wrap;">
+        <h1 class="page-title" style="margin:0;font-size:18px;">💬 Chat</h1>
+        <select id="chatProtocol" onchange="Chat.onProtocolChange()" style="padding:4px 8px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);">
+            <option value="openai" selected>OpenAI (streaming)</option>
+            <option value="mcp">MCP Tool Call</option>
+            <option value="rag">RAG Query</option>
+        </select>
+        <select id="chatModel" style="padding:4px 8px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);" id="chatModelGroup">
+            <option value="eod-rag">DRAGA RAG</option><option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+        </select>
+        <span id="chatModelGroup2"></span>
+        <input type="number" id="chatTopK" value="5" min="1" max="50" style="width:50px;padding:4px 6px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);" title="Top K">
+        <select id="chatToolName" style="display:none;padding:4px 8px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);">
+            <option value="rag_query">rag_query</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);cursor:pointer;" id="chatStreamToggle">
+            <input type="checkbox" id="chatStream" checked> Stream
+        </label>
+        <button class="btn btn-sm" onclick="Chat.clear()" style="margin-left:auto;padding:2px 8px;font-size:11px;">🗑️</button>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;">
@@ -568,6 +605,17 @@ tr:hover td{background:var(--bg-card);}
     <div class="section">
         <div class="section-title"><span class="icon">⚙️</span> Retrieval Config</div>
         <div class="card" id="retrievalConfig"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🧠</span> System Prompt</div>
+        <div class="card" id="systemPromptConfig"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">📜</span> MCP Prompts</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Prompts predefinidos del servidor MCP — úsalos para configurar el comportamiento del chat.</p>
+        <div id="mcpPromptsList"><div class="loading"><div class="spinner"></div></div></div>
     </div>
 
     <div class="section">
@@ -627,7 +675,7 @@ tr:hover td{background:var(--bg-card);}
         <div id="uploadOptions" style="display:none;margin-top:12px;">
             <div class="form-row">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optAutoIdx" checked> Auto-indexar</label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optBg"> En background</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optBg" checked> En background</label>
             </div>
         </div>
         <div class="modal-footer">
@@ -645,6 +693,42 @@ tr:hover td{background:var(--bg-card);}
         <div class="modal-footer">
             <button class="btn" onclick="closeModal('confirmModal')">Cancelar</button>
             <button class="btn btn-danger" id="confirmAction">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ LABEL MODAL ═══ -->
+<div class="modal-overlay" id="labelModal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-title" id="labelModalTitle">🏷️ Nueva Etiqueta</div>
+        <input type="hidden" id="labelEditId">
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="labelName" placeholder="Ej: Importante, FAQ, Legal...">
+        </div>
+        <div class="form-group">
+            <label>Color</label>
+            <div class="color-input-row">
+                <input type="color" id="labelColor" value="#7c3aed">
+                <span id="labelColorHex" style="font-size:12px;color:var(--text-muted)">#7c3aed</span>
+                <div style="display:flex;gap:4px;margin-left:auto;" id="labelColorPresets">
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#7c3aed;" onclick="KB.setLabelColor('#7c3aed')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#3b82f6;" onclick="KB.setLabelColor('#3b82f6')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#22c55e;" onclick="KB.setLabelColor('#22c55e')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#f59e0b;" onclick="KB.setLabelColor('#f59e0b')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#ef4444;" onclick="KB.setLabelColor('#ef4444')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#ec4899;" onclick="KB.setLabelColor('#ec4899')"></span>
+                    <span style="width:22px;height:22px;border-radius:50%;cursor:pointer;background:#64748b;" onclick="KB.setLabelColor('#64748b')"></span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Descripción <small style="color:var(--text-muted)">(opcional)</small></label>
+            <input type="text" id="labelDesc" placeholder="Breve descripción de esta etiqueta">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('labelModal')">Cancelar</button>
+            <button class="btn btn-primary" onclick="KB.saveLabel()">💾 Guardar</button>
         </div>
     </div>
 </div>
@@ -1004,6 +1088,10 @@ const App = {
         // Setup drop zone
         KB.setupDropZone();
 
+        // Label color sync
+        const lc = document.getElementById('labelColor');
+        if (lc) lc.addEventListener('input', () => { document.getElementById('labelColorHex').textContent = lc.value; });
+
         // Nav from hash
         const hash = window.location.hash.replace('#', '') || 'overview';
         this.nav(hash);
@@ -1136,11 +1224,16 @@ const Overview = {
             document.getElementById('ovDocs').textContent = activeDocs;
             document.getElementById('ovChunks').textContent = ds.total_chunks ?? '—';
         } catch {
-            document.getElementById('ovDocs').textContent = t.document_count ?? '—';
+            // Fallback: count from listDocuments instead of unreliable tenant.document_count
             try {
-                const stats = await api.getStats(App.tenantId, App.agentId);
-                document.getElementById('ovChunks').textContent = stats.vector_database?.total_chunks || '—';
-            } catch { document.getElementById('ovChunks').textContent = '—'; }
+                const docList = await api.listDocuments(App.tenantId, null, null, App.agentId);
+                const allDocs = docList.documents || [];
+                document.getElementById('ovDocs').textContent = allDocs.length;
+                document.getElementById('ovChunks').textContent = allDocs.reduce((s, d) => s + (d.chunk_count || 0), 0) || '—';
+            } catch {
+                document.getElementById('ovDocs').textContent = '—';
+                document.getElementById('ovChunks').textContent = '—';
+            }
         }
 
         // Check protocols
@@ -1236,9 +1329,46 @@ const SourceFilter = {
 const KB = {
     docs: [], filtered: [], statusFilter: 'all', page: 1, perPage: 25,
     uploadFiles: [], uploading: false,
+    labels: [], docLabels: {}, openPickerDocId: null,
+
+    _stabilizeTimer: null,
+    _stabilizeRetries: 0,
 
     async load() {
-        await Promise.all([this.loadDocs(), this.loadStats()]);
+        // Sequential: docs first, then stats (stats must reflect current doc state)
+        await this.loadDocs();
+        await this.loadStats();
+        // Labels disabled: await this.loadLabels();
+    },
+
+    /**
+     * After a mutating operation (upload, delete, reindex, reset),
+     * poll until all documents reach a stable state (indexed|failed|deleted)
+     * or until max retries. This ensures transactional consistency between
+     * the document registry and the vector store.
+     */
+    async loadAndStabilize(maxRetries = 8, intervalMs = 2000) {
+        this._stabilizeRetries = 0;
+        if (this._stabilizeTimer) { clearTimeout(this._stabilizeTimer); this._stabilizeTimer = null; }
+        await this.load();
+        const unstable = ['pending', 'processing', 'uploaded', 'outdated', 'pending_delete'];
+        const hasUnstable = () => this.docs.some(d => unstable.includes(d.status));
+        if (!hasUnstable()) return; // already stable
+        toast('Esperando indexación...', 'info');
+        return new Promise(resolve => {
+            const poll = async () => {
+                this._stabilizeRetries++;
+                await this.load();
+                if (!hasUnstable() || this._stabilizeRetries >= maxRetries) {
+                    this._stabilizeTimer = null;
+                    if (hasUnstable()) toast('Algunos documentos aún procesándose', 'warning');
+                    resolve();
+                } else {
+                    this._stabilizeTimer = setTimeout(poll, intervalMs);
+                }
+            };
+            this._stabilizeTimer = setTimeout(poll, intervalMs);
+        });
     },
 
     async loadStats() {
@@ -1288,6 +1418,164 @@ const KB = {
         }
     },
 
+    // ── Labels ──
+    async loadLabels() {
+        try {
+            const data = await api.listLabels(App.tenantId);
+            this.labels = data.labels || data || [];
+        } catch (e) {
+            console.warn('Labels load error:', e);
+            this.labels = [];
+        }
+        this.renderLabelBar();
+    },
+
+    renderLabelBar() {
+        const container = document.getElementById('labelPills');
+        if (!container) return;
+        if (this.labels.length === 0) {
+            container.innerHTML = '<span style="font-size:11px;color:var(--text-muted);font-style:italic">Sin etiquetas definidas</span>';
+            return;
+        }
+        container.innerHTML = this.labels.map(l => {
+            const bg = l.color + '22';
+            return `<span class="label-pill" style="background:${bg};color:${l.color}" title="${esc(l.description || l.name)}">
+                <span class="lp-dot" style="background:${l.color}"></span>${esc(l.name)}
+                <span class="lp-x" onclick="event.stopPropagation();KB.editLabel('${l.id}')" title="Editar">✎</span>
+                <span class="lp-x" onclick="event.stopPropagation();KB.confirmDeleteLabel('${l.id}','${esc(l.name)}')" title="Eliminar">×</span>
+            </span>`;
+        }).join('');
+    },
+
+    openLabelModal(labelId) {
+        const isEdit = !!labelId;
+        document.getElementById('labelModalTitle').textContent = isEdit ? '🏷️ Editar Etiqueta' : '🏷️ Nueva Etiqueta';
+        document.getElementById('labelEditId').value = labelId || '';
+        if (isEdit) {
+            const l = this.labels.find(x => x.id === labelId);
+            if (l) {
+                document.getElementById('labelName').value = l.name;
+                document.getElementById('labelColor').value = l.color || '#7c3aed';
+                document.getElementById('labelColorHex').textContent = l.color || '#7c3aed';
+                document.getElementById('labelDesc').value = l.description || '';
+            }
+        } else {
+            document.getElementById('labelName').value = '';
+            document.getElementById('labelColor').value = '#7c3aed';
+            document.getElementById('labelColorHex').textContent = '#7c3aed';
+            document.getElementById('labelDesc').value = '';
+        }
+        openModal('labelModal');
+    },
+
+    editLabel(labelId) { this.openLabelModal(labelId); },
+
+    setLabelColor(color) {
+        document.getElementById('labelColor').value = color;
+        document.getElementById('labelColorHex').textContent = color;
+    },
+
+    async saveLabel() {
+        const name = document.getElementById('labelName').value.trim();
+        if (!name) { toast('El nombre es obligatorio', 'error'); return; }
+        const color = document.getElementById('labelColor').value;
+        const description = document.getElementById('labelDesc').value.trim();
+        const editId = document.getElementById('labelEditId').value;
+        try {
+            if (editId) {
+                await api.updateLabel(App.tenantId, editId, { name, color, description });
+                toast('Etiqueta actualizada', 'success');
+            } else {
+                await api.createLabel(App.tenantId, { name, color, description });
+                toast('Etiqueta creada', 'success');
+            }
+            closeModal('labelModal');
+            await this.loadLabels();
+            this.render();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    confirmDeleteLabel(labelId, name) {
+        showConfirm('Eliminar Etiqueta', `¿Eliminar la etiqueta "${name}"? Se desvinculará automáticamente de todos los documentos.`,
+            async () => {
+                try {
+                    await api.deleteLabel(App.tenantId, labelId);
+                    toast('Etiqueta eliminada', 'success');
+                    // Remove from local cache
+                    this.labels = this.labels.filter(l => l.id !== labelId);
+                    Object.keys(this.docLabels).forEach(docId => {
+                        this.docLabels[docId] = (this.docLabels[docId] || []).filter(l => l.id !== labelId);
+                    });
+                    this.renderLabelBar();
+                    this.render();
+                } catch (e) { toast('Error: ' + e.message, 'error'); }
+            });
+    },
+
+    _toggling: false,
+    async toggleDocLabel(docId, labelId) {
+        if (this._toggling) return; // guard against rapid clicks
+        this._toggling = true;
+        const current = this.docLabels[docId] || [];
+        const has = current.some(l => l.id === labelId);
+        try {
+            if (has) {
+                await api.unassignLabel(App.tenantId, docId, labelId);
+                this.docLabels[docId] = current.filter(l => l.id !== labelId);
+            } else {
+                await api.assignLabel(App.tenantId, docId, labelId);
+                const label = this.labels.find(l => l.id === labelId);
+                if (label) this.docLabels[docId] = [...current, label];
+            }
+            // Update picker in-place if still open
+            this._refreshPicker(docId);
+            this.render();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+        this._toggling = false;
+    },
+
+    _renderPickerContent(docId) {
+        if (this.labels.length === 0) {
+            return '<div style="padding:8px;font-size:12px;color:var(--text-muted);text-align:center">Sin etiquetas.<br><button class="btn btn-sm" style="margin-top:6px" onclick="KB.openLabelModal();document.querySelectorAll(\'.label-picker\').forEach(p=>p.remove())">+ Crear</button></div>';
+        }
+        const currentIds = (this.docLabels[docId] || []).map(l => l.id);
+        return this.labels.map(l => {
+            const checked = currentIds.includes(l.id);
+            return `<div class="label-picker-item" onclick="KB.toggleDocLabel('${docId}','${l.id}')">
+                <div class="lpi-check${checked ? ' checked' : ''}">${checked ? '✓' : ''}</div>
+                <span class="lp-dot" style="background:${l.color};width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
+                <span style="flex:1">${esc(l.name)}</span>
+            </div>`;
+        }).join('') + '<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px"><div class="label-picker-item" onclick="KB.openLabelModal();document.querySelectorAll(\'.label-picker\').forEach(p=>p.remove())"><span style="color:var(--draga-accent-light)">+ Nueva Etiqueta</span></div></div>';
+    },
+
+    _refreshPicker(docId) {
+        const picker = document.querySelector('.label-picker');
+        if (picker && this.openPickerDocId === docId) {
+            picker.innerHTML = this._renderPickerContent(docId);
+        }
+    },
+
+    async showLabelPicker(docId, event) {
+        event.stopPropagation();
+        // Close any previously open picker
+        document.querySelectorAll('.label-picker').forEach(p => p.remove());
+        if (this.openPickerDocId === docId) { this.openPickerDocId = null; return; }
+        this.openPickerDocId = docId;
+        const cell = event.target.closest('.doc-labels-cell');
+        if (!cell) return;
+        const picker = document.createElement('div');
+        picker.className = 'label-picker';
+        picker.innerHTML = '<div style="padding:12px;text-align:center"><div class="spinner"></div></div>';
+        cell.appendChild(picker);
+        // Lazy-load labels for this doc
+        await this.loadDocLabelsFor(docId);
+        picker.innerHTML = this._renderPickerContent(docId);
+        // Close on outside click
+        const close = (e) => { if (!picker.contains(e.target) && e.target !== event.target) { picker.remove(); this.openPickerDocId = null; document.removeEventListener('click', close); } };
+        setTimeout(() => document.addEventListener('click', close), 0);
+    },
+
     async loadDocs() {
         const tbody = document.getElementById('docTableBody');
         tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
@@ -1302,6 +1590,16 @@ const KB = {
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);padding:16px">❌ ${e.message}</td></tr>`;
         }
+    },
+
+    async loadDocLabelsFor(docId) {
+        // Lazy: load labels for a single document (called when picker opens)
+        if (this.docLabels[docId]) return this.docLabels[docId];
+        try {
+            const res = await api.getDocumentLabels(App.tenantId, docId);
+            this.docLabels[docId] = res.labels || [];
+        } catch { this.docLabels[docId] = []; }
+        return this.docLabels[docId];
     },
 
     applyFilter() {
@@ -1410,24 +1708,44 @@ const KB = {
 
     async reindex(id) {
         toast('Re-indexando...', 'info');
-        try { await api.reindexDocument(id, App.tenantId, App.agentId); toast('Re-indexado', 'success'); this.load(); }
-        catch (e) { toast('Error: ' + e.message, 'error'); }
+        try {
+            await api.reindexDocument(id, App.tenantId, App.agentId);
+            toast('Re-indexado', 'success');
+            await this.loadAndStabilize(5, 1500);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     confirmDelete(id, name) {
         showConfirm('Eliminar Documento', `¿Eliminar "${name}"? Se eliminará de la KB y el vector store.`,
-            async () => { try { await api.deleteDocument(id, App.tenantId, App.agentId); toast('Eliminado', 'success'); document.getElementById('detailPanel').classList.remove('open'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+            async () => {
+                try {
+                    await api.deleteDocument(id, App.tenantId, App.agentId);
+                    toast('Eliminado', 'success');
+                    document.getElementById('detailPanel').classList.remove('open');
+                    await this.loadAndStabilize(4, 1000);
+                } catch (e) { toast('Error: ' + e.message, 'error'); }
+            });
     },
 
     confirmReset() {
         showConfirm('☢️ Reset Nuclear', `Se limpiarán TODOS los chunks del agente "${App.agentId}" en tenant "${App.tenantId}". No se puede deshacer.`,
-            async () => { toast('Reseteando...', 'info'); try { await api.resetReindex(App.tenantId, App.agentId); toast('Reset completado', 'success'); this.load(); } catch (e) { toast('Error: ' + e.message, 'error'); } });
+            async () => {
+                toast('Reseteando...', 'info');
+                try {
+                    await api.resetReindex(App.tenantId, App.agentId);
+                    toast('Reset completado', 'success');
+                    await this.loadAndStabilize(10, 3000);
+                } catch (e) { toast('Error: ' + e.message, 'error'); }
+            });
     },
 
     async processPending() {
         toast('Procesando pendientes...', 'info');
-        try { await api.processPending(App.tenantId, false, App.agentId); toast('Completado', 'success'); this.load(); }
-        catch (e) { toast('Error: ' + e.message, 'error'); }
+        try {
+            await api.processPending(App.tenantId, false, App.agentId);
+            toast('Completado', 'success');
+            await this.loadAndStabilize();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     async renameDoc(docId, currentName) {
@@ -1436,7 +1754,7 @@ const KB = {
         try {
             await api.renameDocument(docId, newName, App.tenantId, App.agentId);
             toast('Documento renombrado', 'success');
-            this.load();
+            await this.load(); // rename is instant, no stabilization needed
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
@@ -1447,7 +1765,7 @@ const KB = {
         const force = confirm('¿Forzar re-indexación de existentes?');
         toast('Sincronizando...', 'info');
         api.syncDirectory(dir, App.tenantId, true, force, App.agentId)
-            .then(() => { toast('Sincronización completada', 'success'); this.load(); })
+            .then(async () => { toast('Sincronización completada', 'success'); await this.loadAndStabilize(); })
             .catch(e => toast('Error: ' + e.message, 'error'));
     },
 
@@ -1505,9 +1823,29 @@ const KB = {
                 closeModal('uploadModal');
                 this._pollTask(res.task_id);
             } else {
-                const ok = res.successful || res.total || this.uploadFiles.length;
-                toast(`${ok} documento(s) subidos`, 'success');
-                setTimeout(() => { closeModal('uploadModal'); this.load(); }, 600);
+                // Classify from individual results for accuracy:
+                // backend flags re-uploaded files as is_duplicate even after delete,
+                // but still processes them (chunk_count > 0). Only truly "skipped"
+                // duplicates have chunk_count === 0.
+                const results = res.results || [];
+                let nuevos = 0, reprocesados = 0, omitidos = 0, fails = 0;
+                results.forEach(r => {
+                    if (!r.success) fails++;
+                    else if (r.is_duplicate && (r.chunk_count || 0) === 0) omitidos++;
+                    else if (r.is_duplicate) reprocesados++;
+                    else nuevos++;
+                });
+                let parts = [];
+                if (nuevos > 0) parts.push(`${nuevos} nuevo(s)`);
+                if (reprocesados > 0) parts.push(`${reprocesados} reprocesado(s)`);
+                if (omitidos > 0) parts.push(`${omitidos} duplicado(s) omitido(s)`);
+                if (fails > 0) parts.push(`${fails} con error`);
+                let msg = parts.join(', ') || 'Sin cambios';
+                let level = fails > 0 ? 'error' : omitidos > 0 ? 'warning' : 'success';
+                toast(msg, level);
+                closeModal('uploadModal');
+                // Poll until all docs reach stable state (indexed/failed)
+                await this.loadAndStabilize();
             }
         } catch (e) { toast('Error: ' + e.message, 'error'); }
         finally { this.uploading = false; btn.disabled = false; btn.innerHTML = '📤 Subir'; }
@@ -1519,8 +1857,15 @@ const KB = {
                 const task = await api.getTask(taskId);
                 if (task.state === 'completed') {
                     const r = task.result || {};
-                    toast(`Upload completado: ${r.successful || 0} ok, ${r.failed || 0} errores`, r.failed ? 'warning' : 'success');
-                    this.load();
+                    const bgDupes = r.duplicates || 0;
+                    const bgNuevos = (r.successful || 0) - bgDupes;
+                    const bgFails = r.failed || 0;
+                    let bgParts = [];
+                    if (bgNuevos > 0) bgParts.push(`${bgNuevos} nuevo(s)`);
+                    if (bgDupes > 0)  bgParts.push(`${bgDupes} duplicado(s)`);
+                    if (bgFails > 0)  bgParts.push(`${bgFails} con error`);
+                    toast(`Upload completado: ${bgParts.join(', ') || 'sin cambios'}`, bgFails ? 'warning' : 'success');
+                    await this.loadAndStabilize();
                     return;
                 }
                 if (task.state === 'failed') {
@@ -1548,6 +1893,7 @@ const Pipeline = {
 
         try {
             const res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId });
+            const latency = Date.now() - t0;
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
 
@@ -1594,20 +1940,21 @@ const Quality = {
     },
 
     async loadMetrics() {
-        const [statsRes, coverageRes, groundingRes, fbRes] = await Promise.allSettled([
-            api.getStats(App.tenantId, App.agentId),
+        const [docsRes, coverageRes, groundingRes, fbRes] = await Promise.allSettled([
+            api.listDocuments(App.tenantId, null, null, App.agentId),
             api.metricsCoverage(App.tenantId, App.agentId),
             api.metricsGrounding(App.tenantId, App.agentId),
             api.feedbackStats(App.tenantId, App.agentId)
         ]);
-        const stats = statsRes.status === 'fulfilled' ? statsRes.value : {};
+        const docs = docsRes.status === 'fulfilled' ? (docsRes.value.documents || []) : [];
         const coverage = coverageRes.status === 'fulfilled' ? coverageRes.value : {};
         const grounding = groundingRes.status === 'fulfilled' ? groundingRes.value : {};
         const fb = fbRes.status === 'fulfilled' ? fbRes.value : {};
 
-        const db = stats.vector_database || {};
-        document.getElementById('qmDocs').textContent = App.tenantData?.document_count || db.total_documents || stats.total_documents || '—';
-        document.getElementById('qmChunks').textContent = db.total_chunks || db.documents || '—';
+        const realDocCount = docs.length;
+        const realChunkCount = docs.reduce((sum, d) => sum + (d.chunk_count || 0), 0);
+        document.getElementById('qmDocs').textContent = realDocCount || '—';
+        document.getElementById('qmChunks').textContent = realChunkCount || '—';
         document.getElementById('qmCoverage').textContent = coverage.coverage_rate != null ? (coverage.coverage_rate * 100).toFixed(0) + '%' : '—';
         document.getElementById('qmGrounding').textContent = grounding.grounding_rate != null ? (grounding.grounding_rate * 100).toFixed(0) + '%' : '—';
         document.getElementById('qmConfidence').textContent = grounding.avg_confidence != null ? (grounding.avg_confidence * 100).toFixed(0) + '%' : '—';
@@ -1680,6 +2027,36 @@ const Chat = {
     _msgCounter: 0,
     _feedbackData: {}, // msgId -> { query, response, confidence, sources }
 
+    onProtocolChange() {
+        const proto = document.getElementById('chatProtocol').value;
+        // Model selector: show for openai & rag, hide for mcp
+        document.getElementById('chatModel').style.display = proto === 'mcp' ? 'none' : '';
+        // Tool selector: show only for mcp
+        document.getElementById('chatToolName').style.display = proto === 'mcp' ? '' : 'none';
+        // Stream toggle: only for openai
+        document.getElementById('chatStreamToggle').style.display = proto === 'openai' ? '' : 'none';
+        // Load MCP tools list on first switch
+        if (proto === 'mcp' && document.getElementById('chatToolName').options.length <= 1) {
+            this._loadMcpTools();
+        }
+    },
+
+    async _loadMcpTools() {
+        try {
+            const data = await api.mcpTools();
+            const sel = document.getElementById('chatToolName');
+            sel.innerHTML = '';
+            (data.tools || data || []).forEach(t => {
+                const name = t.name || t;
+                const opt = document.createElement('option');
+                opt.value = name; opt.textContent = name;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.warn('Could not load MCP tools', e);
+        }
+    },
+
     async send() {
         const input = document.getElementById('chatInput');
         const query = input.value.trim();
@@ -1700,20 +2077,39 @@ const Chat = {
         document.getElementById('chatMessages').appendChild(thinkEl);
         thinkEl.scrollIntoView({ behavior: 'smooth' });
 
+        const protocol = document.getElementById('chatProtocol').value;
+
         try {
-            const topK = parseInt(document.getElementById('chatTopK').value) || 5;
-            const model = document.getElementById('chatModel').value;
-            let fullContent = '';
-            thinkEl.innerHTML = '';
+            if (protocol === 'openai') {
+                await this._sendOpenAI(query, msgId, thinkEl, btn);
+            } else if (protocol === 'mcp') {
+                await this._sendMCP(query, msgId, thinkEl, btn);
+            } else {
+                await this._sendRAG(query, msgId, thinkEl, btn);
+            }
+        } catch (e) {
+            thinkEl.innerHTML = `<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`;
+            btn.disabled = false;
+        }
+    },
 
-            // Also do a parallel RAG query to get sources for this question
-            const docFilter = SourceFilter.getActiveIds();
-            const queryBody = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
-            if (docFilter) queryBody.document_ids = docFilter;
-            const sourcePromise = api.query(queryBody).catch(() => null);
+    // ── OpenAI Protocol (streaming) ──
+    async _sendOpenAI(query, msgId, thinkEl, btn) {
+        const topK = parseInt(document.getElementById('chatTopK').value) || 5;
+        const model = document.getElementById('chatModel').value;
+        const useStream = document.getElementById('chatStream').checked;
+        let fullContent = '';
+        thinkEl.innerHTML = '';
 
-            const chatBody = { model, messages: this.messages, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK, stream: true };
-            if (docFilter) chatBody.document_ids = docFilter;
+        const docFilter = SourceFilter.getActiveIds();
+        const queryBody = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
+        if (docFilter) queryBody.document_ids = docFilter;
+        const sourcePromise = api.query(queryBody).catch(() => null);
+
+        const chatBody = { model, messages: this.messages, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK, stream: useStream };
+        if (docFilter) chatBody.document_ids = docFilter;
+
+        if (useStream) {
             await api.chatCompletionsStream(
                 chatBody,
                 (chunk) => {
@@ -1723,60 +2119,124 @@ const Chat = {
                 async () => {
                     this.messages.push({ role: 'assistant', content: fullContent });
                     btn.disabled = false;
-
-                    // Store feedback data for this message
-                    const ragResult = await sourcePromise;
-                    this._feedbackData[msgId] = {
-                        query,
-                        response: fullContent,
-                        confidence: ragResult?.confidence || null,
-                        sources: ragResult?.sources || []
-                    };
-
-                    // Build sources + feedback footer
-                    const footer = document.createElement('div');
-                    footer.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
-
-                    // Confidence & grounding metrics bar
-                    const conf = ragResult?.confidence;
-                    const confPct = conf != null ? (conf * 100).toFixed(0) : null;
-                    const confColor = conf > 0.7 ? 'var(--success)' : conf > 0.4 ? 'var(--warning)' : 'var(--danger)';
-                    const chunksSearched = ragResult?.metadata?.total_chunks_searched || 0;
-                    const latencyMs = ragResult?.metadata?.query_time_ms;
-                    let metricsHtml = '';
-                    if (confPct != null) {
-                        metricsHtml = `<div style="display:flex;gap:10px;font-size:10px;color:var(--text-muted);margin-bottom:6px;flex-wrap:wrap;">
-                            <span style="color:${confColor};font-weight:700">🎯 Confianza: ${confPct}%</span>
-                            ${chunksSearched ? `<span>📦 ${chunksSearched} chunks buscados</span>` : ''}
-                            ${latencyMs ? `<span>⏱️ ${Math.round(latencyMs)}ms</span>` : ''}
-                            ${ragResult?.metadata?.grounding_rate != null ? `<span>🛡️ Grounding: ${(ragResult.metadata.grounding_rate * 100).toFixed(0)}%</span>` : ''}
-                        </div>`;
-                    }
-
-                    // Source chips
-                    let srcHtml = '';
-                    if (ragResult?.sources?.length) {
-                        const chips = ragResult.sources.map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')">📄 ${esc(s)}</span>`).join('');
-                        const chunks = ragResult.retrieved_chunks || [];
-                        const viewBtn = chunks.length ? `<span class="source-chip" onclick="DocViewer.openWithChunks('Chunks: ${esc(query.slice(0,30))}', Chat._lastChunks)" style="background:rgba(34,197,94,0.1);color:var(--success)">👁️ ${chunks.length} chunks</span>` : '';
-                        Chat._lastChunks = chunks;
-                        srcHtml = `<div style="font-size:11px;margin-bottom:8px">📎 ${chips} ${viewBtn}</div>`;
-                    }
-
-                    // Feedback controls
-                    footer.innerHTML = `${metricsHtml}${srcHtml}
-                        <div class="chat-feedback" id="fb-${msgId}">
-                            <span>¿Fue útil?</span>
-                            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','positive')" title="Útil">👍</button>
-                            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','negative')" title="No útil">👎</button>
-                        </div>`;
-                    thinkEl.appendChild(footer);
+                    await this._appendFooter(msgId, thinkEl, query, fullContent, sourcePromise);
                 }
             );
-        } catch (e) {
-            thinkEl.innerHTML = `<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`;
+        } else {
+            const res = await api.chatCompletions(chatBody);
+            fullContent = res.choices?.[0]?.message?.content || JSON.stringify(res);
+            thinkEl.innerHTML = marked.parse(fullContent);
+            this.messages.push({ role: 'assistant', content: fullContent });
             btn.disabled = false;
+            await this._appendFooter(msgId, thinkEl, query, fullContent, sourcePromise);
         }
+    },
+
+    // ── MCP Protocol (tool call) ──
+    async _sendMCP(query, msgId, thinkEl, btn) {
+        thinkEl.innerHTML = '';
+        const toolName = document.getElementById('chatToolName').value || 'rag_query';
+        const sessionId = `draga-chat-${App.tenantId}-${App.agentId || 'default'}`;
+        const args = { query, tenant_id: App.tenantId };
+        if (App.agentId) args.agent_id = App.agentId;
+
+        const result = await api.mcpCallTool(toolName, args, sessionId);
+
+        // Extract content from MCP tool response
+        let fullContent = '';
+        if (result.content) {
+            fullContent = result.content.map(c => c.text || JSON.stringify(c)).join('\n');
+        } else if (result.result) {
+            fullContent = typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2);
+        } else {
+            fullContent = JSON.stringify(result, null, 2);
+        }
+
+        thinkEl.innerHTML = marked.parse(fullContent);
+        this.messages.push({ role: 'assistant', content: fullContent });
+        btn.disabled = false;
+
+        // Extract sources/confidence from MCP result if available
+        const confidence = result.confidence || null;
+        const sources = result.sources || [];
+        this._feedbackData[msgId] = { query, response: fullContent, confidence, sources };
+        this._appendFeedbackControls(msgId, thinkEl, null);
+    },
+
+    // ── RAG Query Protocol (direct query) ──
+    async _sendRAG(query, msgId, thinkEl, btn) {
+        thinkEl.innerHTML = '';
+        const topK = parseInt(document.getElementById('chatTopK').value) || 5;
+        const docFilter = SourceFilter.getActiveIds();
+        const queryBody = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
+        if (docFilter) queryBody.document_ids = docFilter;
+
+        const result = await api.query(queryBody);
+        const fullContent = result.answer || result.response || JSON.stringify(result, null, 2);
+
+        thinkEl.innerHTML = marked.parse(fullContent);
+        this.messages.push({ role: 'assistant', content: fullContent });
+        btn.disabled = false;
+
+        await this._appendFooter(msgId, thinkEl, query, fullContent, Promise.resolve(result));
+    },
+
+    // ── Shared: append sources + metrics + feedback footer ──
+    async _appendFooter(msgId, thinkEl, query, fullContent, sourcePromise) {
+        const ragResult = await sourcePromise;
+        this._feedbackData[msgId] = {
+            query,
+            response: fullContent,
+            confidence: ragResult?.confidence || null,
+            sources: ragResult?.sources || []
+        };
+
+        const footer = document.createElement('div');
+        footer.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+
+        const conf = ragResult?.confidence;
+        const confPct = conf != null ? (conf * 100).toFixed(0) : null;
+        const confColor = conf > 0.7 ? 'var(--success)' : conf > 0.4 ? 'var(--warning)' : 'var(--danger)';
+        const chunksSearched = ragResult?.metadata?.total_chunks_searched || 0;
+        const latencyMs = ragResult?.metadata?.query_time_ms;
+        let metricsHtml = '';
+        if (confPct != null) {
+            metricsHtml = `<div style="display:flex;gap:10px;font-size:10px;color:var(--text-muted);margin-bottom:6px;flex-wrap:wrap;">
+                <span style="color:${confColor};font-weight:700">🎯 Confianza: ${confPct}%</span>
+                ${chunksSearched ? `<span>📦 ${chunksSearched} chunks buscados</span>` : ''}
+                ${latencyMs ? `<span>⏱️ ${Math.round(latencyMs)}ms</span>` : ''}
+                ${ragResult?.metadata?.grounding_rate != null ? `<span>🛡️ Grounding: ${(ragResult.metadata.grounding_rate * 100).toFixed(0)}%</span>` : ''}
+            </div>`;
+        }
+
+        let srcHtml = '';
+        if (ragResult?.sources?.length) {
+            const chips = ragResult.sources.map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')">📄 ${esc(s)}</span>`).join('');
+            const chunks = ragResult.retrieved_chunks || [];
+            const viewBtn = chunks.length ? `<span class="source-chip" onclick="DocViewer.openWithChunks('Chunks: ${esc(query.slice(0,30))}', Chat._lastChunks)" style="background:rgba(34,197,94,0.1);color:var(--success)">👁️ ${chunks.length} chunks</span>` : '';
+            Chat._lastChunks = chunks;
+            srcHtml = `<div style="font-size:11px;margin-bottom:8px">📎 ${chips} ${viewBtn}</div>`;
+        }
+
+        footer.innerHTML = `${metricsHtml}${srcHtml}
+            <div class="chat-feedback" id="fb-${msgId}">
+                <span>¿Fue útil?</span>
+                <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','positive')" title="Útil">👍</button>
+                <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','negative')" title="No útil">👎</button>
+            </div>`;
+        thinkEl.appendChild(footer);
+    },
+
+    // ── Append feedback controls only (for MCP) ──
+    _appendFeedbackControls(msgId, thinkEl, ragResult) {
+        const footer = document.createElement('div');
+        footer.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--border);';
+        footer.innerHTML = `<div class="chat-feedback" id="fb-${msgId}">
+            <span>¿Fue útil?</span>
+            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','positive')" title="Útil">👍</button>
+            <button class="chat-fb-btn" onclick="Chat.rate('${msgId}','negative')" title="No útil">👎</button>
+        </div>`;
+        thinkEl.appendChild(footer);
     },
 
     // Handle rating selection — show comment input
@@ -1960,7 +2420,7 @@ const ApiKeys = {
 // ══════════════════════════════════════════════════════════════
 const Config = {
     async load() {
-        await Promise.all([this.loadRetrieval(), ApiKeys.load(), WidgetCfg.load(), this.generateEmbed(), TasksMod.refresh()]);
+        await Promise.all([this.loadRetrieval(), this.loadSystemPrompt(), this.loadMcpPrompts(), ApiKeys.load(), WidgetCfg.load(), this.generateEmbed(), TasksMod.refresh()]);
     },
 
     async loadRetrieval() {
@@ -2027,6 +2487,126 @@ const Config = {
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
+    // ── System Prompt ──
+    async loadSystemPrompt() {
+        const container = document.getElementById('systemPromptConfig');
+        try {
+            let currentPrompt = '';
+            let source = 'default';
+
+            // Try agent config first
+            try {
+                const agent = await api.getAgent(App.tenantId, App.agentId);
+                currentPrompt = agent.config?.system_prompt || '';
+                if (currentPrompt) source = 'draga';
+            } catch { /* no agent */ }
+
+            const srcBadge = source === 'draga'
+                ? '<span style="font-size:10px;background:rgba(34,197,94,0.15);color:var(--success);padding:2px 8px;border-radius:8px">🧬 DRAGA</span>'
+                : '<span style="font-size:10px;background:rgba(156,163,175,0.15);color:var(--text-muted);padding:2px 8px;border-radius:8px">📄 Default (plataforma)</span>';
+
+            container.innerHTML = `
+                <div style="margin-bottom:8px">${srcBadge}</div>
+                <div class="form-group">
+                    <label>System Prompt <span style="font-size:10px;color:var(--text-muted)">(define la personalidad y reglas del DRAGA)</span></label>
+                    <textarea id="spPrompt" rows="8" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;font-family:monospace;resize:vertical;">${esc(currentPrompt)}</textarea>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn btn-primary btn-sm" onclick="Config.saveSystemPrompt()">💾 Guardar Prompt</button>
+                    <button class="btn btn-sm" onclick="Config.previewPrompt()" title="Ver el prompt final compilado">👁️ Preview</button>
+                    <span style="font-size:10px;color:var(--text-muted);">Vacío = usa el prompt por defecto de la plataforma</span>
+                </div>
+                <div id="spPreview" style="display:none;margin-top:12px;"></div>`;
+        } catch (e) {
+            container.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+        }
+    },
+
+    async saveSystemPrompt() {
+        try {
+            const prompt = document.getElementById('spPrompt').value.trim();
+            const config = { system_prompt: prompt || null };
+            try {
+                await api.updateAgent(App.tenantId, App.agentId || 'default', { config });
+                toast('System prompt guardado', 'success');
+            } catch {
+                // If no agent exists, create one
+                await api.createAgent({ tenant_id: App.tenantId, agent_id: App.agentId || 'default', config });
+                toast('System prompt guardado (agente creado)', 'success');
+            }
+            this.loadSystemPrompt();
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    async previewPrompt() {
+        const preview = document.getElementById('spPreview');
+        preview.style.display = '';
+        preview.innerHTML = '<div class="spinner"></div> Compilando prompt...';
+        try {
+            // Use MCP render to show what the prompt looks like
+            const result = await api.mcpRenderPrompt('customer_support', { user_question: '(ejemplo)' });
+            preview.innerHTML = `<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${esc(result.rendered || JSON.stringify(result, null, 2))}</div>`;
+        } catch (e) {
+            preview.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+        }
+    },
+
+    // ── MCP Prompts ──
+    async loadMcpPrompts() {
+        const container = document.getElementById('mcpPromptsList');
+        try {
+            const data = await api.mcpPrompts();
+            const prompts = data.prompts || data || [];
+
+            if (prompts.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No hay prompts MCP configurados</div>';
+                return;
+            }
+
+            container.innerHTML = prompts.map((p, i) => {
+                const args = (p.arguments || []).map(a => `<code style="background:var(--bg-input);padding:1px 6px;border-radius:3px;font-size:10px;">${esc(a)}</code>`).join(' ');
+                return `<div class="card" style="margin-bottom:10px;padding:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <strong style="font-size:13px;">📜 ${esc(p.name)}</strong>
+                        <button class="btn btn-sm" onclick="Config.testMcpPrompt('${esc(p.name)}', ${JSON.stringify(p.arguments || []).replace(/"/g, '&quot;')})" style="font-size:10px;">▶ Probar</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${esc(p.description?.trim() || '')}</div>
+                    <div style="font-size:10px;">Args: ${args || '<span style="color:var(--text-muted)">ninguno</span>'}</div>
+                    <div id="mcpPromptPreview-${i}" style="display:none;margin-top:10px;"></div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            container.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+        }
+    },
+
+    async testMcpPrompt(name, argNames) {
+        // Build args object with placeholder values
+        const args = {};
+        (argNames || []).forEach(a => {
+            const val = window.prompt(`Valor para "${a}":`, `(ejemplo ${a})`);
+            if (val !== null) args[a] = val;
+        });
+
+        // Find the preview container
+        const containers = document.querySelectorAll('[id^="mcpPromptPreview-"]');
+        let preview = null;
+        containers.forEach(c => {
+            const card = c.closest('.card');
+            if (card && card.querySelector('strong')?.textContent.includes(name)) preview = c;
+        });
+        if (!preview) return;
+
+        preview.style.display = '';
+        preview.innerHTML = '<div class="spinner"></div> Renderizando...';
+        try {
+            const result = await api.mcpRenderPrompt(name, args);
+            preview.innerHTML = `<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;">${esc(result.rendered || JSON.stringify(result, null, 2))}</div>`;
+        } catch (e) {
+            preview.innerHTML = `<div style="color:var(--danger);font-size:12px">❌ ${e.message}</div>`;
+        }
+    },
+
     generateEmbed() {
         const baseUrl = location.origin;
         const tid = App.tenantId;
@@ -2039,7 +2619,7 @@ const Config = {
 &lt;draga-chat tenant-id="${tid}"${agentAttr} api-base="${baseUrl}/api/v2"&gt;&lt;/draga-chat&gt;</pre>
                 <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedScript').textContent);toast('Copiado','success')">📋</button></div>
             <div class="embed-block"><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px">iframe</div>
-                <pre id="embedIframe">&lt;iframe src="${baseUrl}/chat-interface.html?tenant=${tid}${agentParam}" style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"&gt;&lt;/iframe&gt;</pre>
+                <pre id="embedIframe">&lt;iframe src="${baseUrl}/demo-draga-chat.html?tenant=${tid}${agentParam}" style="position:fixed;bottom:20px;right:20px;width:400px;height:600px;border:none;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:9999"&gt;&lt;/iframe&gt;</pre>
                 <button class="btn btn-sm copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('embedIframe').textContent);toast('Copiado','success')">📋</button></div>`;
     }
 };
