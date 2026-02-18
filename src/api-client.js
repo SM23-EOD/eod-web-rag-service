@@ -40,6 +40,7 @@ class RAGApiClient {
     async _request(method, path, body = null, options = {}) {
         const maxRetries = options.retries ?? 2;        // up to 3 total attempts
         const retryDelay = options.retryDelay ?? 800;   // ms, doubles each retry
+        const timeout = options.timeout ?? 15000;       // 15s default request timeout
 
         const url = `${this.baseUrl}${path}`;
         const headers = { 'Content-Type': 'application/json' };
@@ -47,6 +48,13 @@ class RAGApiClient {
 
         const config = { method, headers };
         if (body && method !== 'GET') config.body = JSON.stringify(body);
+
+        // AbortController for request timeout
+        if (timeout > 0) {
+            const controller = new AbortController();
+            config.signal = controller.signal;
+            setTimeout(() => controller.abort(), timeout);
+        }
 
         let lastError;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -84,7 +92,11 @@ class RAGApiClient {
                     throw e;
                 }
                 // Network errors — also retry
-                lastError = new ApiError(0, e.message || 'Network error', { original: e });
+                if (e.name === 'AbortError') {
+                    lastError = new ApiError(0, 'Request timeout — el servidor no responde', { original: e });
+                } else {
+                    lastError = new ApiError(0, e.message || 'Network error', { original: e });
+                }
                 if (attempt < maxRetries) {
                     await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt)));
                     continue;

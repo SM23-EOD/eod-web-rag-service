@@ -1086,10 +1086,17 @@ async function loadDashboard() {
 
     try {
         // Fetch tenants + overview (real counts from backend)
-        const [tenantsData, overview, grounding] = await Promise.all([
-            api.listTenants(true),
-            api.adminDashboardOverview().catch(() => null),
-            api.metricsGrounding().catch(() => null)
+        // Use a race with timeout so user sees error quickly if backend is down
+        const timeoutErr = new Error('El servidor no responde. Verifica que el backend esté activo.');
+        const raceTimeout = ms => new Promise((_, rej) => setTimeout(() => rej(timeoutErr), ms));
+
+        const [tenantsData, overview, grounding] = await Promise.race([
+            Promise.all([
+                api.listTenants(true),
+                api.adminDashboardOverview().catch(() => null),
+                api.metricsGrounding().catch(() => null)
+            ]),
+            raceTimeout(20000)
         ]);
         const tenants = tenantsData.tenants || [];
 
