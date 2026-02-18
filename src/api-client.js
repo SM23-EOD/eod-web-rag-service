@@ -46,18 +46,19 @@ class RAGApiClient {
         const headers = { 'Content-Type': 'application/json' };
         if (this.apiKey) headers['X-API-Key'] = this.apiKey;
 
-        const config = { method, headers };
-        if (body && method !== 'GET') config.body = JSON.stringify(body);
-
-        // AbortController for request timeout
-        if (timeout > 0) {
-            const controller = new AbortController();
-            config.signal = controller.signal;
-            setTimeout(() => controller.abort(), timeout);
-        }
+        const baseConfig = { method, headers };
+        if (body && method !== 'GET') baseConfig.body = JSON.stringify(body);
 
         let lastError;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            // Fresh AbortController per attempt so retries aren't pre-aborted
+            const config = { ...baseConfig };
+            let timer;
+            if (timeout > 0) {
+                const controller = new AbortController();
+                config.signal = controller.signal;
+                timer = setTimeout(() => controller.abort(), timeout);
+            }
             try {
                 const res = await fetch(url, config);
                 if (!res.ok) {
@@ -65,6 +66,7 @@ class RAGApiClient {
                     const apiErr = new ApiError(res.status, err.detail || err.message || res.statusText, err);
                     // Retry on 429 (rate-limited) — honour Retry-After header
                     if (res.status === 429 && attempt < maxRetries) {
+                        clearTimeout(timer);
                         lastError = apiErr;
                         const retryAfter = res.headers.get('Retry-After');
                         const wait = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 10000) : retryDelay * Math.pow(2, attempt + 1);
@@ -73,6 +75,7 @@ class RAGApiClient {
                     }
                     // Retry only on 5xx (server) errors
                     if (res.status >= 500 && attempt < maxRetries) {
+                        clearTimeout(timer);
                         lastError = apiErr;
                         await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt)));
                         continue;
@@ -80,9 +83,11 @@ class RAGApiClient {
                     throw apiErr;
                 }
                 // 204 No Content or empty body — return null
+                clearTimeout(timer);
                 if (res.status === 204 || res.headers.get('content-length') === '0') return null;
                 return await res.json();
             } catch (e) {
+                clearTimeout(timer);
                 if (e instanceof ApiError) {
                     if (e.status >= 500 && attempt < maxRetries) {
                         lastError = e;
