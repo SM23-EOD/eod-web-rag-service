@@ -3005,11 +3005,12 @@ const Widgets = {
         // Script URL uses the origin (strip /api/v2 if present)
         const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
         const scriptUrl = originUrl + '/src/draga-chat.js';
-        const agentId = App.agentId || 'default';
+        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
+        const tenantId = App.tenantId;
 
         // Build attributes
         const attrs = [];
-        attrs.push(`agent="${esc(agentId)}"`);
+        attrs.push(`agent="${esc(tenantId)}"`);
         attrs.push(`base-url="${esc(baseUrl)}"`);
         attrs.push(`protocol="${w.protocol}"`);
         attrs.push(`model="${esc(w.model)}"`);
@@ -3035,8 +3036,8 @@ const Widgets = {
 
         // iFrame code
         const iframeParams = new URLSearchParams({
-            tenant: App.tenantId || '',
-            agent: agentId,
+            tenant: tenantId || '',
+            agent: App.agentId || 'default',
             protocol: w.protocol,
             model: w.model,
             locale: w.locale,
@@ -3069,7 +3070,8 @@ const Widgets = {
 
     _renderLivePreview(w, baseUrl) {
         const container = document.getElementById('wgPreviewLive');
-        const agentId = App.agentId || 'default';
+        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
+        const tenantId = App.tenantId;
         // Script URL uses origin (strip /api/v2 if present)
         const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
         const scriptUrl = originUrl + '/src/draga-chat.js';
@@ -3077,7 +3079,7 @@ const Widgets = {
 
         // Build the attributes for the live widget
         const attrParts = [
-            `agent="${agentId}"`,
+            `agent="${tenantId}"`,
             `base-url="${baseUrl}"`,
             `protocol="${w.protocol}"`,
             `model="${w.model}"`,
