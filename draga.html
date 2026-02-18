@@ -116,6 +116,27 @@ tr:hover td{background:var(--bg-card);}
 .progress-bar .fill{height:100%;border-radius:4px;background:var(--draga-gradient);transition:width 1s ease;}
 .progress-bar .fill.complete{background:var(--success);}
 
+/* ═══ INGESTION TRACKER ═══ */
+.ingest-tracker{background:var(--bg-card);border:1px solid var(--draga-accent);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;animation:slideIn .3s ease;}
+.ingest-tracker.done{border-color:var(--success);}
+.ingest-tracker.error{border-color:var(--danger);}
+.ingest-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.ingest-header .title{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;}
+.ingest-header .title .spinner{width:14px;height:14px;}
+.ingest-header .meta{font-size:11px;color:var(--text-muted);}
+.ingest-files{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:180px;overflow-y:auto;}
+.ingest-file{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--radius-sm);background:var(--bg-input);font-size:12px;}
+.ingest-file .f-icon{font-size:14px;flex-shrink:0;}
+.ingest-file .f-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ingest-file .f-status{flex-shrink:0;font-size:11px;font-weight:600;}
+.ingest-file .f-status.processing{color:var(--info);}
+.ingest-file .f-status.done{color:var(--success);}
+.ingest-file .f-status.failed{color:var(--danger);}
+.ingest-file .f-status.pending{color:var(--text-muted);}
+.ingest-file .f-status.duplicate{color:var(--warning);}
+.ingest-dismiss{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;}
+.ingest-dismiss:hover{color:var(--text-primary);}
+
 /* ═══ TOAST ═══ */
 .toast-container{position:fixed;top:64px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px;}
 .toast{padding:9px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;animation:slideIn .3s ease;max-width:340px;}
@@ -272,6 +293,24 @@ tr:hover td{background:var(--bg-card);}
 .doc-label-add{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--bg-input);border:1px dashed var(--border);color:var(--text-muted);cursor:pointer;flex-shrink:0;transition:var(--transition);}
 .doc-label-add:hover{border-color:var(--draga-accent);color:var(--draga-accent-light);}
 
+/* ═══ DRAGA CATALOG ═══ */
+.draga-catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.draga-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:var(--transition);position:relative;overflow:hidden;}
+.draga-card:hover{background:var(--bg-card-hover);border-color:var(--draga-accent-light);transform:translateY(-2px);box-shadow:var(--draga-glow);}
+.draga-card.active{border-color:var(--draga-accent);background:var(--draga-accent-alpha);}
+.draga-card .dc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.draga-card .dc-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.draga-card .dc-name{font-size:15px;font-weight:700;color:var(--text-primary);}
+.draga-card .dc-tid{font-size:11px;color:var(--text-muted);font-family:monospace;}
+.draga-card .dc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.draga-card .dc-stat{text-align:center;padding:6px 4px;background:var(--bg-input);border-radius:var(--radius-sm);}
+.draga-card .dc-stat .val{font-size:16px;font-weight:700;color:var(--text-primary);}
+.draga-card .dc-stat .lbl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.draga-card .dc-badge{position:absolute;top:12px;right:12px;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.draga-card .dc-badge.online{background:rgba(34,197,94,.15);color:var(--success);}
+.draga-card .dc-badge.offline{background:rgba(239,68,68,.15);color:var(--danger);}
+.draga-card .dc-badge.loading{background:rgba(245,158,11,.15);color:var(--warning);}
+
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px){
     .app{grid-template-columns:1fr;grid-template-rows:56px 44px 1fr;}
@@ -338,6 +377,11 @@ tr:hover td{background:var(--bg-card);}
         <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="ovModel">—</div></div>
         <div class="stat-card"><div class="label">Idioma</div><div class="value" id="ovLang">—</div></div>
         <div class="stat-card"><div class="label">Colección</div><div class="value" style="font-size:14px" id="ovCollection">—</div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🐉</span> DRAGAs en la Plataforma</div>
+        <div id="dragaCatalog" class="draga-catalog"><div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div></div>
     </div>
 
     <div class="section">
@@ -413,6 +457,9 @@ tr:hover td{background:var(--bg-card);}
                 <button class="btn btn-sm btn-danger" onclick="KB.confirmReset()">☢️ Reset</button>
             </div>
         </div>
+        <!-- Ingestion progress tracker (hidden by default) -->
+        <div id="ingestTracker" style="display:none;"></div>
+
         <div class="doc-toolbar">
             <input type="text" id="docSearch" placeholder="🔍 Buscar documentos..." oninput="KB.filter()">
             <div class="filter-pills">
@@ -1238,6 +1285,100 @@ const Overview = {
 
         // Check protocols
         this.checkProtocols();
+
+        // Load DRAGA catalog
+        this.loadCatalog();
+    },
+
+    async loadCatalog() {
+        const container = document.getElementById('dragaCatalog');
+        if (!container) return;
+        container.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div>';
+
+        const cards = [];
+        try {
+            const data = await api.listTenants(true);
+            const tenants = data.tenants || [];
+
+            for (const t of tenants) {
+                let agents = [];
+                try {
+                    const ad = await api.listAgents(t.tenant_id);
+                    agents = ad.agents || ad || [];
+                } catch { agents = []; }
+
+                if (!agents.length) agents = [{ agent_id: 'default', name: t.name || t.tenant_id }];
+
+                for (const a of agents) {
+                    const isActive = t.tenant_id === App.tenantId && (a.agent_id || 'default') === (App.agentId || 'default');
+                    let docs = '—', chunks = '—', model = '—';
+
+                    // Try to get stats (non-blocking)
+                    try {
+                        const ds = await api.documentStats(t.tenant_id, a.agent_id);
+                        const bs = ds.by_status || {};
+                        docs = (ds.total_documents || 0) - (bs.deleted || 0) - (bs.pending_delete || 0);
+                        chunks = ds.total_chunks ?? '—';
+                    } catch {
+                        try {
+                            const dl = await api.listDocuments(t.tenant_id, null, null, a.agent_id);
+                            docs = (dl.documents || []).length;
+                            chunks = (dl.documents || []).reduce((s, d) => s + (d.chunk_count || 0), 0) || '—';
+                        } catch {}
+                    }
+
+                    // Model from agent config
+                    try {
+                        const ag = await api.getAgent(t.tenant_id, a.agent_id);
+                        model = (ag.default_model || ag.model || '—').split('/').pop();
+                    } catch { model = t.default_model ? t.default_model.split('/').pop() : '—'; }
+
+                    const colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#8b5cf6','#0891b2','#c026d3'];
+                    const colorIdx = (t.tenant_id + (a.agent_id || '')).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
+                    const bg = colors[colorIdx];
+                    const initial = (a.name || a.agent_id || 'D')[0].toUpperCase();
+
+                    cards.push(`
+                        <div class="draga-card${isActive ? ' active' : ''}" onclick="Overview.selectDraga('${t.tenant_id}','${a.agent_id || 'default'}')" title="${t.tenant_id} / ${a.agent_id || 'default'}">
+                            <div class="dc-badge loading">cargado</div>
+                            <div class="dc-header">
+                                <div class="dc-icon" style="background:${bg}22;color:${bg}">${initial}</div>
+                                <div>
+                                    <div class="dc-name">${esc(a.name || a.agent_id || 'default')}</div>
+                                    <div class="dc-tid">${esc(t.tenant_id)}${a.agent_id && a.agent_id !== 'default' ? ' / ' + esc(a.agent_id) : ''}</div>
+                                </div>
+                            </div>
+                            <div class="dc-stats">
+                                <div class="dc-stat"><div class="val">${docs}</div><div class="lbl">Docs</div></div>
+                                <div class="dc-stat"><div class="val">${chunks}</div><div class="lbl">Chunks</div></div>
+                                <div class="dc-stat"><div class="val" style="font-size:11px">${esc(String(model))}</div><div class="lbl">Modelo</div></div>
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+
+            container.innerHTML = cards.length ? cards.join('') : '<p style="color:var(--text-muted);text-align:center;padding:20px;">No se encontraron DRAGAs en la plataforma</p>';
+
+            // Update badges with health check
+            container.querySelectorAll('.dc-badge').forEach(b => {
+                b.className = 'dc-badge online';
+                b.textContent = '● online';
+            });
+        } catch (e) {
+            container.innerHTML = `<p style="color:var(--danger);text-align:center;padding:20px;">Error cargando DRAGAs: ${esc(e.message)}</p>`;
+        }
+    },
+
+    async selectDraga(tenantId, agentId) {
+        if (tenantId !== App.tenantId) {
+            document.getElementById('tenantSelect').value = tenantId;
+            await App.switchTenant(tenantId);
+        }
+        if (agentId !== App.agentId) {
+            document.getElementById('agentSelect').value = agentId;
+            await App.switchAgent(agentId);
+        }
     },
 
     async checkProtocols() {
@@ -1807,75 +1948,179 @@ const KB = {
         }).join('');
     },
 
+    // ── Ingestion Tracker ──
+    _activeTask: null,
+    _pollTimer: null,
+
+    _showTracker(fileNames) {
+        const container = document.getElementById('ingestTracker');
+        const icons = { md:'📝', pdf:'📕', txt:'📃', docx:'📘', json:'🔧', xml:'📐', xlsx:'📊', odt:'📓' };
+        const fileRows = fileNames.map(name => {
+            const ext = name.split('.').pop().toLowerCase();
+            return `<div class="ingest-file" data-fname="${esc(name)}">
+                <span class="f-icon">${icons[ext] || '📄'}</span>
+                <span class="f-name" title="${esc(name)}">${esc(name)}</span>
+                <span class="f-status pending">⏳ En cola</span>
+            </div>`;
+        }).join('');
+        container.innerHTML = `<div class="ingest-tracker" id="ingestPanel">
+            <div class="ingest-header">
+                <div class="title"><div class="spinner"></div> Procesando fuentes...</div>
+                <div class="meta" id="ingestMeta">0 / ${fileNames.length}</div>
+            </div>
+            <div class="progress-bar"><div class="fill" id="ingestProgress" style="width:0%"></div></div>
+            <div class="ingest-files" id="ingestFiles">${fileRows}</div>
+        </div>`;
+        container.style.display = 'block';
+    },
+
+    _updateTracker(task) {
+        const panel = document.getElementById('ingestPanel');
+        if (!panel) return;
+        const totalFiles = task.total_files || 0;
+        const processed = task.processed_files || 0;
+        const pct = task.progress_pct ?? (totalFiles ? Math.round(processed / totalFiles * 100) : 0);
+        const files = task.files || [];
+        const isComplete = task.state === 'completed';
+        const isFailed = task.state === 'failed';
+
+        // Update progress bar
+        const bar = document.getElementById('ingestProgress');
+        if (bar) { bar.style.width = pct + '%'; if (isComplete) bar.classList.add('complete'); }
+
+        // Update meta
+        const meta = document.getElementById('ingestMeta');
+        if (meta) {
+            if (isComplete) {
+                const dupes = task.duplicates || 0;
+                const ok = (task.successful || 0) - dupes;
+                const fail = task.failed || 0;
+                let parts = [];
+                if (ok > 0) parts.push(`${ok} nuevo(s)`);
+                if (dupes > 0) parts.push(`${dupes} duplicado(s)`);
+                if (fail > 0) parts.push(`${fail} error(es)`);
+                meta.textContent = parts.join(', ') || `${totalFiles} procesados`;
+            } else if (isFailed) {
+                meta.textContent = '❌ Error';
+            } else {
+                meta.textContent = `${processed} / ${totalFiles}`;
+            }
+        }
+
+        // Update header
+        const title = panel.querySelector('.ingest-header .title');
+        if (title) {
+            if (isComplete) {
+                panel.classList.add('done');
+                title.innerHTML = `✅ Fuentes procesadas <button class="ingest-dismiss" onclick="KB._dismissTracker()" title="Cerrar">✕</button>`;
+            } else if (isFailed) {
+                panel.classList.add('error');
+                title.innerHTML = `❌ Error en procesamiento <button class="ingest-dismiss" onclick="KB._dismissTracker()" title="Cerrar">✕</button>`;
+            }
+        }
+
+        // Update individual file rows
+        files.forEach(f => {
+            const row = document.querySelector(`.ingest-file[data-fname="${CSS.escape(f.filename)}"]`);
+            if (!row) return;
+            const statusEl = row.querySelector('.f-status');
+            if (!statusEl) return;
+            statusEl.className = 'f-status';
+            if (f.state === 'completed' || f.state === 'indexed') {
+                if (f.is_duplicate) {
+                    statusEl.classList.add('duplicate');
+                    statusEl.textContent = '⚠ Duplicado';
+                } else {
+                    statusEl.classList.add('done');
+                    statusEl.textContent = `✓ ${f.chunk_count || 0} chunks`;
+                }
+            } else if (f.state === 'failed' || f.error) {
+                statusEl.classList.add('failed');
+                statusEl.textContent = '✕ Error';
+                statusEl.title = f.error || '';
+            } else if (f.state === 'processing') {
+                statusEl.classList.add('processing');
+                statusEl.textContent = '⟳ Procesando...';
+            } else {
+                statusEl.classList.add('pending');
+                statusEl.textContent = '⏳ En cola';
+            }
+        });
+    },
+
+    _dismissTracker() {
+        const container = document.getElementById('ingestTracker');
+        if (container) { container.style.display = 'none'; container.innerHTML = ''; }
+        this._activeTask = null;
+    },
+
     async doUpload() {
         if (this.uploading || !this.uploadFiles.length) return;
         this.uploading = true;
         const btn = document.getElementById('uploadBtn');
+        const fileNames = this.uploadFiles.map(f => f.name);
         btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Subiendo...';
         try {
             const autoIdx = document.getElementById('optAutoIdx').checked;
             const bg = document.getElementById('optBg').checked;
             const res = await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg, App.agentId);
 
-            // If background upload, poll task status
+            closeModal('uploadModal');
+
             if (bg && res.task_id) {
-                toast(`Upload en background iniciado (task: ${res.task_id})`, 'info');
-                closeModal('uploadModal');
-                this._pollTask(res.task_id);
+                // Background mode: show tracker and poll
+                this._activeTask = res.task_id;
+                this._showTracker(fileNames);
+                this._pollIngest(res.task_id);
             } else {
-                // Classify from individual results for accuracy:
-                // backend flags re-uploaded files as is_duplicate even after delete,
-                // but still processes them (chunk_count > 0). Only truly "skipped"
-                // duplicates have chunk_count === 0.
+                // Synchronous mode: show tracker with instant result
+                this._showTracker(fileNames);
+                // Build a fake task object from sync response for the tracker
                 const results = res.results || [];
-                let nuevos = 0, reprocesados = 0, omitidos = 0, fails = 0;
-                results.forEach(r => {
-                    if (!r.success) fails++;
-                    else if (r.is_duplicate && (r.chunk_count || 0) === 0) omitidos++;
-                    else if (r.is_duplicate) reprocesados++;
-                    else nuevos++;
-                });
-                let parts = [];
-                if (nuevos > 0) parts.push(`${nuevos} nuevo(s)`);
-                if (reprocesados > 0) parts.push(`${reprocesados} reprocesado(s)`);
-                if (omitidos > 0) parts.push(`${omitidos} duplicado(s) omitido(s)`);
-                if (fails > 0) parts.push(`${fails} con error`);
-                let msg = parts.join(', ') || 'Sin cambios';
-                let level = fails > 0 ? 'error' : omitidos > 0 ? 'warning' : 'success';
-                toast(msg, level);
-                closeModal('uploadModal');
-                // Poll until all docs reach stable state (indexed/failed)
+                const fakeTask = {
+                    state: 'completed',
+                    total_files: results.length,
+                    processed_files: results.length,
+                    progress_pct: 100,
+                    successful: res.successful || 0,
+                    failed: res.failed || 0,
+                    duplicates: res.duplicates || 0,
+                    files: results.map(r => ({
+                        filename: r.filename,
+                        state: r.success ? 'completed' : 'failed',
+                        chunk_count: r.chunk_count || 0,
+                        is_duplicate: r.is_duplicate || false,
+                        error: r.error
+                    }))
+                };
+                this._updateTracker(fakeTask);
                 await this.loadAndStabilize();
             }
         } catch (e) { toast('Error: ' + e.message, 'error'); }
         finally { this.uploading = false; btn.disabled = false; btn.innerHTML = '📤 Subir'; }
     },
 
-    async _pollTask(taskId) {
+    async _pollIngest(taskId) {
+        if (this._pollTimer) clearTimeout(this._pollTimer);
         const poll = async () => {
             try {
                 const task = await api.getTask(taskId);
-                if (task.state === 'completed') {
-                    const r = task.result || {};
-                    const bgDupes = r.duplicates || 0;
-                    const bgNuevos = (r.successful || 0) - bgDupes;
-                    const bgFails = r.failed || 0;
-                    let bgParts = [];
-                    if (bgNuevos > 0) bgParts.push(`${bgNuevos} nuevo(s)`);
-                    if (bgDupes > 0)  bgParts.push(`${bgDupes} duplicado(s)`);
-                    if (bgFails > 0)  bgParts.push(`${bgFails} con error`);
-                    toast(`Upload completado: ${bgParts.join(', ') || 'sin cambios'}`, bgFails ? 'warning' : 'success');
+                this._updateTracker(task);
+
+                if (task.state === 'completed' || task.state === 'failed') {
+                    this._pollTimer = null;
+                    // Refresh doc list to show new state
                     await this.loadAndStabilize();
                     return;
                 }
-                if (task.state === 'failed') {
-                    toast('Upload en background falló', 'error');
-                    return;
-                }
-                setTimeout(poll, 3000); // poll every 3s
-            } catch { setTimeout(poll, 5000); }
+                // Keep polling
+                this._pollTimer = setTimeout(poll, 2000);
+            } catch {
+                this._pollTimer = setTimeout(poll, 4000);
+            }
         };
-        setTimeout(poll, 2000); // first poll after 2s
+        // First poll after 1s
+        this._pollTimer = setTimeout(poll, 1000);
     }
 };
 

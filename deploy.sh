@@ -33,11 +33,14 @@ echo "🐳 Construyendo y desplegando contenedor..."
 ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
 cd /opt/eod-web-rag-service
 
-# Detener contenedor anterior si existe
+# Eliminar imagen anterior para forzar rebuild limpio
 docker compose --profile prod down 2>/dev/null || true
+docker rmi $(docker images --filter "reference=*eod-web-rag*" -q) 2>/dev/null || true
+docker builder prune -f 2>/dev/null || true
 
-# Construir y levantar
-docker compose --profile prod up -d --build
+# Construir SIN cache y recrear contenedor
+docker compose --profile prod build --no-cache
+docker compose --profile prod up -d --force-recreate
 
 # Verificar estado
 echo ""
