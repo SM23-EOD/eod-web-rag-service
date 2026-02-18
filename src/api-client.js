@@ -523,12 +523,12 @@ class RAGApiClient {
             for (const line of lines) {
                 if (line.startsWith('data: ')) {
                     const data = line.slice(6).trim();
-                    if (data === '[DONE]') { onDone?.(); return; }
+                    if (data === '[DONE]') { await onDone?.(); return; }
                     try { onChunk(JSON.parse(data)); } catch {}
                 }
             }
         }
-        onDone?.();
+        await onDone?.();
     }
 }
 

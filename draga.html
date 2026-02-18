@@ -2364,7 +2364,12 @@ const Chat = {
                 async () => {
                     this.messages.push({ role: 'assistant', content: fullContent });
                     btn.disabled = false;
-                    await this._appendFooter(msgId, thinkEl, query, fullContent, sourcePromise);
+                    try {
+                        await this._appendFooter(msgId, thinkEl, query, fullContent, sourcePromise);
+                    } catch (e) {
+                        console.warn('[Chat] Footer error, fallback to basic feedback:', e);
+                        this._appendFeedbackControls(msgId, thinkEl, null);
+                    }
                 }
             );
         } else {
