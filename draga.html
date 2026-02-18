@@ -397,7 +397,7 @@ tr:hover td{background:var(--bg-card);}
     <div class="stats-grid" id="overviewStats">
         <div class="stat-card"><div class="label">Documentos</div><div class="value" id="ovDocs">—</div></div>
         <div class="stat-card"><div class="label">Chunks</div><div class="value" id="ovChunks">—</div></div>
-        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)">14</div></div>
+        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)" id="ovPipelineSteps">—</div></div>
         <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="ovModel">—</div></div>
         <div class="stat-card"><div class="label">Idioma</div><div class="value" id="ovLang">—</div></div>
         <div class="stat-card"><div class="label">Colección</div><div class="value" style="font-size:14px" id="ovCollection">—</div></div>
@@ -1461,6 +1461,13 @@ const Overview = {
 
         // Check protocols
         this.checkProtocols();
+
+        // Pipeline steps — from backend deep health
+        try {
+            const deep = await api.healthDeep();
+            const steps = deep?.pipeline_steps ?? deep?.steps ?? null;
+            document.getElementById('ovPipelineSteps').textContent = steps ?? '—';
+        } catch { document.getElementById('ovPipelineSteps').textContent = '—'; }
 
         // Load DRAGA catalog
         this.loadCatalog();
