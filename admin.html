@@ -306,11 +306,11 @@ tr:hover td{background:var(--bg-card);}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
         <div>
             <h1 class="page-title">Gestión de DRAGAs</h1>
-            <p class="page-desc" style="margin-bottom:0">DRAGAs asociados a tenants</p>
+            <p class="page-desc" style="margin-bottom:0">Cada DRAGA pertenece a un tenant. Un tenant puede tener múltiples DRAGAs.</p>
         </div>
-        <button class="btn btn-primary" onclick="showAgentModal()">➕ Nueva DRAGA</button>
+        <button class="btn btn-primary" onclick="showDragaModal()"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button>
     </div>
-    <div class="card-grid" id="agentCards">
+    <div id="agentCards">
         <div class="loading"><div class="spinner"></div> Cargando...</div>
     </div>
 </div>
@@ -767,37 +767,7 @@ tr:hover td{background:var(--bg-card);}
     </div>
 </div>
 
-<!-- ═══ AGENT MODAL ═══ -->
-<div class="modal-overlay" id="agentModal">
-    <div class="modal">
-        <div class="modal-title"><i class="di" style="width:20px;height:20px;vertical-align:middle"></i> Nueva DRAGA</div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Tenant</label>
-                <select id="agentTenantSelect"><option value="">Cargando...</option></select>
-            </div>
-            <div class="form-group">
-                <label>DRAGA ID</label>
-                <input type="text" id="agentIdInput" placeholder="soporte-v1" pattern="[a-z0-9_\-]+">
-                <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Solo minúsculas, números, guiones</div>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Nombre</label>
-                <input type="text" id="agentNameInput" placeholder="Soporte v1">
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Descripción</label>
-            <textarea id="agentDescInput" placeholder="Descripción del DRAGA..."></textarea>
-        </div>
-        <div class="modal-footer">
-            <button class="btn" onclick="closeModal('agentModal')">Cancelar</button>
-            <button class="btn btn-primary" onclick="saveAgent()">💾 Crear</button>
-        </div>
-    </div>
-</div>
+<!-- agentModal removed — consolidated into dragaModal -->
 
 <!-- ═══ API KEY MODAL ═══ -->
 <div class="modal-overlay" id="apiKeyModal">
@@ -924,6 +894,21 @@ async function showDragaModal() {
 
     openModal('dragaModal');
 }
+
+/** Open DRAGA creation modal pre-selecting a specific tenant */
+async function showDragaModalForTenant(tenantId) {
+    await showDragaModal();
+    // Modal is now open and tenants loaded — select the specified tenant
+    const sel = document.getElementById('dragaTenantSelect');
+    if (sel) {
+        sel.value = tenantId;
+        onDragaTenantSelected();
+    }
+    toggleDragaTenantMode('existing');
+}
+
+// Legacy alias (agentModal removed — use dragaModal)
+function showAgentModal() { showDragaModal(); }
 
 function requestNewTenantMode() {
     const confirmed = confirm(
@@ -1101,12 +1086,18 @@ async function loadDashboard() {
         const tenants = tenantsData.tenants || [];
 
         // ── Hero stats (from backend overview, not hardcoded) ──
-        // Each tenant = 1 DRAGA instance
-        const dragaCount = tenants.length;
         const totalDocs = overview?.platform?.total_documents ?? tenants.reduce((s, t) => s + (t.document_count || 0), 0);
         const totalChunks = overview?.platform?.total_chunks ?? 0;
 
-        document.getElementById('tenantCount').textContent = dragaCount;
+        // Fetch actual DRAGA (agent) count across all tenants
+        let allAgents = [];
+        try {
+            allAgents = await api.listAgents().catch(() => []);
+            if (!Array.isArray(allAgents)) allAgents = [];
+        } catch { allAgents = []; }
+        const dragaCount = allAgents.length || tenants.length;
+
+        document.getElementById('tenantCount').textContent = tenants.length;
         document.getElementById('agentCount').textContent = dragaCount;
         document.getElementById('statDragas').textContent = dragaCount;
         document.getElementById('statDocs').textContent = totalDocs;
@@ -1149,25 +1140,41 @@ async function loadDashboard() {
         // Build per-tenant doc/chunk counts from overview data
         const overviewTenants = (overview?.tenants || []).reduce((m, t) => { m[t.tenant_id] = t; return m; }, {});
 
+        // Group agents by tenant
+        const agentsByTenant = {};
+        allAgents.forEach(a => {
+            if (!agentsByTenant[a.tenant_id]) agentsByTenant[a.tenant_id] = [];
+            agentsByTenant[a.tenant_id].push(a);
+        });
+
         grid.innerHTML = tenants.map(t => {
             const ov = overviewTenants[t.tenant_id] || {};
             const docCount = ov.document_count ?? t.document_count ?? 0;
             const chunkCount = ov.chunk_count ?? 0;
+            const tAgents = agentsByTenant[t.tenant_id] || [];
+            const agentCards = tAgents.length > 0
+                ? tAgents.map(a => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-input);border-radius:6px;font-size:12px;">
+                        <i class="di" style="width:14px;height:14px"></i>
+                        <strong>${a.name}</strong>
+                        <code style="font-size:10px;opacity:0.7">${a.agent_id}</code>
+                        <span class="badge badge-success" style="font-size:9px;margin-left:auto">${a.status || 'active'}</span>
+                    </div>`).join('')
+                : '<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">Sin DRAGAs — usa el botón para crear una</div>';
             return `<div class="draga-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <div class="dc-name">${t.name}</div>
                     ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
                 </div>
-                <div class="dc-id">${t.tenant_id}</div>
+                <div class="dc-id">🏢 ${t.tenant_id}</div>
                 <div class="dc-anatomy">
-                    <div class="dc-part"><span class="icon">🏢</span>Tenant</div>
+                    <div class="dc-part"><span class="icon"><i class="di" style="width:12px;height:12px"></i></span>${tAgents.length} DRAGA${tAgents.length !== 1 ? 's' : ''}</div>
                     <div class="dc-part"><span class="icon">📄</span>${docCount} docs</div>
                     <div class="dc-part"><span class="icon">📚</span>${chunkCount} chunks</div>
                 </div>
+                <div style="display:flex;flex-direction:column;gap:4px;margin:8px 0;">${agentCards}</div>
                 <div class="dc-meta">
                     <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
                     <span>🌐 ${t.response_language || '—'}</span>
-                    <span>📦 ${t.collection_name || '—'}</span>
                 </div>
                 <div class="dc-actions">
                     <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-primary btn-sm"><i class="di"></i> Dashboard</a>
@@ -1297,50 +1304,65 @@ async function loadAgents() {
     const container = document.getElementById('agentCards');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-        // Each tenant = 1 DRAGA instance. Use overview for real counts.
-        const [tenantsData, overview] = await Promise.all([
+        const [tenantsData, agentsRaw] = await Promise.all([
             api.listTenants(true),
-            api.adminDashboardOverview().catch(() => null)
+            api.listAgents().catch(() => [])
         ]);
         const tenants = tenantsData.tenants || [];
-        const overviewTenants = (overview?.tenants || []).reduce((m, t) => { m[t.tenant_id] = t; return m; }, {});
-        document.getElementById('agentCount').textContent = tenants.length;
+        const agents = Array.isArray(agentsRaw) ? agentsRaw : [];
+        document.getElementById('agentCount').textContent = agents.length;
+
+        // Group agents by tenant
+        const agentsByTenant = {};
+        agents.forEach(a => {
+            if (!agentsByTenant[a.tenant_id]) agentsByTenant[a.tenant_id] = [];
+            agentsByTenant[a.tenant_id].push(a);
+        });
 
         if (tenants.length === 0) {
-            container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
-                <h3>Sin DRAGAs</h3><p>Crea tu primera DRAGA para comenzar</p>
-                <button class="btn btn-primary" onclick="showDragaModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
+            container.innerHTML = `<div class="empty-state" style="text-align:center;padding:48px 20px;"><div class="icon">🏢</div>
+                <h3>Sin tenants</h3><p>Primero necesitás crear un tenant (organización) para luego agregarle DRAGAs.</p>
+                <button class="btn btn-primary" onclick="showTenantModal()" style="margin-top:12px">🏢 Crear Tenant</button></div>`;
             return;
         }
 
+        // Render tenants as sections, each with its DRAGAs listed
         container.innerHTML = tenants.map(t => {
-            const ov = overviewTenants[t.tenant_id] || {};
-            const docCount = ov.document_count ?? t.document_count ?? 0;
-            const chunkCount = ov.chunk_count ?? 0;
-            return `<div class="card">
-                <div class="card-header">
-                    <span class="card-title">${t.name}</span>
-                    ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
+            const tAgents = agentsByTenant[t.tenant_id] || [];
+            const agentRows = tAgents.length > 0
+                ? tAgents.map(a => `<div class="card" style="margin:0;padding:12px 16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="di" style="width:16px;height:16px"></i>
+                            <strong style="font-size:14px;">${a.name}</strong>
+                            <code style="font-size:10px;background:var(--bg-input);padding:1px 6px;border-radius:4px;">${a.agent_id}</code>
+                            <span class="badge badge-success" style="font-size:9px;">${a.status || 'active'}</span>
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}" class="btn btn-sm btn-primary" style="text-decoration:none;font-size:11px;"><i class="di" style="width:12px;height:12px"></i> Dashboard</a>
+                            <a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}#chat" class="btn btn-sm" style="text-decoration:none;font-size:11px;">💬</a>
+                            <button class="btn btn-sm btn-danger" style="font-size:11px;" onclick="deleteAgentAction('${t.tenant_id}','${a.agent_id}','${(a.name||"").replace(/'/g,"\\\'")}')" title="Eliminar DRAGA">🗑️</button>
+                        </div>
+                    </div>
+                    ${a.description ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;margin-left:24px;">${a.description}</div>` : ''}
+                    <div style="display:flex;gap:10px;font-size:10px;color:var(--text-muted);margin-top:6px;margin-left:24px;">
+                        <span>Creado: ${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</span>
+                    </div>
+                </div>`).join('')
+                : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">Sin DRAGAs en este tenant <button class="btn btn-sm btn-primary" onclick="showDragaModalForTenant(\''+t.tenant_id+'\')"><i class="di" style="width:12px;height:12px;vertical-align:-1px"></i> Crear DRAGA</button></div>';
+
+            return `<div class="section" style="margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:16px;">🏢</span>
+                        <span style="font-weight:700;font-size:15px;">${t.name}</span>
+                        <code style="font-size:10px;background:var(--bg-input);padding:1px 6px;border-radius:4px;">${t.tenant_id}</code>
+                        ${t.is_active !== false ? '<span class="badge badge-success" style="font-size:9px">Activo</span>' : '<span class="badge badge-muted" style="font-size:9px">Inactivo</span>'}
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">${tAgents.length} DRAGA${tAgents.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <button class="btn btn-sm" onclick="showDragaModalForTenant('${t.tenant_id}')" title="Crear DRAGA en ${t.name}"><i class="di" style="width:12px;height:12px;vertical-align:-1px"></i> + DRAGA</button>
                 </div>
-                <div class="card-meta">
-                    <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px;font-size:11px;">${t.tenant_id}</code>
-                    ${t.description ? `<div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">${t.description}</div>` : ''}
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;font-size:11px;">
-                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🧠 ${(t.default_model || '—').split('/').pop()}</span>
-                    <span style="background:var(--bg-input);padding:2px 8px;border-radius:12px;color:var(--text-secondary)">🌐 ${t.response_language || '—'}</span>
-                </div>
-                <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:12px">
-                    <span>📄 ${docCount} docs</span>
-                    <span>📚 ${chunkCount} chunks</span>
-                    <span>📦 ${t.collection_name || '—'}</span>
-                </div>
-                <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Creado: ${t.created_at ? new Date(t.created_at).toLocaleDateString('es') : '—'}</div>
-                <div class="card-actions">
-                    <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary" style="text-decoration:none"><i class="di"></i> Dashboard</a>
-                    <a href="draga.html?tenant=${t.tenant_id}#chat" class="btn btn-sm" style="text-decoration:none">💬 Chat</a>
-                    <a href="draga.html?tenant=${t.tenant_id}#knowledge" class="btn btn-sm" style="text-decoration:none">📚 KB</a>
-                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">${agentRows}</div>
             </div>`;
         }).join('');
     } catch (e) {
@@ -1348,33 +1370,7 @@ async function loadAgents() {
     }
 }
 
-function showAgentModal() {
-    // Populate tenant selector for agent creation
-    const sel = document.getElementById('agentTenantSelect');
-    api.listTenants(true).then(data => {
-        const tenants = data.tenants || [];
-        sel.innerHTML = tenants.map(t => `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`).join('');
-    }).catch(() => { sel.innerHTML = '<option value="default">Default</option>'; });
-    openModal('agentModal');
-}
-
-async function saveAgent() {
-    const tenantId = document.getElementById('agentTenantSelect').value;
-    const agentId = document.getElementById('agentIdInput').value.trim();
-    const name = document.getElementById('agentNameInput').value.trim();
-    const desc = document.getElementById('agentDescInput').value.trim();
-    if (!tenantId) { toast('Selecciona un tenant', 'error'); return; }
-    if (!agentId || !name) { toast('DRAGA ID y Nombre son requeridos', 'error'); return; }
-    if (!/^[a-z0-9][a-z0-9_\-]*$/.test(agentId)) {
-        toast('DRAGA ID inválido: solo minúsculas, números, guiones', 'error'); return;
-    }
-    try {
-        await api.createAgent({ tenant_id: tenantId, agent_id: agentId, name, description: desc || '' });
-        toast(`DRAGA "${name}" creada en tenant "${tenantId}"`, 'success');
-        closeModal('agentModal');
-        loadAgents();
-    } catch (e) { toast('Error: ' + e.message, 'error'); }
-}
+// showAgentModal and saveAgent removed — consolidated into dragaModal flow (showDragaModal / createDraga)
 
 async function deleteAgentAction(tenantId, agentId, name) {
     if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId}) del tenant "${tenantId}"?`)) return;
