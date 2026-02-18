@@ -442,7 +442,7 @@ tr:hover td{background:var(--bg-card);}
                         <li><span class="task-check">⬜</span><span class="task-text">Alembic migrations (tenants, documents, feedback, sessions)</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">pgvector extension + hybrid search adapter</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Redis cache adapter (reemplaza in-memory)</span><span class="task-actor actor-copilot">Copilot</span></li>
-                        <li><span class="task-check">⬜</span><span class="task-text">Migración de datos ChromaDB → pgvector</span><span class="task-actor actor-hybrid">Hybrid</span></li>
+                        <li><span class="task-check">⬜</span><span class="task-text">Migración de datos vector DB → pgvector</span><span class="task-actor actor-hybrid">Hybrid</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Tests de integración DB</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">Docker compose con PG + Redis</span><span class="task-actor actor-copilot">Copilot</span></li>
                         <li><span class="task-check">⬜</span><span class="task-text">ADR-017: Decision PostgreSQL + pgvector</span><span class="task-actor actor-human">Human</span></li>
@@ -1227,7 +1227,7 @@ async function saveTenant() {
 
 async function deleteTenantAction(id, name) {
     if (!confirm(`¿Eliminar tenant "${name}" (${id})?`)) return;
-    const delCol = confirm('¿Eliminar también la colección ChromaDB? (DESTRUCTIVO)');
+    const delCol = confirm('¿Eliminar también la colección vectorial? (DESTRUCTIVO)');
     try {
         await api.deleteTenant(id, delCol);
         toast(`Tenant "${name}" eliminado`, 'success');
