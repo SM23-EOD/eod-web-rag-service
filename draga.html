@@ -893,6 +893,22 @@ tr:hover td{background:var(--bg-card);}
         </div>
         <div id="taskTable"><div class="loading"><div class="spinner"></div></div></div>
     </div>
+
+    <!-- ═══ DANGER ZONE ═══ -->
+    <div class="section" style="margin-top:48px;">
+        <div class="section-title" style="color:var(--danger);"><span class="icon">⚠️</span> Zona de Peligro</div>
+        <div class="card" style="border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.03);">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Eliminar esta DRAGA</div>
+                    <div style="font-size:12px;color:var(--text-muted);max-width:480px;">
+                        Esta acción eliminará la DRAGA <strong id="dangerDragaName"></strong> y todos sus datos asociados (documentos, chunks, configuración). Esta acción <strong style="color:var(--danger)">no se puede deshacer</strong>.
+                    </div>
+                </div>
+                <button class="btn btn-danger" onclick="DangerZone.deleteDraga()" style="white-space:nowrap;">🗑️ Eliminar DRAGA</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 </main>
@@ -1267,6 +1283,32 @@ function showConfirm(title, msg, action) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// DANGER ZONE — Delete DRAGA
+// ══════════════════════════════════════════════════════════════
+const DangerZone = {
+    async deleteDraga() {
+        const name = App._getAgentDisplayName();
+        const agentId = App.agentId;
+        const tenantId = App.tenantId;
+
+        if (!confirm(`⚠️ ¿Eliminar la DRAGA "${name}" (${agentId}) del tenant "${tenantId}"?\n\nEsto eliminará todos sus documentos, chunks y configuración.\n\nEsta acción NO se puede deshacer.`)) return;
+        if (!confirm(`🔴 CONFIRMACIÓN FINAL\n\n¿Estás SEGURO de eliminar "${name}"?\n\nEscribe mentalmente el nombre para confirmar.`)) return;
+
+        try {
+            toast('Eliminando DRAGA...', 'info');
+            await api.deleteAgent(tenantId, agentId);
+            toast(`DRAGA "${name}" eliminada exitosamente`, 'success');
+            // Redirect to tenant dashboard after deletion
+            setTimeout(() => {
+                window.location.href = `tenant.html?tenant=${tenantId}`;
+            }, 1500);
+        } catch (e) {
+            toast('Error al eliminar: ' + e.message, 'error');
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
 // APP CONTROLLER
 // ══════════════════════════════════════════════════════════════
 const App = {
@@ -1448,7 +1490,7 @@ const App = {
             quality: () => Quality.load(),
             chat: () => ConvHistory.load(),
             widgets: () => Widgets.load(),
-            config: () => Config.load()
+            config: () => { Config.load(); const dz = document.getElementById('dangerDragaName'); if (dz) dz.textContent = App._getAgentDisplayName(); }
         };
         loaders[mod]?.();
     },
