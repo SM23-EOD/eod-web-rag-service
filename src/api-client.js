@@ -125,7 +125,6 @@ class RAGApiClient {
      * @param {object} params - { query, tenant_id, agent_id?, top_k?, use_cache?, category_filter?, document_ids? }
      */
     async query(params) { return this.post('/query', params); }
-    async ingest(docs) { return this.post('/ingest', docs); }
     async getStats(tenantId = null, agentId = null) {
         return this.get(`/stats${this._scopeQuery(tenantId, agentId)}`);
     }
@@ -158,18 +157,7 @@ class RAGApiClient {
         const p = new URLSearchParams({ confirm: 'true', agent_id: agentId || 'default' });
         return this.del(`/agents/${tenantId}?${p}`);
     }
-    async queryAgent(tenantId, data, agentId = null) {
-        data.agent_id = agentId || 'default';
-        return this.post(`/agents/${tenantId}/query`, data);
-    }
-    async ingestAgent(tenantId, docs, agentId = null) {
-        docs.agent_id = agentId || 'default';
-        return this.post(`/agents/${tenantId}/ingest`, docs);
-    }
-    async agentStats(tenantId, agentId = null) {
-        const p = new URLSearchParams({ agent_id: agentId || 'default' });
-        return this.get(`/agents/${tenantId}/stats?${p}`);
-    }
+
 
     // ── API Keys ─────────────────────────────────────────────────
 
@@ -441,7 +429,6 @@ class RAGApiClient {
     async mcpResources() { return this.get('/mcp/resources'); }
     async mcpGetResource(path) { return this.get(`/mcp/resources/${path}`); }
     async mcpSession(id) { return this.get(`/mcp/sessions/${id}`); }
-    async mcpClearSession(id) { return this.del(`/mcp/sessions/${id}`); }
 
     // ── Feedback ──────────────────────────────────────────────────
 
