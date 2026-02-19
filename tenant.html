@@ -279,6 +279,18 @@ body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color
         <div class="section-title"><span class="icon">🔑</span> API Keys del Tenant</div>
         <div id="tenantApiKeys"><div class="loading"><div class="spinner"></div></div></div>
     </div>
+
+    <!-- ═══ DANGER ZONE ═══ -->
+    <div class="section" style="border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius-lg);padding:20px;margin-top:24px;">
+        <div class="section-title" style="color:var(--danger);"><span class="icon">⚠️</span> Zona de Peligro</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+                <div style="font-size:14px;font-weight:700;color:var(--danger);">Eliminar Tenant <strong id="dangerTenantName"></strong></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Esto eliminará el tenant, <strong>todas sus DRAGAs</strong>, documentos, chunks y vectores. Borrado en cascada. Esta acción es irreversible.</div>
+            </div>
+            <button class="btn btn-danger" onclick="TenantApp.deleteTenant()" style="white-space:nowrap;">🗑️ Eliminar Tenant</button>
+        </div>
+    </div>
 </div>
 
 </main>
@@ -394,7 +406,7 @@ const TenantApp = {
             overview: () => this.loadOverview(),
             dragas: () => this.loadDragas(),
             search: () => {},
-            config: () => this.loadConfig(),
+            config: () => { this.loadConfig(); const dz = document.getElementById('dangerTenantName'); if (dz) dz.textContent = `"${this.tenantData?.name || this.tenantId}"`; },
         };
         loaders[mod]?.();
     },
@@ -478,6 +490,7 @@ const TenantApp = {
                     <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}" class="btn btn-primary btn-sm" onclick="event.stopPropagation()"><i class="di" style="width:12px;height:12px"></i> Dashboard</a>
                     <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}#knowledge" class="btn btn-sm" onclick="event.stopPropagation()">📚 KB</a>
                     <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}#chat" class="btn btn-sm" onclick="event.stopPropagation()">💬 Chat</a>
+                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();TenantApp.deleteDraga('${a.agent_id}','${(a.name||'').replace(/'/g,"\\\'")}')" title="Eliminar DRAGA (cascada)">🗑️</button>
                 </div>
             </div>`;
         }).join('');
@@ -530,6 +543,29 @@ const TenantApp = {
             pill.className = 'health-pill offline';
             text.textContent = 'offline';
         }
+    },
+
+    async deleteDraga(agentId, name) {
+        if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId})?\n\nEsto eliminará la DRAGA, sus documentos, chunks y vectores (cascada).`)) return;
+        if (!confirm(`☢️ CONFIRMACIÓN FINAL\n\nVas a eliminar la DRAGA "${name}".\nEsta acción es irreversible.\n\n¿Continuar?`)) return;
+        try {
+            await api.deleteAgent(this.tenantId, agentId);
+            toast(`DRAGA "${name}" eliminada`, 'success');
+            this.agents = this.agents.filter(a => a.agent_id !== agentId);
+            this._renderDragaCards('overviewDragaGrid');
+            this._renderDragaCards('dragasGrid');
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    async deleteTenant() {
+        const name = this.tenantData?.name || this.tenantId;
+        if (!confirm(`⚠️ ¿Eliminar tenant "${name}" (${this.tenantId})?\n\nEsto eliminará el tenant Y TODAS sus DRAGAs (${this.agents.length}), documentos, chunks y vectores.\nBorrado en cascada.`)) return;
+        if (!confirm(`☢️ CONFIRMACIÓN FINAL\n\nVas a eliminar:\n• Tenant: ${name}\n• ${this.agents.length} DRAGA(s)\n• Todos los documentos y vectores\n\nEsta acción es IRREVERSIBLE.\n\n¿Continuar?`)) return;
+        try {
+            await api.deleteTenant(this.tenantId, true);
+            toast(`Tenant "${name}" y todas sus DRAGAs eliminados`, 'success');
+            setTimeout(() => { window.location.href = 'admin.html'; }, 1500);
+        } catch (e) { toast('Error: ' + e.message, 'error'); }
     }
 };
 
