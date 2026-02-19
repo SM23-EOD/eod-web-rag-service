@@ -1198,6 +1198,7 @@ async function loadDashboard() {
                         <div class="ds-actions">
                             <span class="btn btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.preventDefault();event.stopPropagation();window.location.href='draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}#knowledge'">📚 KB</span>
                             <span class="btn btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.preventDefault();event.stopPropagation();window.location.href='draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}#chat'">💬</span>
+                            <span class="btn btn-sm btn-danger" style="font-size:11px;padding:4px 10px;" onclick="event.preventDefault();event.stopPropagation();dashDeleteAgent('${t.tenant_id}','${a.agent_id}','${(a.name||'').replace(/'/g,"\\\'")}')" title="Eliminar DRAGA">🗑️</span>
                         </div>
                     </a>`;
                 }).join('')
@@ -1213,6 +1214,8 @@ async function loadDashboard() {
                         <span class="tg-stat"><i class="di" style="width:14px;height:14px"></i> ${tAgents.length}</span>
                         <span class="tg-stat">📄 ${docCount}</span>
                         <span class="tg-stat">📚 ${chunkCount}</span>
+                        <button class="btn btn-sm btn-danger" style="font-size:10px;padding:3px 8px;" onclick="event.stopPropagation();dashDeleteTenant('${t.tenant_id}','${t.name.replace(/'/g,"\\'")}')"
+                            title="Eliminar tenant y todas sus DRAGAs (cascada)">🗑️ Tenant</button>
                     </div>
                 </div>
                 <div class="tg-body">
@@ -1415,11 +1418,31 @@ async function loadAgents() {
 // showAgentModal and saveAgent removed — consolidated into dragaModal flow (showDragaModal / createDraga)
 
 async function deleteAgentAction(tenantId, agentId, name) {
-    if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId}) del tenant "${tenantId}"?`)) return;
+    if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId}) del tenant "${tenantId}"?\n\nEsto eliminará la DRAGA, sus documentos, chunks y vectores (cascada).`)) return;
     try {
         await api.deleteAgent(tenantId, agentId);
         toast(`DRAGA "${name}" eliminada`, 'success');
         loadAgents();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// Dashboard-level delete helpers (reload dashboard after action)
+async function dashDeleteTenant(id, name) {
+    if (!confirm(`⚠️ ¿Eliminar tenant "${name}" (${id})?\n\nEsto eliminará el tenant Y TODAS sus DRAGAs, documentos, chunks y vectores (borrado en cascada).`)) return;
+    if (!confirm(`☢️ CONFIRMACIÓN FINAL\n\nVas a eliminar:\n• Tenant: ${name}\n• Todas sus DRAGAs\n• Todos los documentos y vectores\n\n¿Continuar?`)) return;
+    try {
+        await api.deleteTenant(id, true);
+        toast(`Tenant "${name}" y todas sus DRAGAs eliminados`, 'success');
+        loadDashboard();
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function dashDeleteAgent(tenantId, agentId, name) {
+    if (!confirm(`¿Eliminar DRAGA "${name}" (${agentId})?\n\nEsto eliminará la DRAGA, sus documentos, chunks y vectores (cascada).`)) return;
+    try {
+        await api.deleteAgent(tenantId, agentId);
+        toast(`DRAGA "${name}" eliminada`, 'success');
+        loadDashboard();
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
 
