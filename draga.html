@@ -2275,8 +2275,6 @@ const KB = {
 
     async _pollIngest(taskId) {
         if (this._pollTimer) clearTimeout(this._pollTimer);
-        let consecutive404 = 0;
-        const MAX_404 = 8;          // stop after 8 consecutive 404s (~32s)
         const MAX_POLL_TIME = 300000; // 5 min absolute timeout
         const startTime = Date.now();
 
@@ -2290,7 +2288,6 @@ const KB = {
             }
             try {
                 const task = await api.getTask(taskId);
-                consecutive404 = 0; // reset on success
                 this._updateTracker(task);
 
                 if (task.state === 'completed' || task.state === 'failed') {
@@ -2302,29 +2299,27 @@ const KB = {
             } catch (err) {
                 const is404 = err && (err.status === 404 || (err.message && err.message.includes('404')));
                 if (is404) {
-                    consecutive404++;
-                    if (consecutive404 >= MAX_404) {
-                        this._pollTimer = null;
-                        // Fallback: try listing tasks to find this one
-                        try {
-                            const list = await api.listTasks(App.tenantId, null, 5, App.agentId);
-                            const found = (list.tasks || []).find(t => t.task_id === taskId);
-                            if (found) {
-                                this._updateTracker(found);
-                                if (found.state !== 'completed' && found.state !== 'failed') {
-                                    // Task exists but GET by ID fails — retry with list polling
-                                    consecutive404 = 0;
-                                    this._pollTimer = setTimeout(poll, 3000);
-                                    return;
-                                }
+                    // 404 = task does not exist on backend → stop immediately.
+                    // One-shot fallback: check task list in case GET-by-ID is the issue.
+                    this._pollTimer = null;
+                    try {
+                        const list = await api.listTasks(App.tenantId, null, 5, App.agentId);
+                        const found = (list.tasks || []).find(t => t.task_id === taskId);
+                        if (found) {
+                            this._updateTracker(found);
+                            if (found.state !== 'completed' && found.state !== 'failed') {
+                                // Task exists in list but GET by ID fails — continue via list polling
+                                this._pollTimer = setTimeout(poll, 3000);
+                                return;
                             }
-                        } catch { /* ignore */ }
-                        toast('❌ No se pudo rastrear la tarea de ingesta. Revisa la lista de documentos.', 'error');
-                        await this.loadAndStabilize();
-                        return;
-                    }
+                        }
+                    } catch { /* ignore */ }
+                    toast('❌ No se pudo rastrear la tarea de ingesta. Revisa la lista de documentos.', 'error');
+                    await this.loadAndStabilize();
+                    return;
                 }
-                this._pollTimer = setTimeout(poll, is404 ? 4000 : 3000);
+                // Non-404 errors: retry after brief delay
+                this._pollTimer = setTimeout(poll, 3000);
             }
         };
         this._pollTimer = setTimeout(poll, 1000);
