@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAGA — Tenant Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/api-client.js"></script>
+    <style>
+/* ═══ DESIGN TOKENS ═══ */
+:root {
+    --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;--draga-accent-alpha:rgba(124,58,237,0.15);
+    --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+    --draga-glow:0 0 40px rgba(124,58,237,0.25);
+    --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;--info:#3b82f6;
+    --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;--bg-input:#242e44;
+    --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+    --border:#243049;--border-light:#334155;
+    --shadow:0 4px 24px rgba(0,0,0,0.35);
+    --radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;height:100vh;}
+
+/* ═══ HEADER ═══ */
+.header{grid-column:1/-1;background:var(--bg-main);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;}
+.header-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.header-brand .logo{width:32px;height:32px;background:var(--draga-gradient);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--draga-glow);}
+.header-brand .name{font-size:18px;font-weight:900;background:var(--draga-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px;}
+.header-brand .subtitle{font-size:10px;color:var(--text-muted);margin-top:-2px;}
+.header-right{display:flex;align-items:center;gap:14px;}
+.header-breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
+.header-breadcrumb a{color:var(--draga-accent-light);text-decoration:none;}
+.header-breadcrumb a:hover{text-decoration:underline;}
+.header-breadcrumb .sep{color:var(--text-muted);}
+.header-breadcrumb .current{color:var(--text-primary);font-weight:700;}
+.health-pill{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;}
+.health-pill.online{background:rgba(34,197,94,0.1);color:var(--success);}
+.health-pill.offline{background:rgba(239,68,68,0.1);color:var(--danger);}
+.health-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.di{display:inline-block;width:1em;height:1em;vertical-align:-0.15em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/%3E%3Crect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/%3E%3Crect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Crect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Cpath d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/%3E%3Crect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/%3E%3Ccircle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/%3E%3Ccircle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/%3E%3Cpath d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;font-style:normal;}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{background:var(--bg-main);border-right:1px solid var(--border);padding:16px 0;overflow-y:auto;}
+.sidebar-section{padding:0 16px;margin-bottom:20px;}
+.sidebar-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);font-weight:700;margin-bottom:8px;padding:0 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--text-secondary);transition:var(--transition);text-decoration:none;margin-bottom:2px;}
+.nav-item:hover{background:var(--bg-card-hover);color:var(--text-primary);}
+.nav-item.active{background:var(--draga-accent-alpha);color:var(--draga-accent-light);}
+.nav-item .icon{font-size:18px;width:24px;text-align:center;}
+.nav-item .badge{margin-left:auto;background:var(--draga-accent-alpha);color:var(--draga-accent-light);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+
+/* ═══ MAIN ═══ */
+.main{overflow-y:auto;padding:24px 32px;background:var(--bg-dark);}
+.module{display:none;}
+.module.active{display:block;}
+.page-title{font-size:24px;font-weight:900;margin-bottom:6px;}
+.page-desc{font-size:13px;color:var(--text-muted);margin-bottom:24px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);}
+.stat-card:hover{border-color:var(--draga-accent);box-shadow:var(--draga-glow);}
+.stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px;}
+.stat-card .value{font-size:28px;font-weight:900;}
+.section{margin-bottom:32px;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.section-title .icon{font-size:20px;}
+
+/* ═══ DRAGA CARDS ═══ */
+.draga-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:24px;}
+.draga-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;transition:var(--transition);position:relative;overflow:hidden;cursor:pointer;text-decoration:none;color:inherit;display:block;}
+.draga-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--draga-gradient);}
+.draga-card:hover{border-color:var(--draga-accent);transform:translateY(-2px);box-shadow:var(--draga-glow);}
+.draga-card .dc-name{font-size:17px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.draga-card .dc-id{font-size:11px;color:var(--text-muted);font-family:monospace;margin-bottom:12px;}
+.draga-card .dc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.dc-stat{text-align:center;padding:8px 4px;background:var(--bg-input);border-radius:var(--radius-sm);font-size:10px;color:var(--text-muted);}
+.dc-stat .num{font-size:18px;font-weight:900;color:var(--text-primary);display:block;margin-bottom:2px;}
+.draga-card .dc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+/* ═══ SEARCH ═══ */
+.search-section{margin-bottom:24px;}
+.search-box{display:flex;gap:10px;}
+.search-box input{flex:1;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:14px;font-family:inherit;}
+.search-box input:focus{outline:none;border-color:var(--draga-accent);}
+.search-box button{padding:12px 24px;}
+.search-scope{font-size:11px;color:var(--text-muted);margin-top:8px;display:flex;align-items:center;gap:6px;}
+.search-results{margin-top:16px;}
+.search-result-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:10px;}
+.search-result-item:hover{border-color:var(--border-light);}
+.sr-query{font-size:11px;color:var(--text-muted);margin-bottom:6px;}
+.sr-answer{font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.6;}
+.sr-meta{display:flex;gap:12px;font-size:10px;color:var(--text-muted);flex-wrap:wrap;}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{border-color:var(--draga-accent);color:var(--text-primary);}
+.btn-primary{background:var(--draga-gradient);color:#fff;border-color:transparent;}
+.btn-primary:hover{opacity:0.9;border-color:transparent;}
+.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.3);}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-success{background:rgba(34,197,94,0.12);color:var(--success);}
+.badge-danger{background:rgba(239,68,68,0.12);color:var(--danger);}
+.badge-warning{background:rgba(245,158,11,0.12);color:var(--warning);}
+.badge-info{background:rgba(59,130,246,0.12);color:var(--info);}
+.badge-muted{background:rgba(100,116,139,0.12);color:var(--text-muted);}
+
+/* ═══ TOAST ═══ */
+.toast-container{position:fixed;top:64px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:10px 18px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;animation:slideIn .3s ease;max-width:360px;}
+.toast-error{background:#991b1b;color:#fecaca;}
+.toast-info{background:#1e3a5f;color:#93c5fd;}
+.toast-success{background:#166534;color:#bbf7d0;}
+.toast-warning{background:#78350f;color:#fde68a;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ═══ LOADING & EMPTY ═══ */
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--draga-accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:40px;color:var(--text-muted);}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state h3{font-size:16px;margin-bottom:6px;color:var(--text-secondary);}
+.empty-state p{font-size:13px;}
+
+/* ═══ CONFIG CARD ═══ */
+.config-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.config-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;}
+.config-item .ci-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;}
+.config-item .ci-value{font-size:14px;font-weight:700;word-break:break-all;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:56px 48px 1fr;}
+    .sidebar{overflow-x:auto;display:flex;flex-direction:row;padding:0 12px;gap:4px;align-items:center;border-right:none;border-bottom:1px solid var(--border);}
+    .sidebar-section{display:flex;gap:4px;margin:0;padding:0;}
+    .sidebar-label{display:none;}
+    .nav-item{white-space:nowrap;padding:8px 12px;}
+    .main{padding:16px;}
+    .draga-grid{grid-template-columns:1fr;}
+}
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+    <div style="display:flex;align-items:center;gap:16px;">
+        <a href="index.html" class="header-brand">
+            <div class="logo"><i class="di" style="font-size:18px;width:18px;height:18px"></i></div>
+            <div><div class="name">DRAGA</div><div class="subtitle">Tenant Dashboard</div></div>
+        </a>
+        <div class="header-breadcrumb">
+            <a href="admin.html">🏗️ Plataforma</a>
+            <span class="sep">›</span>
+            <span class="current" id="breadcrumbTenant">Tenant</span>
+        </div>
+    </div>
+    <div class="header-right">
+        <select id="tenantSelect" onchange="TenantApp.switchTenant(this.value)" style="padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;"></select>
+        <div class="health-pill online" id="healthPill">
+            <div class="health-dot"></div>
+            <span id="healthText">checking...</span>
+        </div>
+        <a href="admin.html" class="btn btn-sm">🏗️ Plataforma</a>
+        <a href="index.html" class="btn btn-sm">🏠 Home</a>
+    </div>
+</header>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+    <div class="sidebar-section">
+        <div class="sidebar-label">Tenant</div>
+        <a class="nav-item active" onclick="TenantApp.nav('overview')" data-mod="overview">
+            <span class="icon">📊</span> Overview
+        </a>
+        <a class="nav-item" onclick="TenantApp.nav('dragas')" data-mod="dragas">
+            <span class="icon"><i class="di"></i></span> DRAGAs
+            <span class="badge" id="navDragaCount">—</span>
+        </a>
+        <a class="nav-item" onclick="TenantApp.nav('search')" data-mod="search">
+            <span class="icon">🔍</span> Buscar
+        </a>
+        <a class="nav-item" onclick="TenantApp.nav('config')" data-mod="config">
+            <span class="icon">🔧</span> Configuración
+        </a>
+    </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- ── MODULE: OVERVIEW ── -->
+<div class="module active" id="mod-overview">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+            <h1 class="page-title" id="overviewTitle">🏢 Tenant Dashboard</h1>
+            <p class="page-desc" id="overviewDesc">Vista a nivel de tenant: métricas agregadas y acceso a cada DRAGA</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary" onclick="TenantApp.nav('dragas')"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Ver DRAGAs</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="overviewStats">
+        <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
+        <div class="stat-card"><div class="label">Documentos (Total)</div><div class="value" id="statDocs">—</div></div>
+        <div class="stat-card"><div class="label">Chunks (Total)</div><div class="value" id="statChunks">—</div></div>
+        <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="statModel">—</div></div>
+        <div class="stat-card"><div class="label">Idioma</div><div class="value" id="statLang">—</div></div>
+        <div class="stat-card"><div class="label">Estado</div><div class="value" id="statStatus">—</div></div>
+    </div>
+
+    <!-- Quick DRAGA overview -->
+    <div class="section">
+        <div class="section-title"><span class="icon"><i class="di"></i></span> DRAGAs de este Tenant</div>
+        <p style="font-size:12px;color:var(--text-muted);margin:-10px 0 16px;">Cada DRAGA tiene su propia base de conocimientos aislada. Seleccioná una para acceder a sus documentos.</p>
+        <div class="draga-grid" id="overviewDragaGrid">
+            <div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODULE: DRAGAS ── -->
+<div class="module" id="mod-dragas">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+            <h1 class="page-title"><i class="di" style="width:24px;height:24px;vertical-align:-3px"></i> DRAGAs del Tenant</h1>
+            <p class="page-desc" id="dragasDesc">Cada DRAGA tiene su propia Knowledge Base. Seleccioná una para gestionar sus documentos.</p>
+        </div>
+    </div>
+    <div class="draga-grid" id="dragasGrid">
+        <div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div>
+    </div>
+</div>
+
+<!-- ── MODULE: SEARCH ── -->
+<div class="module" id="mod-search">
+    <h1 class="page-title">🔍 Búsqueda a nivel de Tenant</h1>
+    <p class="page-desc">Busca en todas las bases de conocimiento de las DRAGAs de este tenant</p>
+
+    <div class="search-section">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Escribe tu consulta..." onkeydown="if(event.key==='Enter')TenantSearch.run()">
+            <select id="searchDragaFilter" style="padding:12px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;min-width:160px;">
+                <option value="__all__">🔍 Todas las DRAGAs</option>
+            </select>
+            <button class="btn btn-primary" onclick="TenantSearch.run()">▶ Buscar</button>
+        </div>
+        <div class="search-scope">
+            <span>📌 Alcance:</span>
+            <strong id="searchScopeLabel">Todas las KBs del tenant</strong>
+        </div>
+    </div>
+
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- ── MODULE: CONFIG ── -->
+<div class="module" id="mod-config">
+    <h1 class="page-title">🔧 Configuración del Tenant</h1>
+    <p class="page-desc">Datos del tenant y configuración general</p>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🏢</span> Información del Tenant</div>
+        <div class="config-grid" id="tenantConfigGrid">
+            <div class="loading"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🔑</span> API Keys del Tenant</div>
+        <div id="tenantApiKeys"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+</div>
+
+</main>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TENANT DASHBOARD — JavaScript
+// Nivel 2: Vista de un tenant y sus DRAGAs
+// ══════════════════════════════════════════════════════════════
+
+const MODULES = ['overview', 'dragas', 'search', 'config'];
+
+function toast(msg, type = 'info', duration = 4000) {
+    const el = document.createElement('div');
+    el.className = 'toast toast-' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), duration);
+}
+
+// ══════════════════════════════════════════════════════════════
+// MAIN APP CONTROLLER
+// ══════════════════════════════════════════════════════════════
+const TenantApp = {
+    tenantId: null,
+    tenantData: null,
+    tenants: [],
+    agents: [],
+
+    async init() {
+        // Load all tenants
+        try {
+            const data = await api.listTenants(true);
+            this.tenants = data.tenants || [];
+        } catch { this.tenants = [{ tenant_id: 'default', name: 'Default' }]; }
+
+        // Populate tenant selector
+        const sel = document.getElementById('tenantSelect');
+        sel.innerHTML = this.tenants.map(t =>
+            `<option value="${t.tenant_id}">${t.name} (${t.tenant_id})</option>`
+        ).join('');
+
+        // Pick tenant from URL
+        const params = new URLSearchParams(window.location.search);
+        const urlTenant = params.get('tenant');
+        const tenantExists = urlTenant && this.tenants.some(t => t.tenant_id === urlTenant);
+
+        if (tenantExists) {
+            this.tenantId = urlTenant;
+        } else if (urlTenant) {
+            toast(`El tenant "${urlTenant}" no existe. Se seleccionó el primero disponible.`, 'warning');
+            this.tenantId = this.tenants[0]?.tenant_id || 'default';
+        } else {
+            this.tenantId = this.tenants[0]?.tenant_id || 'default';
+        }
+
+        sel.value = this.tenantId;
+        this.tenantData = this.tenants.find(t => t.tenant_id === this.tenantId) || { tenant_id: this.tenantId, name: this.tenantId };
+
+        // Update breadcrumb
+        document.getElementById('breadcrumbTenant').textContent = `🏢 ${this.tenantData.name}`;
+
+        // Load agents for this tenant
+        await this.loadAgents();
+
+        // Navigate from hash
+        const hash = window.location.hash.replace('#', '') || 'overview';
+        this.nav(hash);
+
+        // Health check
+        this.checkHealth();
+        setInterval(() => this.checkHealth(), 30000);
+
+        window.addEventListener('hashchange', () => {
+            const h = window.location.hash.replace('#', '');
+            if (MODULES.includes(h)) this.nav(h);
+        });
+    },
+
+    async loadAgents() {
+        try {
+            const data = await api.listAgents(this.tenantId);
+            this.agents = data.agents || data || [];
+            if (!Array.isArray(this.agents)) this.agents = [];
+        } catch {
+            this.agents = [];
+        }
+        document.getElementById('navDragaCount').textContent = this.agents.length;
+
+        // Populate search filter
+        const filter = document.getElementById('searchDragaFilter');
+        filter.innerHTML = '<option value="__all__">🔍 Todas las DRAGAs</option>' +
+            this.agents.map(a => `<option value="${a.agent_id}">${a.name || a.agent_id}</option>`).join('');
+    },
+
+    switchTenant(tid) {
+        // Full page reload on level change (required by spec)
+        window.location.href = `tenant.html?tenant=${tid}`;
+    },
+
+    nav(mod) {
+        if (!MODULES.includes(mod)) mod = 'overview';
+        MODULES.forEach(m => {
+            document.getElementById('mod-' + m).classList.toggle('active', m === mod);
+            document.querySelector(`[data-mod="${m}"]`)?.classList.toggle('active', m === mod);
+        });
+        window.location.hash = mod;
+
+        const loaders = {
+            overview: () => this.loadOverview(),
+            dragas: () => this.loadDragas(),
+            search: () => {},
+            config: () => this.loadConfig(),
+        };
+        loaders[mod]?.();
+    },
+
+    async loadOverview() {
+        const t = this.tenantData;
+        document.getElementById('overviewTitle').innerHTML = `🏢 ${t.name}`;
+        document.getElementById('overviewDesc').textContent = t.description || 'Vista a nivel de tenant: métricas agregadas y acceso a cada DRAGA';
+
+        // Stats
+        document.getElementById('statDragas').textContent = this.agents.length;
+        document.getElementById('statModel').textContent = (t.default_model || '—').split('/').pop();
+        document.getElementById('statLang').textContent = t.response_language || '—';
+        document.getElementById('statStatus').innerHTML = t.is_active !== false
+            ? '<span style="color:var(--success)">✅ Activo</span>'
+            : '<span style="color:var(--danger)">⛔ Inactivo</span>';
+
+        // Aggregate docs/chunks from all DRAGAs
+        let totalDocs = 0, totalChunks = 0;
+        try {
+            const results = await Promise.all(
+                this.agents.map(a =>
+                    api.getStats(this.tenantId, a.agent_id).catch(() => ({}))
+                )
+            );
+            results.forEach(s => {
+                totalDocs += s.total_documents || s.document_count || 0;
+                totalChunks += s.total_chunks || s.chunk_count || 0;
+            });
+        } catch {}
+        document.getElementById('statDocs').textContent = totalDocs;
+        document.getElementById('statChunks').textContent = totalChunks;
+
+        // DRAGA quick cards
+        this._renderDragaCards('overviewDragaGrid');
+    },
+
+    async loadDragas() {
+        this._renderDragaCards('dragasGrid');
+    },
+
+    async _renderDragaCards(containerId) {
+        const grid = document.getElementById(containerId);
+        if (this.agents.length === 0) {
+            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+                <div class="icon"><i class="di" style="font-size:48px;width:48px;height:48px"></i></div>
+                <h3>Sin DRAGAs en este tenant</h3>
+                <p>Crea tu primera DRAGA desde la <a href="admin.html" style="color:var(--draga-accent-light)">Plataforma</a></p>
+            </div>`;
+            return;
+        }
+
+        grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando métricas...</div>';
+
+        // Fetch per-DRAGA stats in parallel
+        const statsResults = await Promise.all(
+            this.agents.map(a =>
+                api.getStats(this.tenantId, a.agent_id).catch(() => ({}))
+            )
+        );
+
+        grid.innerHTML = this.agents.map((a, i) => {
+            const s = statsResults[i] || {};
+            const docs = s.total_documents || s.document_count || 0;
+            const chunks = s.total_chunks || s.chunk_count || 0;
+            const status = a.status || 'active';
+            return `<div class="draga-card" onclick="window.location.href='draga.html?tenant=${this.tenantId}&agent=${a.agent_id}'">
+                <div class="dc-name">
+                    <i class="di" style="width:20px;height:20px"></i>
+                    ${a.name || a.agent_id}
+                    <span class="badge badge-success" style="font-size:9px;margin-left:8px;">${status}</span>
+                </div>
+                <div class="dc-id">ID: ${a.agent_id}</div>
+                ${a.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">${a.description}</div>` : ''}
+                <div class="dc-stats">
+                    <div class="dc-stat"><span class="num">${docs}</span>Documentos</div>
+                    <div class="dc-stat"><span class="num">${chunks}</span>Chunks</div>
+                    <div class="dc-stat"><span class="num">${a.created_at ? new Date(a.created_at).toLocaleDateString('es') : '—'}</span>Creado</div>
+                </div>
+                <div class="dc-actions">
+                    <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}" class="btn btn-primary btn-sm" onclick="event.stopPropagation()"><i class="di" style="width:12px;height:12px"></i> Dashboard</a>
+                    <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}#knowledge" class="btn btn-sm" onclick="event.stopPropagation()">📚 KB</a>
+                    <a href="draga.html?tenant=${this.tenantId}&agent=${a.agent_id}#chat" class="btn btn-sm" onclick="event.stopPropagation()">💬 Chat</a>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    async loadConfig() {
+        const grid = document.getElementById('tenantConfigGrid');
+        const t = this.tenantData;
+
+        grid.innerHTML = `
+            <div class="config-item"><div class="ci-label">Tenant ID</div><div class="ci-value" style="font-family:monospace">${t.tenant_id}</div></div>
+            <div class="config-item"><div class="ci-label">Nombre</div><div class="ci-value">${t.name}</div></div>
+            <div class="config-item"><div class="ci-label">Descripción</div><div class="ci-value">${t.description || '—'}</div></div>
+            <div class="config-item"><div class="ci-label">Modelo</div><div class="ci-value">${t.default_model || '—'}</div></div>
+            <div class="config-item"><div class="ci-label">Idioma</div><div class="ci-value">${t.response_language || '—'}</div></div>
+            <div class="config-item"><div class="ci-label">Estado</div><div class="ci-value">${t.is_active !== false ? '✅ Activo' : '⛔ Inactivo'}</div></div>
+            <div class="config-item"><div class="ci-label">DRAGAs</div><div class="ci-value">${this.agents.length}</div></div>
+        `;
+
+        // API Keys
+        const keysDiv = document.getElementById('tenantApiKeys');
+        try {
+            const data = await api.listApiKeys(this.tenantId);
+            const keys = data.keys || [];
+            if (keys.length === 0) {
+                keysDiv.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px;">Sin API Keys para este tenant. Crea una desde la <a href="admin.html#apikeys" style="color:var(--draga-accent-light)">Plataforma</a>.</div>';
+            } else {
+                keysDiv.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;">
+                    <thead><tr><th>Label</th><th>Prefijo</th><th>Creada</th><th>Expira</th></tr></thead>
+                    <tbody>${keys.map(k => `<tr>
+                        <td><strong>${k.label || '—'}</strong></td>
+                        <td><code style="font-size:11px">${k.key_prefix || '—'}</code></td>
+                        <td>${k.created_at ? new Date(k.created_at).toLocaleDateString('es') : '—'}</td>
+                        <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString('es') : 'Nunca'}</td>
+                    </tr>`).join('')}</tbody></table></div>`;
+            }
+        } catch {
+            keysDiv.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px;">No se pudieron cargar las API Keys.</div>';
+        }
+    },
+
+    async checkHealth() {
+        const pill = document.getElementById('healthPill');
+        const text = document.getElementById('healthText');
+        try {
+            await api.health();
+            pill.className = 'health-pill online';
+            text.textContent = 'online';
+        } catch {
+            pill.className = 'health-pill offline';
+            text.textContent = 'offline';
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// TENANT-LEVEL SEARCH
+// Searches across all DRAGAs of this tenant
+// ══════════════════════════════════════════════════════════════
+const TenantSearch = {
+    async run() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) { toast('Escribe una consulta', 'warning'); return; }
+
+        const filterVal = document.getElementById('searchDragaFilter').value;
+        const container = document.getElementById('searchResults');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando...</div>';
+
+        // Update scope label
+        if (filterVal === '__all__') {
+            document.getElementById('searchScopeLabel').textContent = `Todas las KBs del tenant "${TenantApp.tenantData.name}"`;
+        } else {
+            const agent = TenantApp.agents.find(a => a.agent_id === filterVal);
+            document.getElementById('searchScopeLabel').textContent = `Solo KB de DRAGA "${agent?.name || filterVal}"`;
+        }
+
+        try {
+            const agentsToSearch = filterVal === '__all__'
+                ? TenantApp.agents
+                : TenantApp.agents.filter(a => a.agent_id === filterVal);
+
+            if (agentsToSearch.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>Sin DRAGAs para buscar</h3></div>';
+                return;
+            }
+
+            // Search each DRAGA in parallel
+            const results = await Promise.all(
+                agentsToSearch.map(a =>
+                    api.query({
+                        query,
+                        tenant_id: TenantApp.tenantId,
+                        agent_id: a.agent_id,
+                        top_k: 5
+                    }).then(r => ({ agent: a, result: r }))
+                      .catch(e => ({ agent: a, error: e.message }))
+                )
+            );
+
+            let html = '';
+            let totalResults = 0;
+
+            results.forEach(({ agent, result, error }) => {
+                if (error) {
+                    html += `<div class="search-result-item" style="border-left:3px solid var(--danger);">
+                        <div class="sr-query"><i class="di" style="width:12px;height:12px"></i> <strong>${agent.name || agent.agent_id}</strong> — Error</div>
+                        <div class="sr-answer" style="color:var(--danger)">${error}</div>
+                    </div>`;
+                    return;
+                }
+                if (!result) return;
+
+                totalResults++;
+                const answer = result.answer || result.response || '—';
+                const confidence = result.confidence != null ? `${(result.confidence * 100).toFixed(0)}%` : '—';
+                const sources = result.sources || result.retrieved_chunks || [];
+                const sourceList = sources.slice(0, 3).map(s =>
+                    `<span style="background:var(--bg-input);padding:2px 6px;border-radius:4px;">${s.filename || s.document_id || '—'}</span>`
+                ).join(' ');
+
+                html += `<div class="search-result-item" style="border-left:3px solid var(--success);">
+                    <div class="sr-query">
+                        <i class="di" style="width:12px;height:12px"></i> <strong>${agent.name || agent.agent_id}</strong>
+                        <span class="badge badge-info" style="margin-left:8px;">confianza: ${confidence}</span>
+                    </div>
+                    <div class="sr-answer">${answer}</div>
+                    <div class="sr-meta">
+                        ${sourceList ? '<span>📄 Fuentes: ' + sourceList + '</span>' : ''}
+                        <a href="draga.html?tenant=${TenantApp.tenantId}&agent=${agent.agent_id}#chat" style="color:var(--draga-accent-light);text-decoration:none;">💬 Continuar en chat →</a>
+                    </div>
+                </div>`;
+            });
+
+            if (totalResults === 0 && !html) {
+                html = '<div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p>Intenta con otra consulta o verifica que las DRAGAs tengan documentos.</p></div>';
+            }
+
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = `<div class="empty-state"><div class="icon">❌</div><h3>Error</h3><p>${e.message}</p></div>`;
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+TenantApp.init();
+</script>
+</body>
+</html>

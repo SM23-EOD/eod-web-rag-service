@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DRAGA — Platform Admin</title>
+    <title>DRAGA — Plataforma (Nivel 1)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="src/api-client.js"></script>
@@ -210,7 +210,7 @@ tr:hover td{background:var(--bg-card);}
 <header class="header">
     <a href="index.html" class="header-brand">
         <div class="logo"><i class="di" style="font-size:18px;width:18px;height:18px"></i></div>
-        <div><div class="name">DRAGA</div><div class="subtitle">Platform Admin</div></div>
+        <div><div class="name">DRAGA</div><div class="subtitle">Plataforma</div></div>
     </a>
     <div class="header-right">
         <div class="health-pill online" id="healthPill">
@@ -262,8 +262,8 @@ tr:hover td{background:var(--bg-card);}
 <div class="module active" id="mod-dashboard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div>
-            <h1 class="page-title" style="margin-bottom:4px">Platform Dashboard</h1>
-            <p class="page-desc" style="margin-bottom:0">Vista global de todos los DRAGAs activos en la plataforma</p>
+            <h1 class="page-title" style="margin-bottom:4px">🏗️ Dashboard de la Plataforma</h1>
+            <p class="page-desc" style="margin-bottom:0">Nivel 1: Vista global organizasada por tenants y sus DRAGAs</p>
         </div>
         <button class="btn btn-primary" onclick="showDragaModal()" style="white-space:nowrap">
             <i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA
@@ -1153,12 +1153,12 @@ async function loadDashboard() {
             const chunkCount = ov.chunk_count ?? 0;
             const tAgents = agentsByTenant[t.tenant_id] || [];
             const agentCards = tAgents.length > 0
-                ? tAgents.map(a => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-input);border-radius:6px;font-size:12px;">
+                ? tAgents.map(a => `<a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-input);border-radius:6px;font-size:12px;text-decoration:none;color:inherit;transition:0.15s;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='var(--bg-input)'">
                         <i class="di" style="width:14px;height:14px"></i>
                         <strong>${a.name}</strong>
                         <code style="font-size:10px;opacity:0.7">${a.agent_id}</code>
                         <span class="badge badge-success" style="font-size:9px;margin-left:auto">${a.status || 'active'}</span>
-                    </div>`).join('')
+                    </a>`).join('')
                 : '<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">Sin DRAGAs — usa el botón para crear una</div>';
             return `<div class="draga-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -1177,9 +1177,9 @@ async function loadDashboard() {
                     <span>🌐 ${t.response_language || '—'}</span>
                 </div>
                 <div class="dc-actions">
-                    <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-primary btn-sm"><i class="di"></i> Dashboard</a>
-                    <a href="draga.html?tenant=${t.tenant_id}#chat" class="btn btn-sm">💬 Chat</a>
-                    <a href="draga.html?tenant=${t.tenant_id}#knowledge" class="btn btn-sm">📚 KB</a>
+                    <a href="tenant.html?tenant=${t.tenant_id}" class="btn btn-primary btn-sm">🏢 Tenant</a>
+                    ${tAgents.length === 1 ? `<a href="draga.html?tenant=${t.tenant_id}&agent=${tAgents[0].agent_id}" class="btn btn-sm"><i class="di"></i> DRAGA</a>` : ''}
+                    ${tAgents.length === 1 ? `<a href="draga.html?tenant=${t.tenant_id}&agent=${tAgents[0].agent_id}#chat" class="btn btn-sm">💬 Chat</a>` : ''}
                 </div>
             </div>`;
         }).join('');
@@ -1222,7 +1222,7 @@ async function loadTenants() {
                 <span>📄 ${t.document_count ?? 0} docs</span>
             </div>
             <div class="card-actions">
-                <a href="draga.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary" style="text-decoration:none"><i class="di"></i> Dashboard</a>
+                <a href="tenant.html?tenant=${t.tenant_id}" class="btn btn-sm btn-primary" style="text-decoration:none">🏢 Dashboard</a>
                 <button class="btn btn-sm" onclick="editTenant('${t.tenant_id}')">✏️ Editar</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteTenantAction('${t.tenant_id}','${t.name.replace(/'/g,"\\'")}')">🗑️</button>
             </div>

@@ -361,16 +361,21 @@ tr:hover td{background:var(--bg-card);}
             <span class="name">DRAGA</span>
         </a>
         <div class="header-sep"></div>
-        <div class="tenant-selector">
-            <select id="tenantSelect" onchange="App.switchTenant(this.value)"></select>
-            <span class="scope-sep">/</span>
-            <select id="agentSelect" onchange="App.switchAgent(this.value)"></select>
+        <div class="header-breadcrumb" style="display:flex;align-items:center;gap:6px;font-size:12px;">
+            <a href="admin.html" style="color:var(--text-muted);text-decoration:none;" title="Plataforma">🏗️</a>
+            <span style="color:var(--text-muted)">›</span>
+            <a id="breadcrumbTenant" href="#" style="color:var(--draga-accent-light);text-decoration:none;" title="Ir al tenant">🏢 Tenant</a>
+            <span style="color:var(--text-muted)">›</span>
+            <select id="agentSelect" onchange="App.switchAgent(this.value)" style="padding:4px 8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;"></select>
         </div>
+        <!-- Hidden tenant selector for internal state -->
+        <select id="tenantSelect" style="display:none;"></select>
     </div>
     <div class="header-right">
         <span class="tenant-name" id="tenantDisplayName"></span>
         <div class="health-dot" id="healthDot" title="API Status"></div>
-        <a href="admin.html" class="btn btn-sm">⚙️ Admin</a>
+        <a href="#" id="linkToTenant" class="btn btn-sm">🏢 Tenant</a>
+        <a href="admin.html" class="btn btn-sm">🏗️ Plataforma</a>
     </div>
 </header>
 
@@ -404,8 +409,17 @@ tr:hover td{background:var(--bg-card);}
     </div>
 
     <div class="section">
-        <div class="section-title"><span class="icon">🐉</span> DRAGAs en la Plataforma</div>
-        <div id="dragaCatalog" class="draga-catalog"><div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div></div>
+        <div class="section-title"><span class="icon">�</span> Contexto de esta DRAGA</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+            <div style="background:var(--bg-input);padding:8px 14px;border-radius:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+                🏢 Tenant: <strong id="ovTenantName">—</strong>
+                <a id="ovTenantLink" href="#" style="color:var(--draga-accent-light);font-size:11px;text-decoration:none;">→ Ver tenant</a>
+            </div>
+            <div style="background:var(--bg-input);padding:8px 14px;border-radius:8px;font-size:12px;display:flex;align-items:center;gap:6px;">
+                <i class="di" style="width:14px;height:14px"></i> DRAGA: <strong id="ovDragaName">—</strong>
+            </div>
+            <div style="background:var(--bg-input);padding:8px 14px;border-radius:8px;font-size:12px;display:flex;align-items:center;gap:6px;" id="ovDragaDesc"></div>
+        </div>
     </div>
 
     <div class="section">
@@ -1307,6 +1321,26 @@ const App = {
         this._updateDisplayName();
         this._updateUrl();
 
+        // Set breadcrumb links (3-level navigation)
+        const tenantLink = `tenant.html?tenant=${this.tenantId}`;
+        document.getElementById('breadcrumbTenant').textContent = `🏢 ${this.tenantData?.name || this.tenantId}`;
+        document.getElementById('breadcrumbTenant').href = tenantLink;
+        document.getElementById('linkToTenant').href = tenantLink;
+
+        // Set overview context
+        const ovTenantName = document.getElementById('ovTenantName');
+        const ovTenantLink = document.getElementById('ovTenantLink');
+        const ovDragaName = document.getElementById('ovDragaName');
+        const ovDragaDesc = document.getElementById('ovDragaDesc');
+        if (ovTenantName) ovTenantName.textContent = this.tenantData?.name || this.tenantId;
+        if (ovTenantLink) ovTenantLink.href = tenantLink;
+        if (ovDragaName) ovDragaName.textContent = this._getAgentDisplayName();
+        const agentData = this.agents.find(a => a.agent_id === this.agentId);
+        if (ovDragaDesc) {
+            ovDragaDesc.textContent = agentData?.description || '';
+            ovDragaDesc.style.display = agentData?.description ? '' : 'none';
+        }
+
         // Setup drop zone
         KB.setupDropZone();
 
@@ -1356,27 +1390,15 @@ const App = {
     },
 
     async switchTenant(tid) {
-        this.tenantId = tid;
-        this.tenantData = this.tenants.find(t => t.tenant_id === tid) || { tenant_id: tid, name: tid };
-        // Reload agents for new tenant
-        await this.loadAgents(tid);
-        this.agentId = this.agents[0]?.agent_id || 'default';
-        document.getElementById('agentSelect').value = this.agentId;
-        this._updateDisplayName();
-        this._updateUrl();
-        Chat.clear();
-        // Reload current module
-        const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
-        this.nav(active);
+        // Full page reload to enforce isolation — navigate to tenant dashboard
+        window.location.href = `tenant.html?tenant=${tid}`;
     },
 
     switchAgent(aid) {
-        this.agentId = aid;
-        this._updateDisplayName();
-        this._updateUrl();
-        Chat.clear();
-        const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
-        this.nav(active);
+        // Full page reload on DRAGA switch to enforce clean state
+        const url = new URL(window.location);
+        url.searchParams.set('agent', aid);
+        window.location.href = url.toString();
     },
 
     _getAgentDisplayName() {
@@ -1444,7 +1466,7 @@ const App = {
 const Overview = {
     async load() {
         const t = App.tenantData;
-        document.getElementById('overviewTitle').innerHTML = `<i class="di" style="font-size:28px;width:28px;height:28px;vertical-align:-4px"></i> ${t.name || App.tenantId}`;
+        document.getElementById('overviewTitle').innerHTML = `<i class="di" style="font-size:28px;width:28px;height:28px;vertical-align:-4px"></i> ${App._getAgentDisplayName()}`;
 
         // Clean up old banner if present
         const oldBanner = document.getElementById('noDragaBanner');
@@ -1484,100 +1506,11 @@ const Overview = {
             document.getElementById('ovPipelineSteps').textContent = steps ?? '—';
         } catch { document.getElementById('ovPipelineSteps').textContent = '—'; }
 
-        // Load DRAGA catalog
-        this.loadCatalog();
+        // Load DRAGA catalog — removed (single-DRAGA scope)
     },
 
-    async loadCatalog() {
-        const container = document.getElementById('dragaCatalog');
-        if (!container) return;
-        container.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando DRAGAs...</div>';
-
-        const cards = [];
-        try {
-            const data = await api.listTenants(true);
-            const tenants = data.tenants || [];
-
-            for (const t of tenants) {
-                let agents = [];
-                try {
-                    const ad = await api.listAgents(t.tenant_id);
-                    agents = ad.agents || ad || [];
-                } catch { agents = []; }
-
-                if (!agents.length) agents = [{ agent_id: 'default', name: t.name || t.tenant_id }];
-
-                for (const a of agents) {
-                    const isActive = t.tenant_id === App.tenantId && (a.agent_id || 'default') === (App.agentId || 'default');
-                    let docs = '—', chunks = '—', model = '—';
-
-                    // Try to get stats (non-blocking)
-                    try {
-                        const ds = await api.documentStats(t.tenant_id, a.agent_id);
-                        const bs = ds.by_status || {};
-                        docs = (ds.total_documents || 0) - (bs.deleted || 0) - (bs.pending_delete || 0);
-                        chunks = ds.total_chunks ?? '—';
-                    } catch {
-                        try {
-                            const dl = await api.listDocuments(t.tenant_id, null, null, a.agent_id);
-                            docs = (dl.documents || []).length;
-                            chunks = (dl.documents || []).reduce((s, d) => s + (d.chunk_count || 0), 0) || '—';
-                        } catch {}
-                    }
-
-                    // Model from agent config
-                    try {
-                        const ag = await api.getAgent(t.tenant_id, a.agent_id);
-                        model = (ag.default_model || ag.model || '—').split('/').pop();
-                    } catch { model = t.default_model ? t.default_model.split('/').pop() : '—'; }
-
-                    const colors = ['#7c3aed','#2563eb','#059669','#d97706','#dc2626','#8b5cf6','#0891b2','#c026d3'];
-                    const colorIdx = (t.tenant_id + (a.agent_id || '')).split('').reduce((s, c) => s + c.charCodeAt(0), 0) % colors.length;
-                    const bg = colors[colorIdx];
-                    const initial = (a.name || a.agent_id || 'D')[0].toUpperCase();
-
-                    cards.push(`
-                        <div class="draga-card${isActive ? ' active' : ''}" onclick="Overview.selectDraga('${t.tenant_id}','${a.agent_id || 'default'}')" title="${t.tenant_id} / ${a.agent_id || 'default'}">
-                            <div class="dc-badge loading">cargado</div>
-                            <div class="dc-header">
-                                <div class="dc-icon" style="background:${bg}22;color:${bg}">${initial}</div>
-                                <div>
-                                    <div class="dc-name">${esc(a.name || a.agent_id || 'default')}</div>
-                                    <div class="dc-tid">${esc(t.tenant_id)}${a.agent_id && a.agent_id !== 'default' ? ' / ' + esc(a.agent_id) : ''}</div>
-                                </div>
-                            </div>
-                            <div class="dc-stats">
-                                <div class="dc-stat"><div class="val">${docs}</div><div class="lbl">Docs</div></div>
-                                <div class="dc-stat"><div class="val">${chunks}</div><div class="lbl">Chunks</div></div>
-                                <div class="dc-stat"><div class="val" style="font-size:11px">${esc(String(model))}</div><div class="lbl">Modelo</div></div>
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-
-            container.innerHTML = cards.length ? cards.join('') : '<p style="color:var(--text-muted);text-align:center;padding:20px;">No se encontraron DRAGAs en la plataforma</p>';
-
-            // Update badges with health check
-            container.querySelectorAll('.dc-badge').forEach(b => {
-                b.className = 'dc-badge online';
-                b.textContent = '● online';
-            });
-        } catch (e) {
-            container.innerHTML = `<p style="color:var(--danger);text-align:center;padding:20px;">Error cargando DRAGAs: ${esc(e.message)}</p>`;
-        }
-    },
-
-    async selectDraga(tenantId, agentId) {
-        if (tenantId !== App.tenantId) {
-            document.getElementById('tenantSelect').value = tenantId;
-            await App.switchTenant(tenantId);
-        }
-        if (agentId !== App.agentId) {
-            document.getElementById('agentSelect').value = agentId;
-            await App.switchAgent(agentId);
-        }
-    },
+    // loadCatalog and selectDraga removed — single-DRAGA scope enforced
+    // Use tenant.html for multi-DRAGA views
 
     async checkProtocols() {
         const checks = [
