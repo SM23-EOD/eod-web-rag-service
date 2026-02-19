@@ -114,17 +114,32 @@ tr:hover td{background:var(--bg-card);}
 .modal-title{font-size:18px;font-weight:900;margin-bottom:20px;display:flex;align-items:center;gap:10px;}
 .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
 
-/* ═══ DRAGA INSTANCE CARDS ═══ */
-.draga-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;transition:var(--transition);position:relative;overflow:hidden;}
-.draga-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--draga-gradient);}
-.draga-card:hover{border-color:var(--draga-accent);transform:translateY(-2px);box-shadow:var(--draga-glow);}
-.draga-card .dc-name{font-size:17px;font-weight:900;margin-bottom:4px;}
-.draga-card .dc-id{font-size:11px;color:var(--text-muted);font-family:monospace;margin-bottom:12px;}
-.draga-card .dc-anatomy{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
-.dc-part{text-align:center;padding:8px 4px;background:var(--bg-input);border-radius:var(--radius-sm);font-size:10px;color:var(--text-muted);}
-.dc-part .icon{font-size:16px;display:block;margin-bottom:3px;}
-.draga-card .dc-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;font-size:11px;color:var(--text-muted);}
-.draga-card .dc-actions{display:flex;gap:8px;flex-wrap:wrap;}
+/* ═══ TENANT GROUP (Level 2) ═══ */
+.tenant-group{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;margin-bottom:20px;overflow:hidden;transition:var(--transition);}
+.tenant-group:hover{border-color:color-mix(in srgb, var(--info) 60%, transparent);}
+.tg-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:linear-gradient(135deg, color-mix(in srgb, var(--info) 8%, transparent), transparent);border-bottom:1px solid var(--border);cursor:pointer;}
+.tg-header:hover{background:linear-gradient(135deg, color-mix(in srgb, var(--info) 14%, transparent), transparent);}
+.tg-name{font-size:17px;font-weight:900;display:flex;align-items:center;gap:10px;}
+.tg-name .tg-badge{font-size:9px;padding:2px 8px;border-radius:6px;font-weight:600;}
+.tg-id{font-size:10px;color:var(--text-muted);font-family:monospace;margin-top:2px;}
+.tg-summary{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--text-secondary);}
+.tg-summary .tg-stat{display:flex;align-items:center;gap:4px;}
+.tg-body{padding:16px 24px 20px;}
+.tg-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+.tg-actions{display:flex;gap:8px;margin-bottom:16px;}
+.tg-dragas-title{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+
+/* ═══ DRAGA SUB-CARDS (Level 3 inside tenant) ═══ */
+.draga-subcard{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);transition:var(--transition);text-decoration:none;color:inherit;position:relative;overflow:hidden;}
+.draga-subcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--draga-gradient);}
+.draga-subcard:hover{border-color:var(--draga-accent);background:var(--bg-card-hover,var(--bg-card));transform:translateX(4px);box-shadow:var(--draga-glow);}
+.draga-subcard .ds-icon{flex-shrink:0;}
+.draga-subcard .ds-info{flex:1;min-width:0;}
+.draga-subcard .ds-name{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.draga-subcard .ds-id{font-size:10px;color:var(--text-muted);font-family:monospace;}
+.draga-subcard .ds-stats{display:flex;gap:12px;font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.draga-subcard .ds-actions{display:flex;gap:6px;flex-shrink:0;}
+.draga-subcards{display:flex;flex-direction:column;gap:8px;}
 
 /* ═══ SECTION ═══ */
 .section{margin-bottom:32px;}
@@ -270,19 +285,24 @@ tr:hover td{background:var(--bg-card);}
         </button>
     </div>
 
-    <div class="stats-grid" id="heroStats">
-        <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
-        <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
-        <div class="stat-card"><div class="label">Chunks</div><div class="value" id="statChunks" style="color:var(--info)">—</div></div>
-        <div class="stat-card"><div class="label">API Keys</div><div class="value" id="statKeys" style="color:var(--warning)">—</div></div>
-        <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" id="statPipelineSteps" style="color:var(--info)">—</div></div>
-        <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" id="statAntiHalluc" style="color:var(--success)">—</div></div>
+    <!-- LEVEL 1: Global platform stats -->
+    <div class="section">
+        <div class="section-title"><span class="icon">🌐</span> Métricas Globales</div>
+        <div class="stats-grid" id="heroStats">
+            <div class="stat-card"><div class="label">Tenants</div><div class="value" id="statTenants">—</div></div>
+            <div class="stat-card"><div class="label">DRAGAs</div><div class="value" id="statDragas">—</div></div>
+            <div class="stat-card"><div class="label">Documentos</div><div class="value" id="statDocs">—</div></div>
+            <div class="stat-card"><div class="label">Chunks</div><div class="value" id="statChunks" style="color:var(--info)">—</div></div>
+            <div class="stat-card"><div class="label">API Keys</div><div class="value" id="statKeys" style="color:var(--warning)">—</div></div>
+            <div class="stat-card"><div class="label">Anti-Alucinación</div><div class="value" id="statAntiHalluc" style="color:var(--success)">—</div></div>
+        </div>
     </div>
 
+    <!-- LEVEL 2 + 3: Tenants → DRAGAs -->
     <div class="section">
-        <div class="section-title"><span class="icon"><i class="di"></i></span> DRAGA Instances</div>
-        <div class="card-grid" id="dragaGrid">
-            <div class="loading"><div class="spinner"></div> Cargando instancias...</div>
+        <div class="section-title"><span class="icon">🏢</span> Tenants y sus DRAGAs</div>
+        <div id="tenantHierarchy">
+            <div class="loading"><div class="spinner"></div> Cargando jerarquía...</div>
         </div>
     </div>
 </div>
@@ -1066,8 +1086,8 @@ async function createDraga() {
 // MODULE: DASHBOARD
 // ══════════════════════════════════════════════════════════════
 async function loadDashboard() {
-    const grid = document.getElementById('dragaGrid');
-    grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando instancias...</div>';
+    const grid = document.getElementById('tenantHierarchy');
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando jerarquía...</div>';
 
     try {
         // Fetch tenants + overview (real counts from backend)
@@ -1099,16 +1119,10 @@ async function loadDashboard() {
 
         document.getElementById('tenantCount').textContent = tenants.length;
         document.getElementById('agentCount').textContent = dragaCount;
+        document.getElementById('statTenants').textContent = tenants.length;
         document.getElementById('statDragas').textContent = dragaCount;
         document.getElementById('statDocs').textContent = totalDocs;
         document.getElementById('statChunks').textContent = totalChunks;
-
-        // Pipeline steps — from backend health/deep
-        try {
-            const deep = await api.healthDeep();
-            const steps = deep?.pipeline_steps ?? deep?.steps ?? null;
-            document.getElementById('statPipelineSteps').textContent = steps ?? '—';
-        } catch { document.getElementById('statPipelineSteps').textContent = '—'; }
 
         // Anti-hallucination — from grounding metrics
         const groundingRate = grounding?.avg_grounding_rate;
@@ -1131,8 +1145,8 @@ async function loadDashboard() {
         document.getElementById('statKeys').textContent = totalKeys;
 
         if (tenants.length === 0) {
-            grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
-                <h3>Sin DRAGAs</h3><p>Crea tu primera instancia DRAGA para comenzar</p>
+            grid.innerHTML = `<div class="empty-state"><div class="icon"><i class="di" style="font-size:36px;width:36px;height:36px"></i></div>
+                <h3>Sin Tenants</h3><p>Crea tu primera DRAGA para comenzar</p>
                 <button class="btn btn-primary" onclick="showDragaModal()" style="margin-top:12px"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Nueva DRAGA</button></div>`;
             return;
         }
@@ -1147,39 +1161,67 @@ async function loadDashboard() {
             agentsByTenant[a.tenant_id].push(a);
         });
 
+        // Fetch per-agent stats in parallel for all agents
+        const agentStatsMap = {};
+        try {
+            const statsResults = await Promise.all(
+                allAgents.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))
+            );
+            allAgents.forEach((a, i) => { agentStatsMap[`${a.tenant_id}/${a.agent_id}`] = statsResults[i] || {}; });
+        } catch {}
+
         grid.innerHTML = tenants.map(t => {
             const ov = overviewTenants[t.tenant_id] || {};
             const docCount = ov.document_count ?? t.document_count ?? 0;
             const chunkCount = ov.chunk_count ?? 0;
             const tAgents = agentsByTenant[t.tenant_id] || [];
-            const agentCards = tAgents.length > 0
-                ? tAgents.map(a => `<a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-input);border-radius:6px;font-size:12px;text-decoration:none;color:inherit;transition:0.15s;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='var(--bg-input)'">
-                        <i class="di" style="width:14px;height:14px"></i>
-                        <strong>${a.name}</strong>
-                        <code style="font-size:10px;opacity:0.7">${a.agent_id}</code>
-                        <span class="badge badge-success" style="font-size:9px;margin-left:auto">${a.status || 'active'}</span>
-                    </a>`).join('')
-                : '<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">Sin DRAGAs — usa el botón para crear una</div>';
-            return `<div class="draga-card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <div class="dc-name">${t.name}</div>
-                    ${t.is_active !== false ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-muted">Inactivo</span>'}
+            const statusBadge = t.is_active !== false
+                ? '<span class="tg-badge" style="background:rgba(34,197,94,0.15);color:var(--success)">Activo</span>'
+                : '<span class="tg-badge" style="background:rgba(156,163,175,0.15);color:var(--text-muted)">Inactivo</span>';
+
+            const dragaCards = tAgents.length > 0
+                ? tAgents.map(a => {
+                    const as = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {};
+                    const aDocs = as.total_documents || as.document_count || 0;
+                    const aChunks = as.total_chunks || as.chunk_count || 0;
+                    return `<a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}" class="draga-subcard">
+                        <div class="ds-icon"><i class="di" style="width:22px;height:22px"></i></div>
+                        <div class="ds-info">
+                            <div class="ds-name">${a.name || a.agent_id}</div>
+                            <div class="ds-id">${a.agent_id}</div>
+                        </div>
+                        <div class="ds-stats">
+                            <span>📄 ${aDocs}</span>
+                            <span>📚 ${aChunks}</span>
+                            <span class="badge badge-success" style="font-size:9px">${a.status || 'active'}</span>
+                        </div>
+                        <div class="ds-actions">
+                            <span class="btn btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.preventDefault();event.stopPropagation();window.location.href='draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}#knowledge'">📚 KB</span>
+                            <span class="btn btn-sm" style="font-size:11px;padding:4px 10px;" onclick="event.preventDefault();event.stopPropagation();window.location.href='draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}#chat'">💬</span>
+                        </div>
+                    </a>`;
+                }).join('')
+                : '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;text-align:center;">Sin DRAGAs — crea una desde el menu superior</div>';
+
+            return `<div class="tenant-group">
+                <div class="tg-header" onclick="window.location.href='tenant.html?tenant=${t.tenant_id}'">
+                    <div>
+                        <div class="tg-name">🏢 ${t.name} ${statusBadge}</div>
+                        <div class="tg-id">${t.tenant_id}</div>
+                    </div>
+                    <div class="tg-summary">
+                        <span class="tg-stat"><i class="di" style="width:14px;height:14px"></i> ${tAgents.length}</span>
+                        <span class="tg-stat">📄 ${docCount}</span>
+                        <span class="tg-stat">📚 ${chunkCount}</span>
+                    </div>
                 </div>
-                <div class="dc-id">🏢 ${t.tenant_id}</div>
-                <div class="dc-anatomy">
-                    <div class="dc-part"><span class="icon"><i class="di" style="width:12px;height:12px"></i></span>${tAgents.length} DRAGA${tAgents.length !== 1 ? 's' : ''}</div>
-                    <div class="dc-part"><span class="icon">📄</span>${docCount} docs</div>
-                    <div class="dc-part"><span class="icon">📚</span>${chunkCount} chunks</div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:4px;margin:8px 0;">${agentCards}</div>
-                <div class="dc-meta">
-                    <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
-                    <span>🌐 ${t.response_language || '—'}</span>
-                </div>
-                <div class="dc-actions">
-                    <a href="tenant.html?tenant=${t.tenant_id}" class="btn btn-primary btn-sm">🏢 Tenant</a>
-                    ${tAgents.length === 1 ? `<a href="draga.html?tenant=${t.tenant_id}&agent=${tAgents[0].agent_id}" class="btn btn-sm"><i class="di"></i> DRAGA</a>` : ''}
-                    ${tAgents.length === 1 ? `<a href="draga.html?tenant=${t.tenant_id}&agent=${tAgents[0].agent_id}#chat" class="btn btn-sm">💬 Chat</a>` : ''}
+                <div class="tg-body">
+                    <div class="tg-meta">
+                        <span>🧠 ${(t.default_model || '—').split('/').pop()}</span>
+                        <span>🌐 ${t.response_language || '—'}</span>
+                    </div>
+                    <div class="tg-dragas-title"><i class="di" style="width:14px;height:14px"></i> DRAGAs (${tAgents.length})</div>
+                    <div class="draga-subcards">${dragaCards}</div>
                 </div>
             </div>`;
         }).join('');
