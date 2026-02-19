@@ -365,16 +365,17 @@ class DragaProtocolRAG {
     this._abort = new AbortController();
     const body = {
       query,
+      tenant_id: opts.tenantId || 'default',
+      agent_id: opts.agentId || 'default',
       top_k: opts.topK ?? 5,
       similarity_threshold: opts.similarityThreshold ?? 0.3,
       include_sources: opts.includeSources !== false,
       session_id: opts.sessionId,
       ab_session_id: opts.abSessionId,
     };
-    body.agent_id = opts.agentId || 'default';
     if (opts.documentIds) body.document_ids = opts.documentIds;
 
-    const url = `${this.baseUrl}/agents/${opts.tenantId}/query`;
+    const url = `${this.baseUrl}/query`;
     const res = await this._fetchWithRetry(url, {
       method: 'POST', headers: this._headers(), body: JSON.stringify(body), signal: this._abort.signal,
     }, opts.maxRetries ?? 3);
@@ -383,7 +384,7 @@ class DragaProtocolRAG {
     this._abort = null;
 
     return {
-      content: data.response || '',
+      content: data.answer || data.response || '',
       sources: (data.sources || []).map(s => ({
         document: s.document || s.source || '',
         chunk: s.chunk,
