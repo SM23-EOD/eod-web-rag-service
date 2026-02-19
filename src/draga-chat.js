@@ -473,15 +473,13 @@ class DragaProtocolMCP {
 
   async sendMessage(query, opts = {}) {
     this._abort = new AbortController();
+    // MCP tool generate_rag_answer only accepts: query, tenant_id, session_id, include_sources
     const args = {
       query: query,
-      tenant_id: opts.tenantId,
-      top_k: opts.topK ?? 5,
+      tenant_id: opts.tenantId || 'default',
+      session_id: opts.sessionId || 'default',
       include_sources: opts.includeSources !== false,
-      session_id: opts.sessionId,
     };
-    args.agent_id = opts.agentId || 'default';
-    if (opts.documentIds) args.document_ids = opts.documentIds;
     const body = { tool_name: 'generate_rag_answer', arguments: args };
 
     const res = await this._fetchWithRetry(`${this.baseUrl}/mcp/tools/call`, {
@@ -515,8 +513,8 @@ class DragaProtocolMCP {
   }
 
   /** Fetch a specific document chunk via MCP tool */
-  async getDocumentChunk(chunkUri) {
-    const body = { tool_name: 'get_document_chunk', arguments: { chunk_uri: chunkUri } };
+  async getDocumentChunk(chunkUri, tenantId) {
+    const body = { tool_name: 'get_document_chunk', arguments: { chunk_uri: chunkUri, tenant_id: tenantId || 'default' } };
     const res = await fetch(`${this.baseUrl}/mcp/tools/call`, {
       method: 'POST', headers: this._headers(), body: JSON.stringify(body),
     });
