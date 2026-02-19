@@ -372,6 +372,19 @@ tr:hover td{background:var(--bg-card);}
     </div>
 
     <div class="section">
+        <div class="section-title"><span class="icon">🛡️</span> Calidad Agregada <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px">(datos de referencia — el detalle está a nivel de cada DRAGA)</span></div>
+        <div class="stats-grid" id="qualityGlobalGrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+            <div class="stat-card"><div class="label">Documentos</div><div class="value" id="gqDocs">—</div></div>
+            <div class="stat-card"><div class="label">Chunks</div><div class="value" id="gqChunks">—</div></div>
+            <div class="stat-card"><div class="label">Cobertura</div><div class="value" id="gqCoverage">—</div></div>
+            <div class="stat-card"><div class="label">Grounding</div><div class="value" id="gqGrounding">—</div></div>
+            <div class="stat-card"><div class="label">Confianza Avg</div><div class="value" id="gqConfidence">—</div></div>
+            <div class="stat-card"><div class="label">Cache Hit</div><div class="value" id="gqCacheHit">—</div></div>
+            <div class="stat-card"><div class="label">Feedback Total</div><div class="value" id="gqFeedback">—</div></div>
+        </div>
+    </div>
+
+    <div class="section">
         <div class="section-title"><span class="icon">📝</span> Feedback Reciente</div>
         <div class="card" style="overflow-x:auto;">
             <table>
@@ -1105,10 +1118,6 @@ async function loadDashboard() {
         ]);
         const tenants = tenantsData.tenants || [];
 
-        // ── Hero stats (from backend overview, not hardcoded) ──
-        const totalDocs = overview?.platform?.total_documents ?? tenants.reduce((s, t) => s + (t.document_count || 0), 0);
-        const totalChunks = overview?.platform?.total_chunks ?? 0;
-
         // Fetch actual DRAGA (agent) count across all tenants
         let allAgents = [];
         try {
@@ -1116,6 +1125,23 @@ async function loadDashboard() {
             if (!Array.isArray(allAgents)) allAgents = [];
         } catch { allAgents = []; }
         const dragaCount = allAgents.length || tenants.length;
+
+        // ── Fetch per-agent stats FIRST so hero stats are accurate ──
+        const agentStatsMap = {};
+        try {
+            const statsResults = await Promise.all(
+                allAgents.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))
+            );
+            allAgents.forEach((a, i) => { agentStatsMap[`${a.tenant_id}/${a.agent_id}`] = statsResults[i] || {}; });
+        } catch {}
+
+        // ── Hero stats: prefer per-agent stats (always accurate), fallback to overview ──
+        const agentDocSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_documents || st.document_count || 0), 0);
+        const agentChunkSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_chunks || st.chunk_count || 0), 0);
+        const overviewDocs = overview?.platform?.total_documents;
+        const overviewChunks = overview?.platform?.total_chunks;
+        const totalDocs = agentDocSum || overviewDocs || tenants.reduce((s, t) => s + (t.document_count || 0), 0);
+        const totalChunks = agentChunkSum || overviewChunks || 0;
 
         document.getElementById('tenantCount').textContent = tenants.length;
         document.getElementById('agentCount').textContent = dragaCount;
@@ -1161,20 +1187,14 @@ async function loadDashboard() {
             agentsByTenant[a.tenant_id].push(a);
         });
 
-        // Fetch per-agent stats in parallel for all agents
-        const agentStatsMap = {};
-        try {
-            const statsResults = await Promise.all(
-                allAgents.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))
-            );
-            allAgents.forEach((a, i) => { agentStatsMap[`${a.tenant_id}/${a.agent_id}`] = statsResults[i] || {}; });
-        } catch {}
-
         grid.innerHTML = tenants.map(t => {
             const ov = overviewTenants[t.tenant_id] || {};
-            const docCount = ov.document_count ?? t.document_count ?? 0;
-            const chunkCount = ov.chunk_count ?? 0;
             const tAgents = agentsByTenant[t.tenant_id] || [];
+            // Sum docs/chunks from per-agent stats (most accurate), fallback to overview
+            const agentTotalDocs = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_documents || st.document_count || 0); }, 0);
+            const agentTotalChunks = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_chunks || st.chunk_count || 0); }, 0);
+            const docCount = agentTotalDocs || ov.document_count || t.document_count || 0;
+            const chunkCount = agentTotalChunks || ov.chunk_count || 0;
             const statusBadge = t.is_active !== false
                 ? '<span class="tg-badge" style="background:rgba(34,197,94,0.15);color:var(--success)">Activo</span>'
                 : '<span class="tg-badge" style="background:rgba(156,163,175,0.15);color:var(--text-muted)">Inactivo</span>';
@@ -1548,6 +1568,7 @@ function loadAnalytics() {
     loadHealthStatus();
     loadFeedbackStats();
     loadSystemStats();
+    loadQualityGlobal();
     loadFeedbackList();
 }
 
@@ -1622,13 +1643,29 @@ async function loadFeedbackStats() {
 async function loadSystemStats() {
     const panel = document.getElementById('systemPanel');
     try {
-        const overview = await api.adminDashboardOverview();
+        const [overview, agents] = await Promise.all([
+            api.adminDashboardOverview().catch(() => ({})),
+            api.listAgents().catch(() => [])
+        ]);
         const p = overview.platform || {};
         const op = overview.operational || {};
+        // If adminDashboardOverview docs/chunks are 0 or missing, fetch from per-agent stats
+        let sysDocs = p.total_documents || 0;
+        let sysChunks = p.total_chunks || 0;
+        const agentList = Array.isArray(agents) ? agents : [];
+        if ((!sysDocs || !sysChunks) && agentList.length) {
+            try {
+                const stats = await Promise.all(agentList.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({}))));
+                const sumD = stats.reduce((s, st) => s + (st.total_documents || st.document_count || 0), 0);
+                const sumC = stats.reduce((s, st) => s + (st.total_chunks || st.chunk_count || 0), 0);
+                if (!sysDocs) sysDocs = sumD;
+                if (!sysChunks) sysChunks = sumC;
+            } catch {}
+        }
         const items = [
-            ['DRAGAs', p.total_tenants ?? overview.tenants?.length ?? '—'],
-            ['Documentos', p.total_documents ?? '—'],
-            ['Chunks', p.total_chunks ?? '—'],
+            ['DRAGAs', agentList.length || p.total_tenants || '—'],
+            ['Documentos', sysDocs || '—'],
+            ['Chunks', sysChunks || '—'],
             ['Requests', op.total_requests ?? '—'],
         ];
         panel.innerHTML = `<div style="font-size:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1638,6 +1675,51 @@ async function loadSystemStats() {
         panel.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted)">
             <div style="font-size:20px;margin-bottom:6px">📊</div>
             <div style="font-size:12px">Dashboard no disponible</div></div>`;
+    }
+}
+
+// Aggregated quality metrics across ALL DRAGAs (reference data at platform level)
+async function loadQualityGlobal() {
+    try {
+        const agents = await api.listAgents().catch(() => []);
+        const agentList = Array.isArray(agents) ? agents : [];
+        if (!agentList.length) return;
+
+        // Fetch stats + grounding + coverage + feedback for all agents in parallel
+        const [statsRes, groundingRes, coverageRes, fbRes] = await Promise.all([
+            Promise.all(agentList.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))),
+            api.metricsGrounding().catch(() => ({})),
+            Promise.all(agentList.map(a => api.metricsCoverage(a.tenant_id, a.agent_id).catch(() => ({})))),
+            api.feedbackStats().catch(() => ({}))
+        ]);
+
+        // Aggregate docs & chunks from per-agent stats
+        let totalDocs = 0, totalChunks = 0;
+        statsRes.forEach(s => {
+            totalDocs += s.total_documents || s.document_count || 0;
+            totalChunks += s.total_chunks || s.chunk_count || 0;
+        });
+        document.getElementById('gqDocs').textContent = totalDocs || '—';
+        document.getElementById('gqChunks').textContent = totalChunks || '—';
+
+        // Coverage — average across agents
+        const covRates = coverageRes.filter(c => c.coverage_rate != null).map(c => c.coverage_rate);
+        document.getElementById('gqCoverage').textContent = covRates.length
+            ? (covRates.reduce((a, b) => a + b, 0) / covRates.length * 100).toFixed(0) + '%' : '—';
+
+        // Grounding — from global endpoint
+        document.getElementById('gqGrounding').textContent = groundingRes.avg_grounding_rate != null
+            ? (groundingRes.avg_grounding_rate * 100).toFixed(0) + '%'
+            : groundingRes.grounding_rate != null ? (groundingRes.grounding_rate * 100).toFixed(0) + '%' : '—';
+        document.getElementById('gqConfidence').textContent = groundingRes.avg_confidence != null
+            ? (groundingRes.avg_confidence * 100).toFixed(0) + '%' : '—';
+        document.getElementById('gqCacheHit').textContent = groundingRes.cache_hit_rate != null
+            ? (groundingRes.cache_hit_rate * 100).toFixed(0) + '%' : '—';
+
+        // Feedback total
+        document.getElementById('gqFeedback').textContent = fbRes.total_feedback ?? '—';
+    } catch {
+        // Silent fail — these are reference metrics
     }
 }
 
