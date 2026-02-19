@@ -1468,7 +1468,7 @@ async function dashDeleteAgent(tenantId, agentId, name) {
 
 async function viewAgentStats(tenantId, agentId) {
     try {
-        const stats = await api.agentStats(tenantId, agentId);
+        const stats = await api.getStats(tenantId, agentId);
         alert(JSON.stringify(stats, null, 2));
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
