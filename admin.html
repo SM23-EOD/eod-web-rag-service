@@ -1488,6 +1488,16 @@ function loadAnalytics() {
 
 async function loadHealthStatus() {
     const grid = document.getElementById('healthGrid');
+    // Map backend service keys → friendly role labels (vector DB is dynamic, not hardcoded)
+    const VECTOR_DBS = ['chromadb','chroma','qdrant','pgvector','milvus','weaviate','pinecone','faiss'];
+    function serviceLabel(key) {
+        const lower = key.toLowerCase();
+        if (VECTOR_DBS.some(db => lower.includes(db))) return { role: '🗄️ Vector DB', impl: key };
+        if (lower === 'redis' || lower.includes('cache'))  return { role: '⚡ Cache', impl: key };
+        if (lower.includes('embed'))   return { role: '🔢 Embeddings', impl: key };
+        if (lower === 'llm' || lower.includes('model'))    return { role: '🧠 LLM', impl: key };
+        return { role: key, impl: null };
+    }
     try {
         const deep = await api.healthDeep();
         const status = deep.status || 'unknown';
@@ -1505,8 +1515,10 @@ async function loadHealthStatus() {
             const icon = ok ? '✅' : '❌';
             const latency = info.latency_ms != null ? `${info.latency_ms.toFixed(0)}ms` : '';
             const error = !ok && info.error ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${info.error}</div>` : '';
+            const { role, impl } = serviceLabel(name);
+            const implTag = impl ? `<div style="font-size:9px;color:var(--text-muted);font-family:monospace;margin-top:1px">${impl}</div>` : '';
             html += `<div class="stat-card" style="border-left:3px solid ${color}">
-                <div class="label">${name}</div>
+                <div class="label">${role}</div>${implTag}
                 <div class="value" style="color:${color};font-size:14px;">${icon} ${ok ? 'OK' : 'Error'} ${latency ? '<span style="font-size:11px;color:var(--text-muted);font-weight:400">' + latency + '</span>' : ''}</div>${error}</div>`;
         }
         grid.innerHTML = html;

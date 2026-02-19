@@ -405,7 +405,7 @@ tr:hover td{background:var(--bg-card);}
         <div class="stat-card"><div class="label">Pipeline Steps</div><div class="value" style="color:var(--info)" id="ovPipelineSteps">—</div></div>
         <div class="stat-card"><div class="label">Modelo</div><div class="value" style="font-size:14px" id="ovModel">—</div></div>
         <div class="stat-card"><div class="label">Idioma</div><div class="value" id="ovLang">—</div></div>
-        <div class="stat-card"><div class="label">Colección</div><div class="value" style="font-size:14px" id="ovCollection">—</div></div>
+        <div class="stat-card"><div class="label">Vector DB</div><div class="value" style="font-size:14px" id="ovVectorDB">—</div><div style="font-size:10px;color:var(--text-muted);font-family:monospace;margin-top:2px" id="ovCollection">—</div></div>
     </div>
 
     <div class="section">
@@ -1517,6 +1517,15 @@ const Overview = {
         document.getElementById('ovModel').textContent = (t.default_model || '—').split('/').pop();
         document.getElementById('ovLang').textContent = t.response_language || '—';
         document.getElementById('ovCollection').textContent = t.collection_name || '—';
+
+        // Detect vector DB type dynamically from health/deep (never hardcode)
+        try {
+            const deep = await api.healthDeep();
+            const checks = deep?.checks || {};
+            const VECTOR_DBS = ['chromadb','chroma','qdrant','pgvector','milvus','weaviate','pinecone','faiss'];
+            const vdbKey = Object.keys(checks).find(k => VECTOR_DBS.some(db => k.toLowerCase().includes(db)));
+            document.getElementById('ovVectorDB').textContent = vdbKey || '—';
+        } catch { document.getElementById('ovVectorDB').textContent = '—'; }
 
         // Fetch real doc/chunk counts from documentStats (tenant.document_count is unreliable)
         try {
