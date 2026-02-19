@@ -643,7 +643,7 @@ tr:hover td{background:var(--bg-card);}
     <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;">
         <div class="chat-container">
             <div class="chat-messages" id="chatMessages">
-                <div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. Puedo responder preguntas basándome en la base de conocimientos indexada. ¿En qué puedo ayudarte?</div>
+                <div class="chat-msg assistant" id="chatWelcomeMsg"></div>
             </div>
             <div class="chat-input-bar">
                 <input type="text" id="chatInput" placeholder="Escribe tu pregunta..." onkeydown="if(event.key==='Enter')Chat.send()">
@@ -1364,6 +1364,7 @@ const App = {
         document.getElementById('agentSelect').value = this.agentId;
         this._updateDisplayName();
         this._updateUrl();
+        Chat.clear();
         // Reload current module
         const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
         this.nav(active);
@@ -1373,8 +1374,19 @@ const App = {
         this.agentId = aid;
         this._updateDisplayName();
         this._updateUrl();
+        Chat.clear();
         const active = MODULES.find(m => document.getElementById('mod-' + m).classList.contains('active')) || 'overview';
         this.nav(active);
+    },
+
+    _getAgentDisplayName() {
+        const agent = this.agents.find(a => a.agent_id === this.agentId);
+        return agent?.name || this.agentId || 'DRAGA';
+    },
+
+    _welcomeMessage() {
+        const name = this._getAgentDisplayName();
+        return `¡Hola! Soy el agente de ${name}. Puedo responder preguntas basándome en la base de conocimientos. ¿En qué puedo ayudarte?`;
     },
 
     _updateDisplayName() {
@@ -1383,6 +1395,9 @@ const App = {
             ? ` / ${this.agents.find(a => a.agent_id === this.agentId)?.name || this.agentId}`
             : '';
         document.getElementById('tenantDisplayName').textContent = tName + aName;
+        // Update chat welcome message
+        const wel = document.getElementById('chatWelcomeMsg');
+        if (wel) wel.textContent = this._welcomeMessage();
     },
 
     _updateUrl() {
@@ -2771,7 +2786,7 @@ const Chat = {
         this.messages = [];
         this._msgCounter = 0;
         this._feedbackData = {};
-        document.getElementById('chatMessages').innerHTML = '<div class="chat-msg assistant">¡Hola! Soy el DRAGA de este tenant. ¿En qué puedo ayudarte?</div>';
+        document.getElementById('chatMessages').innerHTML = `<div class="chat-msg assistant" id="chatWelcomeMsg">${App._welcomeMessage()}</div>`;
     }
 };
 
