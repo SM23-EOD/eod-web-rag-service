@@ -533,6 +533,24 @@ tr:hover td{background:var(--bg-card);}
             <button class="btn btn-sm" id="docNext" onclick="KB.nextPage()">▸</button>
         </div>
     </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">🔎</span> Búsqueda Vectorial</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Busca directamente en la base vectorial sin pasar por el LLM. Recupera los chunks más relevantes por similitud semántica.</p>
+        <div class="card">
+            <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                <input type="text" id="kbVectorQuery" placeholder="🔎 Buscar en la base vectorial..." style="flex:1;min-width:200px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')KB.vectorSearch()">
+                <select id="kbVectorTopK" style="padding:8px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:12px;">
+                    <option value="3">Top 3</option>
+                    <option value="5" selected>Top 5</option>
+                    <option value="10">Top 10</option>
+                    <option value="20">Top 20</option>
+                </select>
+                <button class="btn btn-primary" onclick="KB.vectorSearch()">🔎 Buscar</button>
+            </div>
+            <div id="kbVectorResult"></div>
+        </div>
+    </div>
 </div>
 
 <!-- ── PIPELINE ── -->
@@ -2448,6 +2466,65 @@ const KB = {
             }
         };
         this._pollTimer = setTimeout(poll, 1000);
+    },
+
+    // ── Vector Search (from KB) ──
+    async vectorSearch() {
+        const query = document.getElementById('kbVectorQuery').value.trim();
+        if (!query) { toast('Escribe una consulta', 'warning'); return; }
+        const topK = parseInt(document.getElementById('kbVectorTopK').value) || 5;
+        const result = document.getElementById('kbVectorResult');
+        result.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando en base vectorial...</div>';
+        const t0 = Date.now();
+        try {
+            const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
+            if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
+            const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
+            const latency = Date.now() - t0;
+            if (!res.success) {
+                result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${esc(res.error || 'Error desconocido')}</div></div>`;
+                return;
+            }
+            const raw = res.result || '';
+            const chunks = [];
+            const sections = raw.split(/### Resultado \d+/);
+            sections.shift();
+            for (const sec of sections) {
+                const simMatch = sec.match(/Similitud:\s*([\d.]+)%/);
+                const srcMatch = sec.match(/\*\*Fuente:\*\*\s*(.+)/);
+                const similarity = simMatch ? parseFloat(simMatch[1]) : 0;
+                const source = srcMatch ? srcMatch[1].trim() : '—';
+                const contentStart = sec.indexOf('\n', sec.indexOf('**Fuente:**') || 0);
+                const content = contentStart > 0 ? sec.substring(contentStart).trim() : sec.trim();
+                chunks.push({ similarity, source, content });
+            }
+            const avgSim = chunks.length ? (chunks.reduce((s, c) => s + c.similarity, 0) / chunks.length).toFixed(1) : '—';
+            const sources = [...new Set(chunks.map(c => c.source))];
+
+            result.innerHTML = `
+                <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
+                    <div class="stat-card"><div class="label">Chunks encontrados</div><div class="value">${chunks.length}</div></div>
+                    <div class="stat-card"><div class="label">Similitud Avg</div><div class="value" style="color:${avgSim > 50 ? 'var(--success)' : avgSim > 30 ? 'var(--warning)' : 'var(--danger)'}">${avgSim}%</div></div>
+                    <div class="stat-card"><div class="label">Fuentes únicas</div><div class="value">${sources.length}</div></div>
+                    <div class="stat-card"><div class="label">Latencia</div><div class="value" style="font-size:16px">${latency}ms</div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${chunks.map((c, i) => `
+                        <div class="card" style="border-left:3px solid ${c.similarity > 50 ? 'var(--success)' : c.similarity > 30 ? 'var(--warning)' : 'var(--danger)'}; padding:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;">Chunk #${i + 1}</span>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <span class="source-chip" onclick="DocViewer.openByFilename('${esc(c.source)}')" title="Ver documento fuente" style="cursor:pointer;">📄 ${esc(c.source)}</span>
+                                    <span class="badge ${c.similarity > 50 ? 'badge-success' : c.similarity > 30 ? 'badge-warning' : 'badge-danger'}">${c.similarity.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                            <div style="font-size:12px;line-height:1.6;color:var(--text-secondary);max-height:120px;overflow-y:auto;white-space:pre-wrap;">${esc(c.content.substring(0, 500))}${c.content.length > 500 ? '...' : ''}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        } catch (e) {
+            result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${e.message}</div></div>`;
+        }
     }
 };
 
