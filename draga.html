@@ -2412,9 +2412,9 @@ const Pipeline = {
         result.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando en base vectorial...</div>';
         const t0 = Date.now();
         try {
-            const res = await api.mcpCallTool('search_knowledge_base', {
-                query, tenant_id: App.tenantId, top_k: topK
-            });
+            const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
+            if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
+            const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
             const latency = Date.now() - t0;
             if (!res.success) {
                 result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${esc(res.error || 'Error desconocido')}</div></div>`;
@@ -3151,16 +3151,17 @@ const Widgets = {
 
     _renderLivePreview(w, baseUrl) {
         const container = document.getElementById('wgPreviewLive');
-        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
         const tenantId = App.tenantId;
+        const agentId = App.agentId || 'default';
         // Script URL uses origin (strip /api/v2 if present)
         const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
         const scriptUrl = originUrl + '/src/draga-chat.js';
         const color = w.color || '#7c3aed';
 
-        // Build the attributes for the live widget
+        // Build the attributes for the live widget — tenant + agent for DRAGA isolation
         const attrParts = [
-            `agent="${tenantId}"`,
+            `tenant="${tenantId}"`,
+            `agent="${agentId}"`,
             `base-url="${baseUrl}"`,
             `protocol="${w.protocol}"`,
             `model="${w.model}"`,
