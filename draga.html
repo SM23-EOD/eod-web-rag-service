@@ -493,8 +493,10 @@ tr:hover td{background:var(--bg-card);}
     <div class="section">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div class="section-title" style="margin-bottom:0"><span class="icon">📄</span> Documentos</div>
-            <div style="display:flex;gap:8px;">
-                <button class="btn btn-primary btn-sm" onclick="KB.openUpload()">📤 Subir</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" onclick="KB.openUpload()">📤 Archivos</button>
+                <button class="btn btn-sm" onclick="openModal('urlIngestModal')" style="border-color:var(--info);color:var(--info)">🌐 Web URL</button>
+                <button class="btn btn-sm" onclick="openModal('textDocModal')" style="border-color:var(--warning);color:var(--warning)">✏️ Texto</button>
                 <button class="btn btn-sm" onclick="KB.syncDir()">📂 Sync Dir</button>
                 <button class="btn btn-sm" onclick="KB.processPending()">⏳ Procesar</button>
                 <button class="btn btn-sm btn-danger" onclick="KB.confirmReset()">☢️ Reset</button>
@@ -959,6 +961,50 @@ tr:hover td{background:var(--bg-card);}
 </div>
 
 </main>
+</div>
+
+<!-- ═══ URL INGEST MODAL ═══ -->
+<div class="modal-overlay" id="urlIngestModal">
+    <div class="modal" style="max-width:560px">
+        <div class="modal-title">🌐 Importar desde Web</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Introduce la URL de una página web. El backend extraerá el contenido principal como Markdown y lo indexará automáticamente.</p>
+        <div class="form-group">
+            <label>URL de la página web</label>
+            <input type="url" id="urlIngestInput" placeholder="https://ejemplo.com/articulo" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        </div>
+        <div class="form-group">
+            <label>Nombre del documento <span style="color:var(--text-muted);font-weight:400">(opcional — se genera automáticamente)</span></label>
+            <input type="text" id="urlIngestName" placeholder="Mi artículo web" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        </div>
+        <div id="urlIngestResult" style="margin-bottom:12px;"></div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('urlIngestModal')">Cancelar</button>
+            <button class="btn btn-primary" id="urlIngestBtn" onclick="KB.ingestUrl()">🌐 Importar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ TEXT DOC MODAL ═══ -->
+<div class="modal-overlay" id="textDocModal">
+    <div class="modal" style="max-width:640px">
+        <div class="modal-title">✏️ Crear Documento de Texto</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Escribe o pega texto directamente. Se creará un documento <code>.md</code> que se indexará automáticamente.</p>
+        <div class="form-group">
+            <label>Nombre del documento</label>
+            <input type="text" id="textDocName" placeholder="mi-documento" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+            <small style="color:var(--text-muted);font-size:11px">Se añadirá extensión .md automáticamente si no la tiene</small>
+        </div>
+        <div class="form-group">
+            <label>Contenido</label>
+            <textarea id="textDocContent" placeholder="Pega o escribe el contenido aquí...&#10;&#10;Soporta formato Markdown." style="width:100%;min-height:220px;padding:12px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;font-family:var(--font-mono);line-height:1.6;resize:vertical;"></textarea>
+            <small id="textDocCharCount" style="color:var(--text-muted);font-size:11px">0 caracteres</small>
+        </div>
+        <div id="textDocResult" style="margin-bottom:12px;"></div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('textDocModal')">Cancelar</button>
+            <button class="btn btn-primary" id="textDocBtn" onclick="KB.createTextDoc()">✏️ Crear y subir</button>
+        </div>
+    </div>
 </div>
 
 <!-- ═══ UPLOAD MODAL ═══ -->
@@ -1432,6 +1478,12 @@ const App = {
 
         // Setup drop zone
         KB.setupDropZone();
+
+        // Text doc character counter
+        const tdc = document.getElementById('textDocContent');
+        if (tdc) tdc.addEventListener('input', () => {
+            document.getElementById('textDocCharCount').textContent = tdc.value.length + ' caracteres';
+        });
 
         // Label color sync
         const lc = document.getElementById('labelColor');
@@ -2209,6 +2261,105 @@ const KB = {
             toast('Completado', 'success');
             await this.loadAndStabilize();
         } catch (e) { toast('Error: ' + e.message, 'error'); }
+    },
+
+    // ── URL Ingestion ──
+    async ingestUrl() {
+        const url = document.getElementById('urlIngestInput').value.trim();
+        if (!url) { toast('Introduce una URL', 'warning'); return; }
+        try { new URL(url); } catch { toast('URL no válida', 'error'); return; }
+
+        const displayName = document.getElementById('urlIngestName').value.trim() || null;
+        const btn = document.getElementById('urlIngestBtn');
+        const resultDiv = document.getElementById('urlIngestResult');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;display:inline-block"></div> Importando...';
+        resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Descargando y procesando página web...</div>';
+
+        try {
+            const res = await api.ingestUrl(url, displayName, App.tenantId, App.agentId);
+            if (res.success) {
+                const dupNote = res.is_duplicate ? ' <span style="color:var(--warning)">(duplicado)</span>' : '';
+                resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--success);padding:10px 14px">
+                    <div style="color:var(--success);font-weight:600">✅ Importado correctamente${dupNote}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px">
+                        📄 ${esc(res.filename)} · ${res.chunk_count} chunks · ${res.indexed ? '✅ Indexado' : '⏳ Pendiente'}
+                        ${res.message ? `<br>💬 ${esc(res.message)}` : ''}
+                    </div>
+                </div>`;
+                toast(`✅ Web importada: ${res.filename}`, 'success');
+                await this.loadAndStabilize();
+            } else {
+                resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
+                    <div style="color:var(--danger)">❌ ${esc(res.error || 'Error al importar')}</div>
+                </div>`;
+            }
+        } catch (e) {
+            resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
+                <div style="color:var(--danger)">❌ ${esc(e.message)}</div>
+            </div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '🌐 Importar';
+        }
+    },
+
+    // ── Text Document Creation ──
+    async createTextDoc() {
+        const name = document.getElementById('textDocName').value.trim();
+        const content = document.getElementById('textDocContent').value;
+        if (!name) { toast('Escribe un nombre para el documento', 'warning'); return; }
+        if (!content.trim()) { toast('El contenido no puede estar vacío', 'warning'); return; }
+
+        // Ensure .md extension
+        const filename = name.endsWith('.md') || name.endsWith('.txt') ? name : name + '.md';
+
+        const btn = document.getElementById('textDocBtn');
+        const resultDiv = document.getElementById('textDocResult');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;display:inline-block"></div> Creando...';
+        resultDiv.innerHTML = '';
+
+        try {
+            // Create a File object from text content
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const file = new File([blob], filename, { type: 'text/markdown' });
+
+            const res = await api.uploadDocuments([file], App.tenantId, true, true, App.agentId);
+
+            if (res.task_id) {
+                resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--success);padding:10px 14px">
+                    <div style="color:var(--success);font-weight:600">✅ Documento creado</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px">📄 ${esc(filename)} · ${content.length} caracteres · Procesando en background...</div>
+                </div>`;
+                toast(`✅ Documento creado: ${filename}`, 'success');
+                closeModal('textDocModal');
+                this._activeTask = res.task_id;
+                this._showTracker([filename]);
+                this._pollIngest(res.task_id);
+            } else {
+                const r = res.results?.[0];
+                if (r?.success) {
+                    resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--success);padding:10px 14px">
+                        <div style="color:var(--success);font-weight:600">✅ Documento creado e indexado</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">📄 ${esc(filename)} · ${r.chunk_count || 0} chunks</div>
+                    </div>`;
+                    toast(`✅ Documento creado: ${filename}`, 'success');
+                    await this.loadAndStabilize();
+                } else {
+                    resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
+                        <div style="color:var(--danger)">❌ ${esc(r?.error || 'Error al crear documento')}</div>
+                    </div>`;
+                }
+            }
+        } catch (e) {
+            resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
+                <div style="color:var(--danger)">❌ ${esc(e.message)}</div>
+            </div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '✏️ Crear y subir';
+        }
     },
 
     async renameDoc(docId, currentName) {

@@ -289,6 +289,12 @@ class RAGApiClient {
     getDocumentSourceUrl(documentId, tenantId = null, agentId = null) {
         return `${this.baseUrl}/documents/${documentId}/source${this._scopeQuery(tenantId, agentId)}`;
     }
+    async ingestUrl(url, displayName = null, tenantId = null, agentId = null) {
+        const q = this._scopeQuery(tenantId, agentId);
+        const body = { url };
+        if (displayName) body.display_name = displayName;
+        return this.post(`/documents/ingest-url${q}`, body);
+    }
     async documentStats(tenantId = null, agentId = null) {
         return this.get(`/documents/stats/summary${this._scopeQuery(tenantId, agentId)}`);
     }
