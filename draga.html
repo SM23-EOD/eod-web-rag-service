@@ -3085,12 +3085,13 @@ const Widgets = {
         // Script URL uses the origin (strip /api/v2 if present)
         const originUrl = baseUrl.replace(/\/api\/v2\/?$/, '').replace(/\/+$/, '');
         const scriptUrl = originUrl + '/src/draga-chat.js';
-        // NOTE: <draga-chat> uses the "agent" attribute as tenant ID in the API URL
         const tenantId = App.tenantId;
+        const agentId = App.agentId || 'default';
 
-        // Build attributes
+        // Build attributes — tenant + agent for DRAGA-level isolation
         const attrs = [];
-        attrs.push(`agent="${esc(tenantId)}"`);
+        attrs.push(`tenant="${esc(tenantId)}"`);
+        attrs.push(`agent="${esc(agentId)}"`);
         attrs.push(`base-url="${esc(baseUrl)}"`);
         attrs.push(`protocol="${w.protocol}"`);
         attrs.push(`model="${esc(w.model)}"`);

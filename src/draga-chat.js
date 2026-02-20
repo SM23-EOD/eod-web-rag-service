@@ -1,13 +1,17 @@
 /**
  * DRAGA Chat Widget — Web Component
- * <draga-chat agent="..." api-key="..." base-url="..."></draga-chat>
+ * <draga-chat tenant="..." agent="..." api-key="..." base-url="..."></draga-chat>
+ *
+ * Attributes:
+ *   - tenant   → Tenant ID (optional; enables DRAGA-level isolation)
+ *   - agent    → Agent/DRAGA ID (or tenant ID if no tenant attr — backward compat)
  *
  * Supports 3 backend protocols:
  *   - openai  → POST /api/v2/chat/completions (streaming SSE + batch)
- *   - rag     → POST /api/v2/agents/{agent}/query
+ *   - rag     → POST /api/v2/query
  *   - mcp     → EventSource /api/v2/mcp/sse + POST /api/v2/mcp/tools/call
  *
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -555,7 +559,7 @@ class DragaProtocolMCP {
 class DragaChat extends HTMLElement {
   static get observedAttributes() {
     return [
-      'agent', 'api-key', 'base-url', 'protocol', 'theme', 'position',
+      'tenant', 'agent', 'api-key', 'base-url', 'protocol', 'theme', 'position',
       'locale', 'model', 'streaming', 'show-sources', 'show-confidence',
       'show-grounding', 'feedback', 'max-history',
     ];
@@ -589,7 +593,12 @@ class DragaChat extends HTMLElement {
 
   // ── Attribute getters ───────────────────────────────────────────
 
+  get tenant()         { return this.getAttribute('tenant') || ''; }
   get agent()          { return this.getAttribute('agent') || ''; }
+  /** Resolved tenant: explicit tenant attr, or agent as fallback (backward compat) */
+  get _tenantId()      { return this.tenant || this.agent; }
+  /** Resolved agent: only set when tenant attr is present (multi-draga mode) */
+  get _agentId()       { return this.tenant ? this.agent : ''; }
   get apiKey()         { return this.getAttribute('api-key') || ''; }
   get baseUrl()        { return (this.getAttribute('base-url') || '').replace(/\/+$/, ''); }
   get protocol()       { return this.getAttribute('protocol') || 'openai'; }
@@ -626,8 +635,9 @@ class DragaChat extends HTMLElement {
   // ── Initialization ──────────────────────────────────────────────
 
   async _initialize() {
-    // 1. Services
-    this._session = new DragaSessionManager(this.agent);
+    // 1. Services — session key includes tenant+agent for proper isolation
+    const sessionKey = this._agentId ? `${this._tenantId}/${this._agentId}` : this._tenantId;
+    this._session = new DragaSessionManager(sessionKey);
     this._health = new DragaHealthChecker(this.baseUrl, this.apiKey);
     this._feedback = new DragaFeedbackSender(this.baseUrl, this.apiKey);
 
@@ -635,8 +645,8 @@ class DragaChat extends HTMLElement {
     const healthy = await this._health.check();
     this._setState({ isOnline: healthy });
 
-    // 3. Widget config from backend
-    this._widgetConfig = await DragaConfigLoader.load(this.baseUrl, this.agent, this.apiKey);
+    // 3. Widget config from backend (uses tenant_id as path param)
+    this._widgetConfig = await DragaConfigLoader.load(this.baseUrl, this._tenantId, this.apiKey);
 
     // 4. Create protocol instance
     this._initProtocol();
@@ -733,7 +743,8 @@ class DragaChat extends HTMLElement {
       const streamEnabled = this._widgetConfig?.behavior?.streaming_enabled ?? this.streamingAttr;
       const opts = {
         model: this.model,
-        tenantId: this.agent,
+        tenantId: this._tenantId,
+        agentId: this._agentId || 'default',
         sessionId: this._session.sessionId,
         topK: 5,
         similarityThreshold: 0.3,
@@ -837,7 +848,8 @@ class DragaChat extends HTMLElement {
       query: userMsg?.content || '',
       response: msg.content,
       rating,
-      tenantId: this.agent,
+      tenantId: this._tenantId,
+      agentId: this._agentId || 'default',
       sessionId: this._session.sessionId,
       comment,
     });

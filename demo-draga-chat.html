@@ -254,7 +254,11 @@
         </select>
       </div>
       <div class="config-field">
-        <label>Agent / Tenant ID</label>
+        <label>Tenant ID</label>
+        <input id="cfg-tenant" type="text" value="" placeholder="eod-sm23 (opcional)">
+      </div>
+      <div class="config-field">
+        <label>Agent ID</label>
         <input id="cfg-agent" type="text" value="eod" placeholder="eod">
       </div>
       <div class="config-field">
@@ -350,7 +354,8 @@
     <div class="info-card">
       <h3>🏷️ HTML Attributes</h3>
       <ul class="attr-list">
-        <li><code>agent</code> <span class="type">string</span> — Tenant / agent ID</li>
+        <li><code>tenant</code> <span class="type">string</span> — Tenant ID (optional, enables DRAGA-level isolation)</li>
+        <li><code>agent</code> <span class="type">string</span> — Agent/DRAGA ID (or tenant ID if no tenant attr)</li>
         <li><code>base-url</code> <span class="type">string</span> — API base URL</li>
         <li><code>protocol</code> <span class="type">"openai"|"rag"|"mcp"</span></li>
         <li><code>model</code> <span class="type">string</span> — Model name</li>
@@ -415,6 +420,18 @@
   <div id="floating-widget-host"></div>
 
   <script>
+    // ── Read URL params ──
+    const _urlParams = new URLSearchParams(window.location.search);
+    if (_urlParams.get('tenant')) document.getElementById('cfg-tenant').value = _urlParams.get('tenant');
+    if (_urlParams.get('agent')) document.getElementById('cfg-agent').value = _urlParams.get('agent');
+    if (_urlParams.get('protocol')) document.getElementById('cfg-protocol').value = _urlParams.get('protocol');
+    if (_urlParams.get('model')) document.getElementById('cfg-model').value = _urlParams.get('model');
+    if (_urlParams.get('locale')) document.getElementById('cfg-locale').value = _urlParams.get('locale');
+    if (_urlParams.has('streaming')) document.getElementById('cfg-streaming').checked = _urlParams.get('streaming') === 'true';
+    if (_urlParams.has('sources')) document.getElementById('cfg-sources').checked = _urlParams.get('sources') === 'true';
+    if (_urlParams.has('feedback')) document.getElementById('cfg-feedback').checked = _urlParams.get('feedback') === 'true';
+    if (_urlParams.get('apiKey')) { /* stored for widget but not displayed */ }
+
     // ── Health check ──
     fetch('/api/v2/health').then(r => {
       const badge = document.getElementById('health-badge');
@@ -431,6 +448,7 @@
       const inlineHost = document.getElementById('inline-host');
       inlineHost.innerHTML = '';
       const inlineEl = document.createElement('draga-chat');
+      if (cfg.tenant) inlineEl.setAttribute('tenant', cfg.tenant);
       inlineEl.setAttribute('agent', cfg.agent);
       inlineEl.setAttribute('base-url', cfg.baseUrl);
       inlineEl.setAttribute('protocol', cfg.protocol);
@@ -450,6 +468,7 @@
       const floatHost = document.getElementById('floating-widget-host');
       floatHost.innerHTML = '';
       const floatEl = document.createElement('draga-chat');
+      if (cfg.tenant) floatEl.setAttribute('tenant', cfg.tenant);
       floatEl.setAttribute('agent', cfg.agent);
       floatEl.setAttribute('base-url', cfg.baseUrl);
       floatEl.setAttribute('protocol', cfg.protocol);
@@ -472,6 +491,7 @@
     function getConfig() {
       return {
         protocol: document.getElementById('cfg-protocol').value,
+        tenant: document.getElementById('cfg-tenant').value.trim(),
         agent: document.getElementById('cfg-agent').value,
         baseUrl: document.getElementById('cfg-baseurl').value,
         model: document.getElementById('cfg-model').value,
@@ -489,6 +509,7 @@
 
     function updateCodePreview(cfg) {
       const attrs = [
+        cfg.tenant ? `  tenant="${cfg.tenant}"` : null,
         `  agent="${cfg.agent}"`,
         `  base-url="${cfg.baseUrl}"`,
         `  protocol="${cfg.protocol}"`,
