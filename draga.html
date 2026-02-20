@@ -449,7 +449,12 @@ tr:hover td{background:var(--bg-card);}
     </div>
 
     <div class="section">
-        <div class="section-title"><span class="icon">🤖</span> Agent Crew (6 activos + 1 roadmap)</div>
+        <div class="section-title"><span class="icon">�</span> Modelos del Pipeline</div>
+        <div id="ovPipelineModels" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span class="icon">�🤖</span> Agent Crew (6 activos + 1 roadmap)</div>
         <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));">
             <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🔍</div><div style="font-size:11px;font-weight:700;margin-top:4px">Retrieval</div><div style="font-size:9px;color:var(--text-muted)">Búsqueda + adaptive top_k</div></div>
             <div class="stat-card" style="text-align:center;padding:12px;"><div style="font-size:20px">🛡️</div><div style="font-size:11px;font-weight:700;margin-top:4px">Grounding</div><div style="font-size:9px;color:var(--text-muted)">NLI + verificación</div></div>
@@ -1575,7 +1580,100 @@ const Overview = {
             document.getElementById('ovPipelineSteps').textContent = steps ?? '—';
         } catch { document.getElementById('ovPipelineSteps').textContent = '—'; }
 
-        // Load DRAGA catalog — removed (single-DRAGA scope)
+        // Pipeline models — from agent config
+        this.loadPipelineModels();
+    },
+
+    async loadPipelineModels() {
+        const container = document.getElementById('ovPipelineModels');
+        try {
+            const agent = await api.getAgent(App.tenantId, App.agentId);
+            const c = agent.config || {};
+
+            // Also update the top-level model card
+            document.getElementById('ovModel').textContent = (c.llm_model || '—').split('/').pop();
+            document.getElementById('ovLang').textContent = c.response_language || '—';
+
+            const embModel = c.embedding_model || '—';
+            const embDims  = c.embedding_dimensions || '—';
+            const embDevice = c.embedding_device || '—';
+            const sparse   = c.sparse_enabled ? '✅ Habilitado' : '❌ Deshabilitado';
+            const llmModel = c.llm_model || '—';
+            const llmTemp   = c.llm_temperature ?? '—';
+            const llmTokens = c.llm_max_tokens ?? '—';
+            const rerankerOn = c.reranker_enabled;
+            const rerankerModel = c.reranker_model || (rerankerOn ? 'cross-encoder (default)' : '—');
+            const allowed = (c.allowed_models || []).map(m => `<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;background:rgba(59,130,246,0.12);color:var(--info);margin:2px;">${esc(m.split('/').pop())}</span>`).join('');
+            const chunkSize = c.chunk_size ?? '—';
+            const chunkOverlap = c.chunk_overlap ?? '—';
+
+            container.innerHTML = `
+                <div class="card" style="border-left:3px solid var(--info);padding:14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <span style="font-size:20px">📐</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:700">Embedding Model</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Ingestion + Retrieval</div>
+                        </div>
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:var(--info);margin-bottom:8px;word-break:break-all">${esc(embModel)}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-secondary)">
+                        <span>📏 ${embDims} dims</span>
+                        <span>💻 ${esc(embDevice)}</span>
+                        <span>🔀 Sparse: ${sparse}</span>
+                    </div>
+                </div>
+
+                <div class="card" style="border-left:3px solid var(--success);padding:14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <span style="font-size:20px">🤖</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:700">LLM Conversacional</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Generation + Integration</div>
+                        </div>
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:var(--success);margin-bottom:8px">${esc(llmModel)}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-secondary)">
+                        <span>🌡️ Temp: ${llmTemp}</span>
+                        <span>📝 Max tokens: ${llmTokens}</span>
+                    </div>
+                    ${allowed ? `<div style="margin-top:8px"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">Modelos permitidos:</div>${allowed}</div>` : ''}
+                </div>
+
+                <div class="card" style="border-left:3px solid var(--warning);padding:14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <span style="font-size:20px">🔄</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:700">Reranker</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Post-Retrieval Reranking</div>
+                        </div>
+                    </div>
+                    <div style="font-size:13px;font-weight:600;color:${rerankerOn ? 'var(--warning)' : 'var(--text-muted)'};margin-bottom:8px">${esc(rerankerModel)}</div>
+                    <div style="font-size:11px;color:var(--text-secondary)">
+                        ${rerankerOn ? '<span class="badge badge-success">✅ Activo</span>' : '<span class="badge badge-muted">⛔ Inactivo</span>'}
+                    </div>
+                </div>
+
+                <div class="card" style="border-left:3px solid var(--draga-accent);padding:14px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                        <span style="font-size:20px">✂️</span>
+                        <div>
+                            <div style="font-size:13px;font-weight:700">Chunking (Ingestion)</div>
+                            <div style="font-size:10px;color:var(--text-muted)">Particionado de documentos</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-secondary)">
+                        <span>📦 Chunk size: <strong>${chunkSize}</strong> tokens</span>
+                        <span>🔗 Overlap: <strong>${chunkOverlap}</strong> tokens</span>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:var(--text-muted)">
+                        Embedding model se reutiliza para vectorizar cada chunk
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            container.innerHTML = `<div style="color:var(--text-muted);font-size:12px">No se pudieron cargar los modelos: ${esc(e.message)}</div>`;
+        }
     },
 
     // loadCatalog and selectDraga removed — single-DRAGA scope enforced
