@@ -590,10 +590,16 @@ tr:hover td{background:var(--bg-card);}
     <div class="section">
         <div class="section-title"><span class="icon">🧪</span> Live Test</div>
         <div class="card">
-            <div style="display:flex;gap:10px;margin-bottom:14px;">
-                <input type="text" id="pipelineQuery" placeholder="Escribe una consulta para probar el pipeline..." style="flex:1;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')Pipeline.run()">
+            <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+                <input type="text" id="pipelineQuery" placeholder="Escribe una consulta para probar el pipeline..." style="flex:1;min-width:200px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')Pipeline.run()">
+                <select id="pipelineProtocol" style="padding:8px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:12px;" title="Protocolo de comunicación">
+                    <option value="rest" selected>🔌 REST</option>
+                    <option value="openai">🤖 OpenAI</option>
+                    <option value="mcp">🔗 MCP</option>
+                </select>
                 <button class="btn btn-primary" onclick="Pipeline.run()">▶ Ejecutar</button>
             </div>
+            <p style="font-size:11px;color:var(--text-muted);margin:0 0 14px 0">Compara la respuesta usando distintos protocolos: <strong>REST</strong> (/query), <strong>OpenAI</strong> (/chat/completions), <strong>MCP</strong> (rag_query tool)</p>
             <div id="pipelineResult"></div>
         </div>
     </div>
@@ -2535,13 +2541,62 @@ const Pipeline = {
     async run() {
         const query = document.getElementById('pipelineQuery').value.trim();
         if (!query) { toast('Escribe una consulta', 'warning'); return; }
+        const protocol = document.getElementById('pipelineProtocol').value;
 
         const result = document.getElementById('pipelineResult');
-        result.innerHTML = '<div class="loading"><div class="spinner"></div> Ejecutando pipeline...</div>';
+        const protoLabels = { rest: '🔌 REST /query', openai: '🤖 OpenAI /chat/completions', mcp: '🔗 MCP rag_query' };
+        result.innerHTML = `<div class="loading"><div class="spinner"></div> Ejecutando vía ${protoLabels[protocol]}...</div>`;
         const t0 = Date.now();
 
         try {
-            const res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId });
+            let res;
+            if (protocol === 'rest') {
+                // ── REST: POST /query ──
+                res = await api.query({ query, tenant_id: App.tenantId, agent_id: App.agentId });
+            } else if (protocol === 'openai') {
+                // ── OpenAI Compatible: POST /chat/completions ──
+                const oaiPayload = {
+                    model: App.agentId || 'default',
+                    messages: [{ role: 'user', content: query }],
+                    tenant_id: App.tenantId,
+                    agent_id: App.agentId
+                };
+                const oaiRes = await api.chatCompletions(oaiPayload);
+                // Normalize OpenAI response to match REST shape
+                const choice = oaiRes.choices?.[0];
+                const content = choice?.message?.content || '';
+                const meta = oaiRes.metadata || oaiRes.rag_metadata || {};
+                res = {
+                    answer: content,
+                    confidence: meta.confidence ?? null,
+                    sources: meta.sources || [],
+                    cached: meta.cached || false,
+                    retrieved_chunks: meta.retrieved_chunks || [],
+                    metadata: meta,
+                    _raw_oai: oaiRes
+                };
+            } else if (protocol === 'mcp') {
+                // ── MCP: POST /mcp/tools/call → rag_query ──
+                const mcpArgs = { query, tenant_id: App.tenantId };
+                if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
+                const mcpRes = await api.mcpCallTool('rag_query', mcpArgs);
+                // Normalize MCP response
+                if (!mcpRes.success && mcpRes.error) {
+                    throw new Error(`MCP error: ${mcpRes.error}`);
+                }
+                // MCP rag_query returns markdown text; extract structured data if available
+                const raw = mcpRes.result || mcpRes.answer || '';
+                res = {
+                    answer: typeof raw === 'string' ? raw : (raw.answer || JSON.stringify(raw)),
+                    confidence: raw.confidence ?? mcpRes.confidence ?? null,
+                    sources: raw.sources || mcpRes.sources || [],
+                    cached: raw.cached || mcpRes.cached || false,
+                    retrieved_chunks: raw.retrieved_chunks || mcpRes.retrieved_chunks || [],
+                    metadata: raw.metadata || mcpRes.metadata || {},
+                    _raw_mcp: mcpRes
+                };
+            }
+
             const latency = Date.now() - t0;
             const conf = res.confidence != null ? (res.confidence * 100).toFixed(0) : '—';
             const confColor = res.confidence > 0.7 ? 'var(--success)' : res.confidence > 0.4 ? 'var(--warning)' : 'var(--danger)';
@@ -2559,9 +2614,13 @@ const Pipeline = {
             const sourcesHtml = (res.sources || []).map(s => `<span class="source-chip" onclick="DocViewer.openByFilename('${esc(s)}')" title="Ver documento fuente">📄 ${esc(s)}</span>`).join('');
             const chunksViewBtn = Pipeline._lastChunks.length ? `<button class="btn btn-sm" style="margin-top:10px" onclick="DocViewer.openWithChunks('Chunks Recuperados', Pipeline._lastChunks)">👁️ Ver ${Pipeline._lastChunks.length} chunks recuperados</button>` : '';
 
+            // Protocol badge
+            const protoBadge = `<span class="badge" style="background:var(--draga-accent);color:var(--bg-primary);font-size:10px;padding:2px 8px;">${protoLabels[protocol]}</span>`;
+
             result.innerHTML = `
                 ${errorBanner}
                 <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
+                    <div class="stat-card"><div class="label">Protocolo</div><div class="value" style="font-size:12px">${protoBadge}</div></div>
                     <div class="stat-card"><div class="label">Confianza</div><div class="value" style="color:${confColor}">${conf}%</div></div>
                     <div class="stat-card"><div class="label">Fuentes</div><div class="value">${res.sources?.length || 0}</div></div>
                     <div class="stat-card"><div class="label">Latencia</div><div class="value" style="font-size:16px">${latency}ms</div></div>
