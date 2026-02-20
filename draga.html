@@ -2478,7 +2478,7 @@ const KB = {
         const t0 = Date.now();
         try {
             const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
-            if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
+            // agent_id: backend Issue #347 — search_knowledge_base aún no soporta agent_id
             const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
             const latency = Date.now() - t0;
             if (!res.success) {
@@ -2588,7 +2588,7 @@ const Pipeline = {
         const t0 = Date.now();
         try {
             const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
-            if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
+            // agent_id: backend Issue #347 — search_knowledge_base aún no soporta agent_id
             const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
             const latency = Date.now() - t0;
             if (!res.success) {
