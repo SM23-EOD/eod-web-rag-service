@@ -576,6 +576,24 @@ tr:hover td{background:var(--bg-card);}
     </div>
 
     <div class="section">
+        <div class="section-title"><span class="icon">🔎</span> Búsqueda Vectorial Directa</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Busca directamente en la base vectorial sin pasar por el LLM. Útil para evaluar la calidad del retrieval y comparar con la respuesta generada.</p>
+        <div class="card">
+            <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                <input type="text" id="vectorQuery" placeholder="Consulta de búsqueda vectorial..." style="flex:1;min-width:200px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')Pipeline.vectorSearch()">
+                <select id="vectorTopK" style="padding:8px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:12px;">
+                    <option value="3">Top 3</option>
+                    <option value="5" selected>Top 5</option>
+                    <option value="10">Top 10</option>
+                    <option value="20">Top 20</option>
+                </select>
+                <button class="btn btn-primary" onclick="Pipeline.vectorSearch()">🔎 Buscar</button>
+            </div>
+            <div id="vectorResult"></div>
+        </div>
+    </div>
+
+    <div class="section">
         <div class="section-title"><span class="icon">🔒</span> Invariantes del Dominio</div>
         <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
             <div class="stat-card" style="font-size:12px;border-left:3px solid var(--success)"><strong>Sin documentos → no_answer</strong><div style="color:var(--text-muted);margin-top:4px">Nunca inventa si no hay fuentes</div></div>
@@ -2380,6 +2398,67 @@ const Pipeline = {
                     <div style="font-size:13px;line-height:1.7">${marked.parse(res.answer || 'Sin respuesta')}</div>
                     ${sourcesHtml ? `<div style="margin-top:10px">📎 <span style="font-size:11px;color:var(--text-muted)">Fuentes:</span> ${sourcesHtml}</div>` : ''}
                     ${chunksViewBtn}
+                </div>`;
+        } catch (e) {
+            result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${e.message}</div></div>`;
+        }
+    },
+
+    async vectorSearch() {
+        const query = document.getElementById('vectorQuery').value.trim();
+        if (!query) { toast('Escribe una consulta', 'warning'); return; }
+        const topK = parseInt(document.getElementById('vectorTopK').value) || 5;
+        const result = document.getElementById('vectorResult');
+        result.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando en base vectorial...</div>';
+        const t0 = Date.now();
+        try {
+            const res = await api.mcpCallTool('search_knowledge_base', {
+                query, tenant_id: App.tenantId, top_k: topK
+            });
+            const latency = Date.now() - t0;
+            if (!res.success) {
+                result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${esc(res.error || 'Error desconocido')}</div></div>`;
+                return;
+            }
+            // Parse the markdown result to extract chunks
+            const raw = res.result || '';
+            // Extract similarity percentages and source info from the markdown
+            const chunks = [];
+            const sections = raw.split(/### Resultado \d+/);
+            sections.shift(); // remove header
+            for (const sec of sections) {
+                const simMatch = sec.match(/Similitud:\s*([\d.]+)%/);
+                const srcMatch = sec.match(/\*\*Fuente:\*\*\s*(.+)/);
+                const similarity = simMatch ? parseFloat(simMatch[1]) : 0;
+                const source = srcMatch ? srcMatch[1].trim() : '—';
+                // Content is everything after the source line
+                const contentStart = sec.indexOf('\n', sec.indexOf('**Fuente:**') || 0);
+                const content = contentStart > 0 ? sec.substring(contentStart).trim() : sec.trim();
+                chunks.push({ similarity, source, content });
+            }
+            const avgSim = chunks.length ? (chunks.reduce((s, c) => s + c.similarity, 0) / chunks.length).toFixed(1) : '—';
+            const sources = [...new Set(chunks.map(c => c.source))];
+
+            result.innerHTML = `
+                <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:14px;">
+                    <div class="stat-card"><div class="label">Chunks encontrados</div><div class="value">${chunks.length}</div></div>
+                    <div class="stat-card"><div class="label">Similitud Avg</div><div class="value" style="color:${avgSim > 50 ? 'var(--success)' : avgSim > 30 ? 'var(--warning)' : 'var(--danger)'}">${avgSim}%</div></div>
+                    <div class="stat-card"><div class="label">Fuentes únicas</div><div class="value">${sources.length}</div></div>
+                    <div class="stat-card"><div class="label">Latencia</div><div class="value" style="font-size:16px">${latency}ms</div></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${chunks.map((c, i) => `
+                        <div class="card" style="border-left:3px solid ${c.similarity > 50 ? 'var(--success)' : c.similarity > 30 ? 'var(--warning)' : 'var(--danger)'}; padding:12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <span style="font-size:12px;font-weight:700;">Chunk #${i + 1}</span>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <span class="source-chip" onclick="DocViewer.openByFilename('${esc(c.source)}')" title="Ver documento fuente" style="cursor:pointer;">📄 ${esc(c.source)}</span>
+                                    <span class="badge ${c.similarity > 50 ? 'badge-success' : c.similarity > 30 ? 'badge-warning' : 'badge-danger'}">${c.similarity.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                            <div style="font-size:12px;line-height:1.6;color:var(--text-secondary);max-height:120px;overflow-y:auto;white-space:pre-wrap;">${esc(c.content.substring(0, 500))}${c.content.length > 500 ? '...' : ''}</div>
+                        </div>
+                    `).join('')}
                 </div>`;
         } catch (e) {
             result.innerHTML = `<div class="card" style="border-left:3px solid var(--danger)"><div style="color:var(--danger)">❌ ${e.message}</div></div>`;
