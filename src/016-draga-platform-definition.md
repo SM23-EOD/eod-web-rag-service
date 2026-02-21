@@ -17,7 +17,7 @@ Documento de referencia: `DRAGA.md` (raíz del repo) contiene la versión narrat
 El sistema que hoy llamamos DRAGA nació como un MVP monolítico de RAG service para un único caso de uso: soporte al cliente de Envíos23 para regulaciones aduanales de Cuba. En 6 semanas evolucionó a través de 14 ADRs y 230+ PRs hasta convertirse en algo sustancialmente más ambicioso:
 
 ```
-Ene 2026 — MVP monolítico (1 tenant, 1 query engine, ChromaDB hardcoded)
+Ene 2026 — MVP monolítico (1 tenant, 1 query engine, ChromaDB → migrado a Qdrant)
      └──→ ADR-001: Multi-Tenant Architecture
      └──→ ADR-002: Hexagonal Architecture + RAG Agent Constructor
      └──→ ADR-004: 14-step composable pipeline
@@ -219,7 +219,7 @@ Estas reglas no se negocian. Si un feature o cambio las viola, no se implementa.
               ┌────────────────────────────▼────────────────────────────────┐
               │                    Outbound Adapters                         │
               │                                                             │
-              │  Persistence:  ChromaDB, Qdrant, Redis, PostgreSQL, JSON    │
+              │  Persistence:  Qdrant, Redis, PostgreSQL, JSON               │
               │  Processing:   TEI Embeddings, Document Processor, Loaders  │
               │  External:     OpenRouter (LLM), Model Router, HyDE, NER    │
               │  Detection:    Language Detector                            │
@@ -336,7 +336,7 @@ El despliegue sigue la arquitectura hexagonal en 4 Docker Compose stacks indepen
 
 ```
 stack-infrastructure.yml        → Traefik (reverse proxy + SSL) + Portainer
-stack-adapters-persistence.yml  → ChromaDB + Qdrant + Redis + PostgreSQL
+stack-adapters-persistence.yml  → Qdrant + Redis + PostgreSQL
 stack-adapters-processing.yml   → TEI Embeddings (HuggingFace)
 stack-domain-rag.yml            → RAG Service (FastAPI) — el core
 ```

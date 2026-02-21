@@ -274,11 +274,11 @@ Sprint 8 (Sem 18-20) → Taxonomías + Diferenciadores   → GA + GROUNDING ESTR
 - **Contra**: Overhead operacional alto para equipo pequeño, consumo de RAM ~512MB, curva de aprendizaje
 - **Decisión**: Evaluado en Sprint 3, pero se recomienda empezar con solución lightweight (Logto/JWT custom) y migrar a Keycloak si se necesita SSO/federation
 
-### 2. Migrar a Qdrant como único vector DB (eliminar ChromaDB)
+### 2. ~~Migrar a Qdrant como único vector DB (eliminar ChromaDB)~~ ✅ COMPLETADO
 
-- **Pro**: Simplifica stack, Qdrant soporta hybrid search nativo
-- **Contra**: ChromaDB es el default actual y funciona en producción; migración riesgosa sin ganar funcionalidad
-- **Decisión**: Qdrant para nuevos tenants y búsqueda híbrida; ChromaDB en modo legacy para tenants existentes; migración gradual
+- **Estado (Feb 2026)**: Migración completada. Qdrant es el único vector DB en producción.
+- 5 colecciones activas en Qdrant (167.172.225.44:6333)
+- ChromaDB eliminado del stack
 
 ### 3. Implementar billing antes de auth
 

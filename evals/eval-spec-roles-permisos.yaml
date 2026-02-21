@@ -1,0 +1,248 @@
+# evaluation-spec.yaml — Sistema de Roles y Permisos para DRAGA Platform
+# Proyecto: DRAGA Platform (eod-web-rag-service + hex-domain-rag)
+# Fecha: 2026-02-21
+# Objective Spec: evals/objective-spec-roles-permisos.yaml
+
+objective:
+  titulo: "Sistema de autenticación, roles y permisos multi-tenant para DRAGA Platform"
+  descripcion: |
+    La plataforma DRAGA es multi-tenant pero no tiene control de acceso.
+    Cualquier persona con la URL puede ver/modificar todos los tenants y DRAGAs.
+    No hay autenticación, no hay roles, no hay filtrado por permisos.
+
+    Sin baseline — no existe auth. El "control" actual es oscuridad de URLs
+    y API keys manuales en localStorage.
+
+    Resultado esperado: 3 roles diferenciados (Admin Plataforma, Admin Tenant,
+    Usuario DRAGA), login con JWT, routing condicional en frontend,
+    validación de permisos en backend, y widgets públicos que siguen
+    funcionando sin auth.
+  owner: "Pedro"
+  alcance:
+    incluye:
+      - "Frontend: login screen, auth guards, role-based routing, user management UI"
+      - "Frontend: sesión JWT en localStorage con refresh automático"
+      - "Frontend: filtrado de tenants/DRAGAs visibles según scope del usuario"
+      - "Backend (hex-domain-rag): modelo User/Role/Permission, endpoints auth, middleware JWT"
+      - "Backend (hex-domain-rag): endpoints gestión de usuarios (CRUD, asignar rol/scope)"
+    excluye:
+      - "OAuth2/SSO externo — fase posterior"
+      - "MFA — fase posterior"
+      - "Auditoría detallada de acciones — fase posterior"
+      - "Pipeline RAG — no se modifica, solo se protege"
+      - "Widgets públicos de chat — siguen funcionando sin auth via embed token"
+  riesgos_identificados:
+    - "Backend dependency: auth requiere endpoints nuevos en hex-domain-rag — bloqueante"
+    - "Backwards compat: usuarios actuales sin login podrían perder acceso durante migración"
+    - "XSS: JWTs en localStorage vulnerables — mitigar con CSP headers y sanitización"
+    - "Scope leakage: error en filtrado client-side podría exponer datos cross-tenant"
+    - "UX friction: login en herramienta que hoy es open puede frenar adopción"
+  adrs_referenciados:
+    - "ADR-0001: Web Components — login/auth como Custom Elements"
+    - "ADR-0002: Shadow DOM — encapsulación del login widget"
+    - "ADR-0006: Nginx — redirect a login si no hay JWT válido"
+    - "ADR-0008: Multi-DRAGA UI Alignment — permisos respetan jerarquía Plataforma > Tenant > DRAGA"
+
+evaluation:
+  # ═══════════════════════════════════════════════════════════
+  # GRADERS CODE-BASED (obligatorios)
+  # ═══════════════════════════════════════════════════════════
+  automated_tests:
+    unit:
+      # --- Modelo de datos (backend) ---
+      - descripcion: "El modelo User tiene campos: id, email, password_hash, role, scoped_tenants, scoped_agents, created_at, is_active"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_user_model_fields"
+      - descripcion: "Role enum tiene exactamente 3 valores: platform_admin, tenant_admin, draga_user"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_role_enum_values"
+      - descripcion: "Permission check: platform_admin puede acceder a cualquier tenant y DRAGA"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_platform_admin_full_access"
+      - descripcion: "Permission check: tenant_admin solo accede a tenants en su scope"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_tenant_admin_scoped_access"
+      - descripcion: "Permission check: draga_user solo accede a DRAGAs específicos en su scope"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_draga_user_scoped_access"
+      - descripcion: "Permission check: draga_user NO puede modificar KB ni config"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_draga_user_readonly_restrictions"
+      - descripcion: "JWT generation incluye role, scoped_tenants, scoped_agents, exp"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_jwt_payload_contains_role_and_scope"
+      - descripcion: "JWT expirado retorna 401 Unauthorized"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_jwt_expired_returns_401"
+      - descripcion: "Password se hashea con bcrypt, nunca se almacena en texto plano"
+        tipo: "fail-to-pass"
+        comando: "make test-unit -- -k test_password_hashed_bcrypt"
+      # --- No regresión ---
+      - descripcion: "Endpoints existentes de tenants/agents/documents siguen funcionando con API key válida"
+        tipo: "pass-to-pass"
+        comando: "make test-unit -- -k test_existing_endpoints_with_api_key"
+      - descripcion: "Widget chat sigue funcionando sin auth (embed token)"
+        tipo: "pass-to-pass"
+        comando: "make test-unit -- -k test_widget_chat_no_auth_required"
+
+    integration:
+      # --- Auth endpoints ---
+      - descripcion: "POST /auth/register crea usuario y retorna JWT + refresh_token"
+        comando: "make test-integration -- -k test_api_register"
+      - descripcion: "POST /auth/login con credenciales válidas retorna JWT"
+        comando: "make test-integration -- -k test_api_login_success"
+      - descripcion: "POST /auth/login con credenciales inválidas retorna 401"
+        comando: "make test-integration -- -k test_api_login_invalid_credentials"
+      - descripcion: "POST /auth/refresh con refresh_token válido retorna nuevo JWT"
+        comando: "make test-integration -- -k test_api_refresh_token"
+      - descripcion: "GET /auth/me retorna perfil del usuario autenticado con rol y scope"
+        comando: "make test-integration -- -k test_api_me_authenticated"
+      - descripcion: "GET /auth/me sin token retorna 401"
+        comando: "make test-integration -- -k test_api_me_unauthenticated"
+      # --- Authorization middleware ---
+      - descripcion: "GET /tenants con JWT de tenant_admin solo retorna tenants de su scope"
+        comando: "make test-integration -- -k test_api_tenants_scoped_by_role"
+      - descripcion: "GET /agents con JWT de draga_user solo retorna agents de su scope"
+        comando: "make test-integration -- -k test_api_agents_scoped_by_role"
+      - descripcion: "POST /agents (crear DRAGA) con JWT de draga_user retorna 403 Forbidden"
+        comando: "make test-integration -- -k test_api_create_agent_forbidden_for_draga_user"
+      - descripcion: "DELETE /agents/{id} con JWT de tenant_admin sobre otro tenant retorna 403"
+        comando: "make test-integration -- -k test_api_delete_agent_cross_tenant_forbidden"
+      - descripcion: "POST /documents/upload con JWT de draga_user retorna 403"
+        comando: "make test-integration -- -k test_api_upload_forbidden_for_draga_user"
+      - descripcion: "POST /query con JWT de draga_user con scope válido retorna 200"
+        comando: "make test-integration -- -k test_api_query_allowed_for_scoped_draga_user"
+      # --- User management (solo platform_admin) ---
+      - descripcion: "GET /users lista usuarios (solo platform_admin)"
+        comando: "make test-integration -- -k test_api_list_users_platform_admin_only"
+      - descripcion: "POST /users/invite envía invitación con rol y scope pre-asignados"
+        comando: "make test-integration -- -k test_api_invite_user"
+      - descripcion: "PUT /users/{id}/role cambia rol (solo platform_admin)"
+        comando: "make test-integration -- -k test_api_change_user_role"
+      - descripcion: "PUT /users/{id}/scope actualiza tenants/DRAGAs asignados"
+        comando: "make test-integration -- -k test_api_update_user_scope"
+      # --- Backwards compatibility ---
+      - descripcion: "Requests con X-API-Key válida bypasean JWT auth (compatibilidad)"
+        comando: "make test-integration -- -k test_api_key_backwards_compat"
+      - descripcion: "Widget embed endpoints (/chat/completions con embed_token) no requieren JWT"
+        comando: "make test-integration -- -k test_widget_embed_no_jwt_required"
+
+    contract:
+      - descripcion: "POST /auth/login response schema: { token, refresh_token, user: { id, email, role, scope } }"
+        comando: "make test-contract -- -k test_auth_login_response_schema"
+      - descripcion: "GET /auth/me response schema: { id, email, role, scoped_tenants, scoped_agents }"
+        comando: "make test-contract -- -k test_auth_me_response_schema"
+      - descripcion: "Todos los endpoints existentes mantienen backward compatibility en response schema"
+        comando: "make test-contract -- -k test_existing_endpoints_backward_compat"
+
+  static_analysis:
+    lint: "make lint"
+    type_check: "make typecheck"
+    secret_scan: "make secret-scan"
+    dependency_scan: "make dep-scan"
+
+  # ═══════════════════════════════════════════════════════════
+  # GRADERS MODEL-BASED
+  # ═══════════════════════════════════════════════════════════
+  model_graders:
+    - nombre: "UX del flujo de login"
+      tipo: "rubric"
+      rubrica: |
+        Evaluar si la pantalla de login:
+        1. Es minimalista y coherente con el design system DRAGA (colores, tipografía, dark mode)
+        2. Muestra mensajes de error claros en español (ej: "Credenciales inválidas", no "401 Unauthorized")
+        3. Redirige automáticamente a la página correcta según el rol tras login
+        4. Muestra spinner/loading durante la autenticación
+        5. El logout limpia la sesión y redirige al login
+      calibrado_con_humano: false
+      dataset: "evals/datasets/auth-ui-scenarios.jsonl"
+
+    - nombre: "Correctness del filtrado por scope"
+      tipo: "assertion"
+      rubrica: |
+        Verificar que:
+        1. Un tenant_admin de "eod-sm23" NO ve el tenant "sm23-dani" en admin.html
+        2. Un draga_user de "envio23" NO ve el DRAGA "rfc-edd" en su dashboard
+        3. Un platform_admin ve todos los tenants y todos los DRAGAs
+        4. Al cambiar el role de un usuario, los cambios se reflejan inmediatamente (sin cache stale)
+        5. Manipular el JWT payload en el browser no otorga acceso extra (validación server-side)
+      calibrado_con_humano: false
+      dataset: "evals/datasets/auth-scope-scenarios.jsonl"
+
+    - nombre: "Seguridad del sistema de auth"
+      tipo: "rubric"
+      rubrica: |
+        Evaluar que:
+        1. Los passwords nunca aparecen en logs, responses, ni en el DOM
+        2. Los JWTs tienen expiración razonable (<= 24h access, <= 7d refresh)
+        3. No hay secrets hardcodeados en el código frontend (API keys, JWT secrets)
+        4. El token se elimina de localStorage al hacer logout
+        5. Los endpoints de auth usan HTTPS en producción (o Nginx reverse proxy)
+        6. Rate limiting existe en /auth/login para prevenir brute force
+      calibrado_con_humano: false
+      dataset: "evals/datasets/auth-security-scenarios.jsonl"
+
+  # ═══════════════════════════════════════════════════════════
+  # MÉTRICAS Y UMBRALES
+  # ═══════════════════════════════════════════════════════════
+  metrics:
+    - nombre: "Latencia p95 de auth middleware (validar JWT en cada request)"
+      umbral_minimo: "< 50ms"
+      umbral_objetivo: "< 10ms"
+    - nombre: "Latencia p95 POST /auth/login"
+      umbral_minimo: "< 1000ms"
+      umbral_objetivo: "< 500ms"
+    - nombre: "% de endpoints protegidos por auth middleware"
+      umbral_minimo: ">= 90% de endpoints admin/write"
+      umbral_objetivo: "100% excepto health y widget embed"
+    - nombre: "Cross-tenant data leakage rate"
+      umbral_minimo: "0%"
+      umbral_objetivo: "0%"
+    - nombre: "Login success rate (credenciales válidas)"
+      umbral_minimo: ">= 99%"
+      umbral_objetivo: ">= 99.9%"
+    - nombre: "Token refresh success rate"
+      umbral_minimo: ">= 98%"
+      umbral_objetivo: ">= 99.5%"
+
+  eval_type: "capability"
+  graduation_criteria: "pass_rate >= 95% durante 2 semanas, 0 cross-tenant leaks"
+  pass_metric: "pass@1"
+
+  # ═══════════════════════════════════════════════════════════
+  # SEGURIDAD
+  # ═══════════════════════════════════════════════════════════
+  security:
+    secretos: "JWT_SECRET en .env del backend — nunca en código frontend, nunca en localStorage"
+    datos_sensibles: |
+      - Passwords: hasheados con bcrypt, nunca en texto plano
+      - JWTs en localStorage: riesgo XSS mitigado con CSP headers en Nginx
+      - Emails de usuarios: datos personales, no exponer en endpoints públicos
+      - API keys existentes: siguen funcionando como auth alternativo
+    permisos_herramientas:
+      - "git: read/write en rama feature (ambos repos)"
+      - "test suite: ejecución completa"
+      - "DB: acceso para crear tablas user/role/permission en entorno de test"
+      - "Nginx: modificar config para redirect a login"
+
+  # ═══════════════════════════════════════════════════════════
+  # AUTONOMÍA Y CONTROL
+  # ═══════════════════════════════════════════════════════════
+  autonomy_level: "A1"
+  orchestration_pattern: "multi-agent"
+  stop_conditions:
+    - "Si el diseño del schema de User/Role requiere decisiones de negocio sobre jerarquía → escalar al PO"
+    - "Si se necesita modificar endpoints existentes de forma breaking → escalar"
+    - "Si la implementación de JWT compromise la seguridad de API keys existentes → escalar"
+    - "Si el backend no tiene la infraestructura para auth (no hay ORM/DB migration tool) → escalar"
+    - "3 fallos consecutivos en la misma task → escalar"
+  human_gates:
+    - tipo: "arquitectura"
+      obligatorio: true
+      condicion: "Revisión del schema de User/Role/Permission y diseño de endpoints de auth antes de implementar"
+    - tipo: "seguridad"
+      obligatorio: true
+      condicion: "Review de seguridad: JWT config, password hashing, CORS, CSP headers, rate limiting"
+    - tipo: "release"
+      obligatorio: true
+      condicion: "Evidencia de eval completa + test manual de flujos cross-tenant + backwards compat con API keys"

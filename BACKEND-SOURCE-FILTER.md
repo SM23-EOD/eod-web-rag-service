@@ -19,7 +19,7 @@ El frontend de administración ya permite **seleccionar/deseleccionar fuentes (d
 2. **`POST /api/v2/chat/completions`** acepta el mismo campo `source_filter: string[]`.
    - Se propaga al retriever con la misma lógica.
 
-3. **Filtrado en ChromaDB**: El filtro se aplica a nivel de metadatos del chunk (`where: {"document_id": {"$in": [...]}}`) en la query a ChromaDB.
+3. **Filtrado en Qdrant**: El filtro se aplica a nivel de metadatos del chunk usando Qdrant filter conditions (`must` con `match` on `document_id`).
    - Si la lista está vacía, no se devuelven chunks (búsqueda vacía).
    - Si contiene IDs que no existen, simplemente no matchean.
 
@@ -27,7 +27,7 @@ El frontend de administración ya permite **seleccionar/deseleccionar fuentes (d
 
 5. **Sin side-effects**: El filtro NO modifica datos, solo la búsqueda. Los documentos desactivados siguen existiendo y se pueden reactivar.
 
-6. **Performance**: No debe degradar significativamente el rendimiento. El filtro `$in` en ChromaDB metadata es eficiente.
+6. **Performance**: No debe degradar significativamente el rendimiento. Los filtros por metadata en Qdrant son eficientes (payload indexing).
 
 ## Propuesta de Implementación
 
@@ -55,28 +55,27 @@ class ChatCompletionRequest(BaseModel):
     source_filter: Optional[List[str]] = None  # ← NUEVO
 ```
 
-### Retriever (ChromaDB Query)
+### Retriever (Qdrant Query)
 
 ```python
-# En el retriever, construir filtro where:
-where_filter = {}
+from qdrant_client.models import Filter, FieldCondition, MatchAny, MatchValue
+
+# En el retriever, construir filtro Qdrant:
+conditions = []
 
 if category_filter:
-    where_filter["category"] = category_filter
+    conditions.append(FieldCondition(key="category", match=MatchValue(value=category_filter)))
 
 if source_filter is not None:
-    where_filter["document_id"] = {"$in": source_filter}
+    conditions.append(FieldCondition(key="document_id", match=MatchAny(any=source_filter)))
 
-# Si hay múltiples condiciones, usar $and:
-if len(where_filter) > 1:
-    where_clause = {"$and": [{k: v} for k, v in where_filter.items()]}
-else:
-    where_clause = where_filter or None
+qdrant_filter = Filter(must=conditions) if conditions else None
 
-results = collection.query(
-    query_texts=[query],
-    n_results=top_k,
-    where=where_clause
+results = qdrant_client.search(
+    collection_name=f"kb_{tenant_id}_{agent_id}",
+    query_vector=query_embedding,
+    limit=top_k,
+    query_filter=qdrant_filter
 )
 ```
 
@@ -113,7 +112,7 @@ const sourceFilter = (activeIds.length < DocMgr.docs.length) ? activeIds : null;
 - **Archivos a modificar**:
   - `src/adapters/inbound/api/query_routes.py` — Agregar campo al schema
   - `src/adapters/inbound/api/chat_routes.py` — Agregar campo al schema
-  - `src/core/retriever.py` (o equivalente) — Agregar filtro `$in` a ChromaDB query
+  - `src/core/retriever.py` (o equivalente) — Agregar filtro Qdrant con `FieldCondition`
   - Tests unitarios para el filtrado
 
 ## Notas

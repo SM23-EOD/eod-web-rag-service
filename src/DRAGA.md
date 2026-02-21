@@ -318,7 +318,7 @@ La Knowledge Base es el fundamento de verdad de un DRAGA. Contiene:
 - **Embeddings vectoriales**: Representaciones densas para búsqueda por similitud
 - **Metadata de trazabilidad**: Fuente, sección, fecha de ingestión, content hash
 
-La KB está materializada como una colección vectorial aislada (`kb_{tenant_id}`) en la base de datos vectorial (ChromaDB o Qdrant).
+La KB está materializada como una colección vectorial aislada (`kb_{tenant_id}_{agent_id}`) en **Qdrant**.
 
 **Invariante**: La KB es la única fuente de verdad para las respuestas del DRAGA. Nada fuera de la KB se usa para generar respuestas.
 

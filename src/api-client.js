@@ -45,6 +45,9 @@ class RAGApiClient {
         const url = `${this.baseUrl}${path}`;
         const headers = { 'Content-Type': 'application/json' };
         if (this.apiKey) headers['X-API-Key'] = this.apiKey;
+        // Attach JWT if available (coexists with X-API-Key for backwards compat)
+        const jwt = typeof AuthSession !== 'undefined' ? AuthSession.getToken() : localStorage.getItem('draga-auth-token');
+        if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
 
         const baseConfig = { method, headers };
         if (body && method !== 'GET') baseConfig.body = JSON.stringify(body);
@@ -72,6 +75,17 @@ class RAGApiClient {
                         const wait = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 10000) : retryDelay * Math.pow(2, attempt + 1);
                         await new Promise(r => setTimeout(r, wait || 2000));
                         continue;
+                    }
+                    // 401 Unauthorized — attempt token refresh once, then redirect to login
+                    if (res.status === 401 && !path.startsWith('/auth/')) {
+                        clearTimeout(timer);
+                        const refreshOk = await this._tryRefreshToken();
+                        if (refreshOk) continue; // retry with new token
+                        AuthSession.clear();
+                        if (typeof window !== 'undefined' && !window.location.pathname.endsWith('login.html')) {
+                            window.location.href = '/login.html';
+                        }
+                        throw apiErr;
                     }
                     // Retry only on 5xx (server) errors
                     if (res.status >= 500 && attempt < maxRetries) {
@@ -112,6 +126,28 @@ class RAGApiClient {
         throw lastError;
     }
 
+    /** Attempt to refresh the access token. Returns true on success. */
+    async _tryRefreshToken() {
+        try {
+            const refresh = (typeof AuthSession !== 'undefined')
+                ? AuthSession.getRefreshToken()
+                : localStorage.getItem('draga-auth-refresh');
+            if (!refresh) return false;
+            const res = await fetch(`${this.baseUrl}/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refresh })
+            });
+            if (!res.ok) return false;
+            const data = await res.json();
+            if (data.token && typeof AuthSession !== 'undefined') {
+                const user = AuthSession.getUser();
+                AuthSession.save({ token: data.token, refresh_token: data.refresh_token || refresh, user: data.user || user });
+            }
+            return !!data.token;
+        } catch (_) { return false; }
+    }
+
     get(path) { return this._request('GET', path); }
     post(path, body) { return this._request('POST', path, body); }
     put(path, body) { return this._request('PUT', path, body); }
@@ -125,13 +161,13 @@ class RAGApiClient {
      * @param {object} params - { query, tenant_id, agent_id?, top_k?, use_cache?, category_filter?, document_ids? }
      */
     async query(params) { return this.post('/query', params); }
-    async getStats(tenantId = null, agentId = null) {
-        return this.get(`/stats${this._scopeQuery(tenantId, agentId)}`);
+    async getStats(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.get(`/stats${q}`);
     }
-    async clearCache(tenantId = null, agentId = null) {
+    async clearCache(tenantId) {
         if (!tenantId) throw new ApiError(400, 'tenant_id requerido para limpiar caché');
-        const p = this._scopeParams(tenantId, agentId);
-        return this.del(`/cache?${p}`);
+        return this.del(`/cache?tenant_id=${tenantId}`);
     }
     async health() { return this.get('/health'); }
     async healthDeep() { return this.get('/health/deep'); }
@@ -150,26 +186,100 @@ class RAGApiClient {
         const p = new URLSearchParams({ agent_id: agentId || 'default' });
         return this.get(`/agents/${tenantId}?${p}`);
     }
+    // NOTE: PUT /agents/{tenant_id} does NOT exist in backend.
+    // Use deleteAgent + createAgent to replace, or wait for backend support.
     async updateAgent(tenantId, agentId, data) {
-        return this.put(`/agents/${tenantId}?agent_id=${agentId || 'default'}`, data);
+        console.warn('[api] updateAgent: PUT endpoint does not exist in backend — using POST recreate');
+        return this.post('/agents', { tenant_id: tenantId, agent_id: agentId || 'default', ...data });
     }
     async deleteAgent(tenantId, agentId = null) {
         const p = new URLSearchParams({ confirm: 'true', agent_id: agentId || 'default' });
         return this.del(`/agents/${tenantId}?${p}`);
     }
+    /** DELETE /agents/{tenant_id}/destroy — permanent destroy including KB collection */
+    async destroyAgent(tenantId, agentId = null) {
+        const p = new URLSearchParams({ confirm: 'true', agent_id: agentId || 'default' });
+        return this.del(`/agents/${tenantId}/destroy?${p}`);
+    }
 
 
     // ── API Keys ─────────────────────────────────────────────────
 
-    async listApiKeys(tenantId) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/api-keys${q}`);
+    async listApiKeys() {
+        return this.get('/api-keys');
     }
     async createApiKey(data) { return this.post('/api-keys', data); }
     async revokeApiKey(keyId) { return this.del(`/api-keys/${keyId}`); }
-    async revokeAllApiKeys(tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.post(`/api-keys/revoke-all${q}`);
+    async revokeAllApiKeys() {
+        return this.post('/api-keys/revoke-all');
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────
+
+    /** Register a new user. Returns { token, refresh_token, user }. */
+    async register(email, password, name = '') {
+        const res = await this.post('/auth/register', { email, password, name });
+        if (res.token && typeof AuthSession !== 'undefined') {
+            AuthSession.save(res);
+        }
+        return res;
+    }
+
+    /** Login with email & password. Returns { token, refresh_token, user }. */
+    async login(email, password) {
+        const res = await this.post('/auth/login', { email, password });
+        if (res.token && typeof AuthSession !== 'undefined') {
+            AuthSession.save(res);
+        }
+        return res;
+    }
+
+    /** Refresh an expired access token using the stored refresh token. */
+    async refreshToken() {
+        const refresh = (typeof AuthSession !== 'undefined')
+            ? AuthSession.getRefreshToken()
+            : localStorage.getItem('draga-auth-refresh');
+        if (!refresh) throw new ApiError('No refresh token available', 401);
+        const res = await this.post('/auth/refresh', { refresh_token: refresh });
+        if (res.token && typeof AuthSession !== 'undefined') {
+            // Preserve existing user data on refresh
+            const user = AuthSession.getUser();
+            AuthSession.save({ token: res.token, refresh_token: res.refresh_token || refresh, user: res.user || user });
+        }
+        return res;
+    }
+
+    /** Logout — clear tokens client-side (and optionally revoke server-side). */
+    async logout() {
+        try { await this.post('/auth/logout'); } catch (_) { /* best-effort */ }
+        AuthSession.clear();
+    }
+
+    /** Get current user profile. */
+    async me() { return this.get('/auth/me'); }
+
+    /** List all users (platform_admin only). */
+    async listUsers() { return this.get('/auth/users'); }
+
+    /** Invite / create user (platform_admin only). */
+    async inviteUser(data) { return this.post('/auth/users', data); }
+
+    /** Change a user's role (platform_admin only). */
+    async changeUserRole(userId, role) {
+        return this.put(`/auth/users/${userId}/role`, { role });
+    }
+
+    /** Update a user's scoped tenants / agents (platform_admin only). */
+    async updateUserScope(userId, scopedTenants, scopedAgents) {
+        return this.put(`/auth/users/${userId}/scope`, {
+            scoped_tenants: scopedTenants,
+            scoped_agents: scopedAgents
+        });
+    }
+
+    /** Deactivate a user (platform_admin only). */
+    async deactivateUser(userId) {
+        return this.del(`/auth/users/${userId}`);
     }
 
     // ── Conversations ────────────────────────────────────────────
@@ -179,45 +289,47 @@ class RAGApiClient {
         if (limit) params.set('limit', limit);
         return this.get(`/conversations?${params}`);
     }
-    async getConversation(sessionId, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.get(`/conversations/${sessionId}${q}`);
+    async getConversation(sessionId, tenantId = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        return this.get(`/conversations/${sessionId}?${params}`);
     }
-    async deleteConversation(sessionId, tenantId = null) {
-        const q = tenantId ? `?tenant_id=${tenantId}` : '';
-        return this.del(`/conversations/${sessionId}${q}`);
+    async deleteConversation(sessionId, tenantId = null, agentId = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        return this.del(`/conversations/${sessionId}?${params}`);
     }
 
     // ── Widget Config ─────────────────────────────────────────────
 
-    async getWidgetConfig(tenantId, agentId = null) {
-        return this.get(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`);
+    async getWidgetConfig(tenantId) {
+        return this.get(`/agents/${tenantId}/widget-config`);
     }
-    async updateWidgetConfig(tenantId, data, agentId = null) {
-        return this.put(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`, data);
+    async updateWidgetConfig(tenantId, data) {
+        return this.put(`/agents/${tenantId}/widget-config`, data);
     }
-    async resetWidgetConfig(tenantId, agentId = null) {
-        return this.del(`/agents/${tenantId}/widget-config?agent_id=${agentId || 'default'}`);
+    async resetWidgetConfig(tenantId) {
+        return this.del(`/agents/${tenantId}/widget-config`);
     }
 
     // ── Tasks ──────────────────────────────────────────────────────
 
-    async listTasks(tenantId = null, state = null, limit = null, agentId = null) {
-        const params = this._scopeParams(tenantId, agentId);
+    async listTasks(tenantId = null, state = null, limit = null) {
+        const params = new URLSearchParams();
+        if (tenantId) params.set('tenant_id', tenantId);
         if (state) params.set('state', state);
         if (limit) params.set('limit', limit);
         const q = params.toString() ? `?${params}` : '';
         return this.get(`/tasks${q}`);
     }
     async getTask(taskId) { return this.get(`/tasks/${taskId}`); }
-    async cleanupTasks(tenantId = null, agentId = null) {
-        return this.del(`/tasks${this._scopeQuery(tenantId, agentId)}`);
+    async cleanupTasks(tenantId = null) {
+        const q = tenantId ? `?tenant_id=${tenantId}` : '';
+        return this.del(`/tasks${q}`);
     }
 
     // ── Metrics ───────────────────────────────────────────────────
 
-    async metricsOperational(tenantId = null, agentId = null) {
-        return this.get(`/metrics/operational${this._scopeQuery(tenantId, agentId)}`);
+    async metricsOperational() {
+        return this.get('/metrics/operational');
     }
     async metricsDashboard(tenantId = null, agentId = null) {
         return this.get(`/metrics/dashboard${this._scopeQuery(tenantId, agentId)}`);
@@ -233,6 +345,16 @@ class RAGApiClient {
     }
     async metricsGrounding(tenantId = null, agentId = null) {
         return this.get(`/metrics/grounding${this._scopeQuery(tenantId, agentId)}`);
+    }
+    async metricsKbCoverage(tenantId = null, agentId = null, limit = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        if (limit) params.set('limit', limit);
+        return this.get(`/metrics/kb-coverage?${params}`);
+    }
+    async metricsTrends(tenantId = null, agentId = null, windowHours = null) {
+        const params = this._scopeParams(tenantId, agentId);
+        if (windowHours) params.set('window_hours', windowHours);
+        return this.get(`/metrics/trends?${params}`);
     }
     async metricsPrometheus() {
         const url = `${this.baseUrl}/metrics/prometheus`;
@@ -435,6 +557,7 @@ class RAGApiClient {
     async mcpResources() { return this.get('/mcp/resources'); }
     async mcpGetResource(path) { return this.get(`/mcp/resources/${path}`); }
     async mcpSession(id) { return this.get(`/mcp/sessions/${id}`); }
+    async mcpClearSession(id) { return this.del(`/mcp/sessions/${id}`); }
 
     // ── Feedback ──────────────────────────────────────────────────
 
@@ -481,11 +604,13 @@ class RAGApiClient {
     async getDocumentLabels(tenantId, documentId) {
         return this.get(`/agents/${tenantId}/documents/${documentId}/labels`);
     }
-    async assignLabel(tenantId, documentId, labelId) {
-        return this.post(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}`);
+    async assignLabel(tenantId, documentId, labelId, agentId = null) {
+        const q = `?agent_id=${agentId || 'default'}`;
+        return this.post(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}${q}`);
     }
-    async unassignLabel(tenantId, documentId, labelId) {
-        return this.del(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}`);
+    async unassignLabel(tenantId, documentId, labelId, agentId = null) {
+        const q = `?agent_id=${agentId || 'default'}`;
+        return this.del(`/agents/${tenantId}/documents/${documentId}/labels/${labelId}${q}`);
     }
 
     // ── Admin ─────────────────────────────────────────────────────
@@ -503,6 +628,21 @@ class RAGApiClient {
     // ── Feature Flags ─────────────────────────────────────────────
 
     async listFeatureFlags() { return this.get('/admin/feature-flags'); }
+    async reloadFeatureFlags() { return this.post('/admin/feature-flags/reload'); }
+    async getTenantFlags(tenantId) { return this.get(`/admin/feature-flags/tenants/${tenantId}`); }
+    async getTenantFlagsResolved(tenantId) { return this.get(`/admin/feature-flags/tenants/${tenantId}/resolved`); }
+    async setTenantFlag(tenantId, flagName, enabled) {
+        return this.put(`/admin/feature-flags/tenants/${tenantId}/${flagName}`, { enabled });
+    }
+    async deleteTenantFlag(tenantId, flagName) {
+        return this.del(`/admin/feature-flags/tenants/${tenantId}/${flagName}`);
+    }
+    async setGlobalFlag(flagName, enabled) {
+        return this.put(`/admin/feature-flags/${flagName}`, { enabled });
+    }
+    async platformReset(confirm = false) {
+        return this.post(`/admin/platform-reset?confirm=${confirm}`);
+    }
 
     // ── OpenAI Compatible ─────────────────────────────────────────
 

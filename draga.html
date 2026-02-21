@@ -7,6 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script src="src/auth.js"></script>
     <script src="src/api-client.js"></script>
     <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -43,6 +44,16 @@ body{font-family:'Lato',-apple-system,sans-serif;background:var(--bg-dark);color
 .header-right{display:flex;align-items:center;gap:10px;}
 .health-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.health-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:var(--transition);}
+.health-pill.online{background:rgba(34,197,94,0.1);color:var(--success);}
+.health-pill.offline{background:rgba(239,68,68,0.1);color:var(--danger);}
+.health-pill.degraded{background:rgba(245,158,11,0.1);color:var(--warning);}
+.degradation-banner{display:none;grid-column:1/-1;padding:8px 24px;font-size:12px;font-weight:600;gap:8px;align-items:center;z-index:99;}
+.degradation-banner.active{display:flex;}
+.degradation-banner.warn{background:rgba(245,158,11,0.12);color:var(--warning);border-bottom:1px solid rgba(245,158,11,0.25);}
+.degradation-banner.error{background:rgba(239,68,68,0.1);color:var(--danger);border-bottom:1px solid rgba(239,68,68,0.2);}
+.degradation-banner .close-btn{margin-left:auto;cursor:pointer;opacity:0.7;font-size:14px;}
+.degradation-banner .close-btn:hover{opacity:1;}
 
 /* ═══ SIDEBAR ═══ */
 .sidebar{background:var(--bg-main);border-right:1px solid var(--border);padding:12px 0;overflow-y:auto;}
@@ -373,11 +384,22 @@ tr:hover td{background:var(--bg-card);}
     </div>
     <div class="header-right">
         <span class="tenant-name" id="tenantDisplayName"></span>
-        <div class="health-dot" id="healthDot" title="API Status"></div>
+        <div class="health-pill online" id="healthPill" title="Estado de servicios" onclick="App.nav('overview')">
+            <div class="health-dot" id="healthDot"></div>
+            <span id="healthText">checking...</span>
+        </div>
         <a href="#" id="linkToTenant" class="btn btn-sm">🏢 Tenant</a>
         <a href="admin.html" class="btn btn-sm">🏗️ Plataforma</a>
     </div>
 </header>
+
+<!-- ═══ DEGRADATION BANNER ═══ -->
+<div class="degradation-banner" id="degradationBanner">
+    <span id="degradationIcon">⚠️</span>
+    <span id="degradationMsg">Servicio degradado</span>
+    <span id="degradationDetail" style="font-weight:400;font-size:11px;color:var(--text-muted)"></span>
+    <span class="close-btn" onclick="document.getElementById('degradationBanner').classList.remove('active')" title="Cerrar">✕</span>
+</div>
 
 <!-- ═══ SIDEBAR ═══ -->
 <nav class="sidebar">
@@ -502,6 +524,13 @@ tr:hover td{background:var(--bg-card);}
                 <button class="btn btn-sm btn-danger" onclick="KB.confirmReset()">☢️ Reset</button>
             </div>
         </div>
+        <!-- Pending inbox banner (shown when there are unprocessed files) -->
+        <div id="pendingBanner" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:13px;">📦 <strong id="pendingCount">0</strong> archivo(s) en el inbox pendientes de procesar</div>
+                <button class="btn btn-sm btn-primary" onclick="KB.processPending()" id="processPendingBtn">⚡ Procesar pendientes</button>
+            </div>
+        </div>
         <!-- Ingestion progress tracker (hidden by default) -->
         <div id="ingestTracker" style="display:none;"></div>
 
@@ -591,6 +620,7 @@ tr:hover td{background:var(--bg-card);}
 
     <div class="section">
         <div class="section-title"><span class="icon">🧪</span> Live Test</div>
+        <div id="pipelineServiceStatus" style="margin-bottom:10px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);">Cargando estado de servicios...</div>
         <div class="card">
             <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
                 <input type="text" id="pipelineQuery" placeholder="Escribe una consulta para probar el pipeline..." style="flex:1;min-width:200px;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;" onkeydown="if(event.key==='Enter')Pipeline.run()">
@@ -601,7 +631,7 @@ tr:hover td{background:var(--bg-card);}
                 </select>
                 <button class="btn btn-primary" onclick="Pipeline.run()">▶ Ejecutar</button>
             </div>
-            <p style="font-size:11px;color:var(--text-muted);margin:0 0 14px 0">Compara la respuesta usando distintos protocolos: <strong>REST</strong> (/query), <strong>OpenAI</strong> (/chat/completions), <strong>MCP</strong> (rag_query tool)</p>
+            <p style="font-size:11px;color:var(--text-muted);margin:0 0 14px 0">Compara la respuesta usando distintos protocolos: <strong>REST</strong> (/query), <strong>OpenAI</strong> (/chat/completions), <strong>MCP</strong> (generate_rag_answer tool)</p>
             <div id="pipelineResult"></div>
         </div>
     </div>
@@ -695,7 +725,7 @@ tr:hover td{background:var(--bg-card);}
         <span id="chatModelGroup2"></span>
         <input type="number" id="chatTopK" value="5" min="1" max="50" style="width:50px;padding:4px 6px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);" title="Top K">
         <select id="chatToolName" style="display:none;padding:4px 8px;font-size:11px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);">
-            <option value="rag_query">rag_query</option>
+            <option value="generate_rag_answer">generate_rag_answer</option>
         </select>
         <label style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);cursor:pointer;" id="chatStreamToggle">
             <input type="checkbox" id="chatStream" checked> Stream
@@ -968,6 +998,9 @@ tr:hover td{background:var(--bg-card);}
     <div class="modal" style="max-width:560px">
         <div class="modal-title">🌐 Importar desde Web</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Introduce la URL de una página web. El backend extraerá el contenido principal como Markdown y lo indexará automáticamente.</p>
+        <div style="font-size:11px;color:var(--warning);background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2);border-radius:var(--radius);padding:8px 10px;margin-bottom:10px">
+            ⚠️ <strong>Nota:</strong> Las páginas que usan frameworks JavaScript (Angular, React, Vue) o que requieren login pueden no tener contenido extraíble. En esos casos, usa <strong>✏️ Texto</strong> para copiar y pegar el contenido manualmente.
+        </div>
         <div class="form-group">
             <label>URL de la página web</label>
             <input type="url" id="urlIngestInput" placeholder="https://ejemplo.com/articulo" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
@@ -1018,9 +1051,19 @@ tr:hover td{background:var(--bg-card);}
         <input type="file" id="fileInput" multiple accept=".pdf,.md,.txt,.docx,.odt,.xlsx,.xls,.json,.xml" style="display:none" onchange="KB.addFiles([...this.files]);this.value='';">
         <div id="uploadFileList"></div>
         <div id="uploadOptions" style="display:none;margin-top:12px;">
-            <div class="form-row">
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optAutoIdx" checked> Auto-indexar</label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="optBg" checked> En background</label>
+            <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">Modo de carga</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <label style="flex:1;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--bg-input);border:2px solid var(--draga-accent);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;" id="modeDirectLabel">
+                    <input type="radio" name="uploadMode" value="direct" checked onchange="KB._updateModeUI()" style="margin-top:2px;">
+                    <div><strong>⚡ Subir y procesar</strong><br><span style="color:var(--text-muted);font-size:11px">Sube e indexa cada archivo inmediatamente</span></div>
+                </label>
+                <label style="flex:1;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--bg-input);border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:12px;" id="modeBatchLabel">
+                    <input type="radio" name="uploadMode" value="batch" onchange="KB._updateModeUI()" style="margin-top:2px;">
+                    <div><strong>📦 Solo subir (batch)</strong><br><span style="color:var(--text-muted);font-size:11px">Sube todos primero, procesa después con un click</span></div>
+                </label>
+            </div>
+            <div id="uploadModeHint" style="font-size:11px;color:var(--info);background:rgba(59,130,246,0.08);border-radius:var(--radius-sm);padding:6px 10px;display:none;">
+                💡 Los archivos se guardarán en el inbox. Cuando estés listo, pulsa <strong>"Procesar pendientes"</strong> para indexarlos todos de una vez.
             </div>
         </div>
         <div class="modal-footer">
@@ -1585,7 +1628,7 @@ const App = {
         const loaders = {
             overview: () => Overview.load(),
             knowledge: () => KB.load(),
-            pipeline: () => {},
+            pipeline: () => PipelineModule.load(),
             quality: () => Quality.load(),
             chat: () => ConvHistory.load(),
             widgets: () => Widgets.load(),
@@ -1594,10 +1637,67 @@ const App = {
         loaders[mod]?.();
     },
 
+    // F14: Deep health check — per-service status in header pill + degradation banner
+    _serviceHealth: null,
     async checkHealth() {
+        const pill = document.getElementById('healthPill');
         const dot = document.getElementById('healthDot');
-        try { await api.health(); dot.style.background = 'var(--success)'; }
-        catch { dot.style.background = 'var(--danger)'; }
+        const text = document.getElementById('healthText');
+        const banner = document.getElementById('degradationBanner');
+        const bannerMsg = document.getElementById('degradationMsg');
+        const bannerDetail = document.getElementById('degradationDetail');
+        const bannerIcon = document.getElementById('degradationIcon');
+        try {
+            const deep = await api.healthDeep();
+            const status = deep.status || 'unknown';
+            const checks = deep.checks || {};
+            this._serviceHealth = checks;
+
+            // Identify failed services
+            const failed = Object.entries(checks).filter(([,v]) => !v.ok).map(([k]) => k);
+            const allOk = failed.length === 0;
+
+            if (allOk) {
+                pill.className = 'health-pill online';
+                text.textContent = 'online';
+                dot.style.background = 'var(--success)';
+                banner.className = 'degradation-banner';
+            } else if (status === 'degraded') {
+                pill.className = 'health-pill degraded';
+                text.textContent = 'degradado';
+                dot.style.background = 'var(--warning)';
+                // Show degradation banner with specifics
+                const embDown = failed.includes('embedding');
+                if (embDown) {
+                    banner.className = 'degradation-banner warn active';
+                    bannerIcon.textContent = '⚠️';
+                    bannerMsg.textContent = 'Servicio de búsqueda temporalmente no disponible';
+                    bannerDetail.textContent = '— El servicio de embeddings está caído. Chat y búsqueda vectorial no funcionarán hasta que se restaure.';
+                } else {
+                    banner.className = 'degradation-banner warn active';
+                    bannerIcon.textContent = '⚠️';
+                    bannerMsg.textContent = `Servicios degradados: ${failed.join(', ')}`;
+                    bannerDetail.textContent = '';
+                }
+            } else {
+                pill.className = 'health-pill offline';
+                text.textContent = 'error';
+                dot.style.background = 'var(--danger)';
+                banner.className = 'degradation-banner error active';
+                bannerIcon.textContent = '❌';
+                bannerMsg.textContent = 'Plataforma no disponible';
+                bannerDetail.textContent = `— ${failed.join(', ')} no responden`;
+            }
+        } catch {
+            pill.className = 'health-pill offline';
+            text.textContent = 'offline';
+            dot.style.background = 'var(--danger)';
+            banner.className = 'degradation-banner error active';
+            bannerIcon.textContent = '❌';
+            bannerMsg.textContent = 'API no disponible';
+            bannerDetail.textContent = '';
+            this._serviceHealth = null;
+        }
     }
 };
 
@@ -1854,6 +1954,22 @@ const KB = {
         await this.loadDocs();
         await this.loadStats();
         // Labels disabled: await this.loadLabels();
+        // Check for pending/uploaded docs and show/hide inbox banner
+        this._checkPendingBanner();
+    },
+
+    _checkPendingBanner() {
+        const pendingStatuses = ['pending', 'uploaded'];
+        const pendingDocs = this.docs.filter(d => pendingStatuses.includes(d.status));
+        const banner = document.getElementById('pendingBanner');
+        if (banner) {
+            if (pendingDocs.length > 0) {
+                document.getElementById('pendingCount').textContent = pendingDocs.length;
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
     },
 
     /**
@@ -1905,19 +2021,19 @@ const KB = {
             // If documentStats shows 0 docs but vector DB has chunks, show chunks count from stats
             if (totalDocs === 0) {
                 try {
-                    const vs = await api.getStats(App.tenantId, App.agentId);
+                    const vs = await api.getStats(App.tenantId);
                     const vc = vs.vector_database?.total_chunks || 0;
                     if (vc > 0) {
                         document.getElementById('kbChunks').textContent = vc;
                         document.getElementById('navDocCount').textContent = `${vc}✂`;
                     }
-                } catch {}
+                } catch (e2) { console.warn('KB vector stats fallback error:', e2); }
             }
         } catch (e) {
             console.warn('KB Stats error:', e);
             // Fallback to vector DB stats
             try {
-                const vs = await api.getStats(App.tenantId, App.agentId);
+                const vs = await api.getStats(App.tenantId);
                 const db = vs.vector_database || {};
                 document.getElementById('kbTotal').textContent = '—';
                 document.getElementById('kbChunks').textContent = db.total_chunks || 0;
@@ -2035,10 +2151,10 @@ const KB = {
         const has = current.some(l => l.id === labelId);
         try {
             if (has) {
-                await api.unassignLabel(App.tenantId, docId, labelId);
+                await api.unassignLabel(App.tenantId, docId, labelId, App.agentId);
                 this.docLabels[docId] = current.filter(l => l.id !== labelId);
             } else {
-                await api.assignLabel(App.tenantId, docId, labelId);
+                await api.assignLabel(App.tenantId, docId, labelId, App.agentId);
                 const label = this.labels.find(l => l.id === labelId);
                 if (label) this.docLabels[docId] = [...current, label];
             }
@@ -2290,13 +2406,24 @@ const KB = {
                 toast(`✅ Web importada: ${res.filename}`, 'success');
                 await this.loadAndStabilize();
             } else {
+                const errMsg = res.error || 'Error al importar';
+                const isNoContent = errMsg.toLowerCase().includes('no meaningful content') || errMsg.toLowerCase().includes('no content');
+                const hint = isNoContent
+                    ? '<div style="font-size:12px;color:var(--text-muted);margin-top:8px">💡 Esta página probablemente usa JavaScript para cargar su contenido (SPA/Angular/React/Vue) o está protegida. Prueba con <strong>✏️ Texto</strong> para pegar el contenido manualmente.</div>'
+                    : '';
                 resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
-                    <div style="color:var(--danger)">❌ ${esc(res.error || 'Error al importar')}</div>
+                    <div style="color:var(--danger)">❌ ${isNoContent ? 'No se pudo extraer contenido de esta página' : esc(errMsg)}</div>
+                    ${hint}
                 </div>`;
             }
         } catch (e) {
+            const isGateway = e.message && (e.message.includes('502') || e.message.includes('Bad Gateway') || e.message.includes('503'));
+            const friendlyMsg = isGateway
+                ? 'El servicio de importación no está disponible temporalmente. Intenta de nuevo en unos minutos.'
+                : e.message;
             resultDiv.innerHTML = `<div class="card" style="border-left:3px solid var(--danger);padding:10px 14px">
-                <div style="color:var(--danger)">❌ ${esc(e.message)}</div>
+                <div style="color:var(--danger)">❌ ${esc(friendlyMsg)}</div>
+                ${isGateway ? '<div style="font-size:12px;color:var(--text-muted);margin-top:6px">Si el error persiste, contacta al administrador.</div>' : ''}
             </div>`;
         } finally {
             btn.disabled = false;
@@ -2407,6 +2534,25 @@ const KB = {
             this.uploadFiles.push(f);
         });
         this.renderUploadFiles();
+    },
+
+    _updateModeUI() {
+        const mode = document.querySelector('input[name="uploadMode"]:checked')?.value || 'direct';
+        const directLabel = document.getElementById('modeDirectLabel');
+        const batchLabel = document.getElementById('modeBatchLabel');
+        const hint = document.getElementById('uploadModeHint');
+        const btn = document.getElementById('uploadBtn');
+        if (mode === 'batch') {
+            batchLabel.style.borderColor = 'var(--draga-accent)';
+            directLabel.style.borderColor = 'var(--border)';
+            hint.style.display = 'block';
+            btn.innerHTML = '📦 Subir al inbox';
+        } else {
+            directLabel.style.borderColor = 'var(--draga-accent)';
+            batchLabel.style.borderColor = 'var(--border)';
+            hint.style.display = 'none';
+            btn.innerHTML = '📤 Subir';
+        }
     },
 
     renderUploadFiles() {
@@ -2527,20 +2673,54 @@ const KB = {
         this._activeTask = null;
     },
 
+    async processPending() {
+        const btn = document.getElementById('processPendingBtn');
+        if (!btn) return;
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;display:inline-block"></div> Procesando...';
+        try {
+            const res = await api.processPending(App.tenantId, false, App.agentId);
+            const taskId = res.task_id;
+            if (taskId) {
+                this._activeTask = taskId;
+                this._showTracker(['Procesando archivos pendientes...']);
+                this._pollIngest(taskId);
+            } else {
+                toast('✅ Archivos pendientes procesados', 'success');
+                await this.loadAndStabilize();
+            }
+            document.getElementById('pendingBanner').style.display = 'none';
+        } catch (e) {
+            toast('Error al procesar pendientes: ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '⚡ Procesar pendientes';
+        }
+    },
+
     async doUpload() {
         if (this.uploading || !this.uploadFiles.length) return;
         this.uploading = true;
         const btn = document.getElementById('uploadBtn');
         const fileNames = this.uploadFiles.map(f => f.name);
         btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:14px;height:14px"></div> Subiendo...';
+        const mode = document.querySelector('input[name="uploadMode"]:checked')?.value || 'direct';
+        const autoIdx = mode === 'direct';
+        const bg = mode === 'direct';
         try {
-            const autoIdx = document.getElementById('optAutoIdx').checked;
-            const bg = document.getElementById('optBg').checked;
             const res = await api.uploadDocuments(this.uploadFiles, App.tenantId, autoIdx, bg, App.agentId);
 
             closeModal('uploadModal');
 
-            if (bg && res.task_id) {
+            if (mode === 'batch') {
+                // Batch mode: files uploaded to inbox, show pending banner
+                const count = res.successful || res.results?.length || fileNames.length;
+                toast(`📦 ${count} archivo(s) subidos al inbox. Pulsa "Procesar pendientes" cuando estés listo.`, 'success');
+                const banner = document.getElementById('pendingBanner');
+                document.getElementById('pendingCount').textContent = count;
+                banner.style.display = 'block';
+                await this.loadAndStabilize();
+            } else if (bg && res.task_id) {
                 // Background mode: show tracker and poll
                 this._activeTask = res.task_id;
                 this._showTracker(fileNames);
@@ -2570,7 +2750,7 @@ const KB = {
                 await this.loadAndStabilize();
             }
         } catch (e) { toast('Error: ' + e.message, 'error'); }
-        finally { this.uploading = false; btn.disabled = false; btn.innerHTML = '📤 Subir'; }
+        finally { this.uploading = false; btn.disabled = false; btn.innerHTML = mode === 'batch' ? '📦 Subir al inbox' : '📤 Subir'; }
     },
 
     async _pollIngest(taskId) {
@@ -2603,7 +2783,7 @@ const KB = {
                     // One-shot fallback: check task list in case GET-by-ID is the issue.
                     this._pollTimer = null;
                     try {
-                        const list = await api.listTasks(App.tenantId, null, 5, App.agentId);
+                        const list = await api.listTasks(App.tenantId, null, 5);
                         const found = (list.tasks || []).find(t => t.task_id === taskId);
                         if (found) {
                             this._updateTracker(found);
@@ -2634,8 +2814,7 @@ const KB = {
         result.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando en base vectorial...</div>';
         const t0 = Date.now();
         try {
-            const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
-            // agent_id: backend Issue #347 — search_knowledge_base aún no soporta agent_id
+            const mcpArgs = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
             const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
             const latency = Date.now() - t0;
             if (!res.success) {
@@ -2686,7 +2865,68 @@ const KB = {
 };
 
 // ══════════════════════════════════════════════════════════════
-// PIPELINE
+// PIPELINE MODULE — Nav-level loader (F15: was dead code `() => {}`)
+// ══════════════════════════════════════════════════════════════
+const PipelineModule = {
+    async load() {
+        // Update step items with service health indicators
+        await this._updateStepHealth();
+        // Pre-populate query from URL or last search
+        const urlQ = new URLSearchParams(window.location.search).get('q');
+        if (urlQ) document.getElementById('pipelineQuery').value = urlQ;
+    },
+
+    async _updateStepHealth() {
+        const steps = document.querySelectorAll('#mod-pipeline .step-item');
+        // Reset all step items
+        steps.forEach(s => { s.style.opacity = ''; s.title = ''; });
+
+        try {
+            const checks = App._serviceHealth || (await api.healthDeep()).checks || {};
+            const embOk = checks.embedding?.ok ?? true;
+            const llmOk = checks.llm?.ok ?? true;
+            const vdbOk = Object.entries(checks).some(([k, v]) =>
+                ['qdrant', 'chroma', 'chromadb', 'pgvector'].some(db => k.toLowerCase().includes(db)) && v.ok
+            );
+
+            // Mark steps that depend on failed services
+            steps.forEach(s => {
+                const label = s.textContent.trim().toLowerCase();
+                if (!embOk && (label.includes('embedding') || label.includes('vector search'))) {
+                    s.style.opacity = '0.4';
+                    s.style.borderLeft = '3px solid var(--danger)';
+                    s.title = '⚠️ Servicio de embeddings no disponible';
+                }
+                if (!vdbOk && label.includes('vector search')) {
+                    s.style.opacity = '0.4';
+                    s.style.borderLeft = '3px solid var(--danger)';
+                    s.title = '⚠️ Base de datos vectorial no disponible';
+                }
+                if (!llmOk && (label.includes('llm') || label.includes('generation'))) {
+                    s.style.opacity = '0.4';
+                    s.style.borderLeft = '3px solid var(--danger)';
+                    s.title = '⚠️ Servicio LLM no disponible';
+                }
+            });
+
+            // Show service status summary above Live Test
+            const summary = document.getElementById('pipelineServiceStatus');
+            if (summary) {
+                const svcHtml = Object.entries(checks).map(([k, v]) => {
+                    const icon = v.ok ? '✅' : '❌';
+                    const ms = v.latency_ms != null ? `${Math.round(v.latency_ms)}ms` : '—';
+                    return `<span style="font-size:11px;margin-right:12px;">${icon} <strong>${k}</strong> ${ms}</span>`;
+                }).join('');
+                summary.innerHTML = svcHtml;
+            }
+        } catch {
+            // Health unavailable — leave steps in default state
+        }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// PIPELINE — Live test execution
 // ══════════════════════════════════════════════════════════════
 const Pipeline = {
     async run() {
@@ -2695,7 +2935,7 @@ const Pipeline = {
         const protocol = document.getElementById('pipelineProtocol').value;
 
         const result = document.getElementById('pipelineResult');
-        const protoLabels = { rest: '🔌 REST /query', openai: '🤖 OpenAI /chat/completions', mcp: '🔗 MCP rag_query' };
+        const protoLabels = { rest: '🔌 REST /query', openai: '🤖 OpenAI /chat/completions', mcp: '🔗 MCP generate_rag_answer' };
         result.innerHTML = `<div class="loading"><div class="spinner"></div> Ejecutando vía ${protoLabels[protocol]}...</div>`;
         const t0 = Date.now();
 
@@ -2727,15 +2967,15 @@ const Pipeline = {
                     _raw_oai: oaiRes
                 };
             } else if (protocol === 'mcp') {
-                // ── MCP: POST /mcp/tools/call → rag_query ──
+                // ── MCP: POST /mcp/tools/call → generate_rag_answer ──
                 const mcpArgs = { query, tenant_id: App.tenantId };
                 if (App.agentId && App.agentId !== 'default') mcpArgs.agent_id = App.agentId;
-                const mcpRes = await api.mcpCallTool('rag_query', mcpArgs);
+                const mcpRes = await api.mcpCallTool('generate_rag_answer', mcpArgs);
                 // Normalize MCP response
                 if (!mcpRes.success && mcpRes.error) {
                     throw new Error(`MCP error: ${mcpRes.error}`);
                 }
-                // MCP rag_query returns markdown text; extract structured data if available
+                // MCP generate_rag_answer returns markdown text; extract structured data if available
                 const raw = mcpRes.result || mcpRes.answer || '';
                 res = {
                     answer: typeof raw === 'string' ? raw : (raw.answer || JSON.stringify(raw)),
@@ -2797,8 +3037,7 @@ const Pipeline = {
         result.innerHTML = '<div class="loading"><div class="spinner"></div> Buscando en base vectorial...</div>';
         const t0 = Date.now();
         try {
-            const mcpArgs = { query, tenant_id: App.tenantId, top_k: topK };
-            // agent_id: backend Issue #347 — search_knowledge_base aún no soporta agent_id
+            const mcpArgs = { query, tenant_id: App.tenantId, agent_id: App.agentId, top_k: topK };
             const res = await api.mcpCallTool('search_knowledge_base', mcpArgs);
             const latency = Date.now() - t0;
             if (!res.success) {
@@ -3060,7 +3299,7 @@ const Chat = {
     // ── MCP Protocol (tool call) ──
     async _sendMCP(query, msgId, thinkEl, btn) {
         thinkEl.innerHTML = '';
-        const toolName = document.getElementById('chatToolName').value || 'rag_query';
+        const toolName = document.getElementById('chatToolName').value || 'generate_rag_answer';
         const sessionId = `draga-chat-${App.tenantId}-${App.agentId || 'default'}`;
         const args = { query, tenant_id: App.tenantId };
         if (App.agentId) args.agent_id = App.agentId;
@@ -3265,7 +3504,7 @@ const ConvHistory = {
 
     async openSession(sessionId) {
         try {
-            const data = await api.getConversation(sessionId, App.tenantId);
+            const data = await api.getConversation(sessionId, App.tenantId, App.agentId);
             const messages = data.messages || [];
             if (messages.length === 0) { toast('Sesión vacía', 'info'); return; }
 
@@ -3411,7 +3650,7 @@ const Widgets = {
 
     async useExistingKey() {
         try {
-            const data = await api.listApiKeys(App.tenantId);
+            const data = await api.listApiKeys();
             const keys = data.keys || [];
             if (keys.length === 0) {
                 toast('No hay API Keys. Crea una en la sección Configuración.', 'warning');
@@ -3689,7 +3928,7 @@ const ApiKeys = {
         const container = document.getElementById('dragaApiKeys');
         container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
         try {
-            const data = await api.listApiKeys(App.tenantId);
+            const data = await api.listApiKeys();
             const keys = data.keys || [];
 
             if (keys.length === 0) {
@@ -3959,7 +4198,7 @@ const WidgetCfg = {
 
     async load() {
         try {
-            this.config = await api.getWidgetConfig(App.tenantId, App.agentId);
+            this.config = await api.getWidgetConfig(App.tenantId);
             this.renderTheme();
             this.renderBranding();
             this.renderBehavior();
@@ -4035,14 +4274,14 @@ const WidgetCfg = {
             max_message_length: parseInt(document.getElementById('wbh_max_message_length')?.value) || 2000,
         };
         try {
-            await api.updateWidgetConfig(App.tenantId, { theme, branding, behavior }, App.agentId);
+            await api.updateWidgetConfig(App.tenantId, { theme, branding, behavior });
             toast('Widget guardado', 'success');
         } catch (e) { toast('Error: ' + e.message, 'error'); }
     },
 
     async reset() {
         showConfirm('Reset Widget', 'Restaurar configuración del widget a defaults.', async () => {
-            try { await api.resetWidgetConfig(App.tenantId, App.agentId); toast('Widget reseteado', 'success'); this.load(); }
+            try { await api.resetWidgetConfig(App.tenantId); toast('Widget reseteado', 'success'); this.load(); }
             catch (e) { toast('Error: ' + e.message, 'error'); }
         });
     }
@@ -4056,7 +4295,7 @@ const TasksMod = {
         const container = document.getElementById('taskTable');
         const state = document.getElementById('taskStateFilter')?.value || null;
         try {
-            const res = await api.listTasks(App.tenantId, state, null, App.agentId);
+            const res = await api.listTasks(App.tenantId, state);
             const tasks = res.tasks || res || [];
             if (!tasks.length) { container.innerHTML = '<div class="empty-state"><p>No hay tareas</p></div>'; return; }
             container.innerHTML = `<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Estado</th><th>Progreso</th><th>Archivos</th><th>Resultado</th><th>Tiempo</th></tr></thead>
@@ -4082,7 +4321,7 @@ const TasksMod = {
 
     async cleanup() {
         showConfirm('Limpiar Tareas', 'Eliminar tareas completadas/fallidas.', async () => {
-            try { await api.cleanupTasks(App.tenantId, App.agentId); toast('Tareas limpiadas', 'success'); this.refresh(); }
+            try { await api.cleanupTasks(App.tenantId); toast('Tareas limpiadas', 'success'); this.refresh(); }
             catch (e) { toast('Error: ' + e.message, 'error'); }
         });
     }
@@ -4091,7 +4330,14 @@ const TasksMod = {
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => {
+    const _p = new URLSearchParams(window.location.search);
+    const _tid = _p.get('tenant');
+    const _aid = _p.get('agent');
+    if (AuthGuard.require({ requiredRole: Roles.DRAGA_USER, tenantId: _tid, agentId: _aid })) {
+        App.init();
+    }
+});
 </script>
 </body>
 </html>

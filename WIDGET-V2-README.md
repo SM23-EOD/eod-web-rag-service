@@ -239,15 +239,13 @@ npx terser src/assistant-widget-v2.js -o dist/assistant-widget-v2.min.js -c -m
 Para probar el widget:
 
 ```bash
-# Iniciar el servidor backend
-cd /home/urra/projects/eod-web-rag-service
-docker-compose up -d
+# Desarrollo local
+npm run dev
+# → http://localhost:3000/demo-widget-v2.html
 
-# O usar el script de deploy
-./deploy.sh
-
-# Abrir el demo
-open http://localhost/demo-widget-v2.html
+# Deploy a producción
+bash deploy.sh
+# → http://167.172.225.44:8081/demo-widget-v2.html
 ```
 
 ## 📝 Ejemplos de Uso
@@ -316,7 +314,7 @@ open http://localhost/demo-widget-v2.html
 
 ## 📄 Licencia
 
-Este widget es parte del proyecto EOD Web RAG Service.
+Este widget es parte de la **DRAGA Platform** (Document Grounded RAG Agents).
 
 ## 🤝 Contribuciones
 

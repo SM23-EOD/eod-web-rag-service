@@ -19,12 +19,11 @@ Sistema de test A/B para comparar las dos interfaces del widget asistente:
 
 ### Página de Demo
 
-Abre `ab-test.html` en tu navegador:
+Usa el script de testing:
 
 ```bash
-# Con servidor local
-python3 -m http.server 8000
-# Visita: http://localhost:8000/ab-test.html
+bash test-ab.sh
+# Abre las URLs mostradas en la consola
 ```
 
 ### Integración en tu sitio
@@ -281,13 +280,15 @@ Activa logs detallados en la consola del navegador:
 ## 📦 Archivos del Sistema
 
 ```
-/src/
+src/
   ab-test-loader.js          # Clase principal del A/B test
+  ab-test-analytics.js       # Analytics tracking para GA4/GTM
   assistant-widget.js        # Variante A (original)
   assistant-widget-v2.js     # Variante B (nueva)
 
-ab-test.html                 # Página de demo interactiva
-AB-TEST-README.md           # Esta documentación
+ab-test-tests.html           # Página de tests unitarios
+AB-TEST-README.md            # Esta documentación
+AB-TEST-DATA-COLLECTION.md   # Guía detallada de recolección de datos
 ```
 
 ## 🎓 Mejores Prácticas
@@ -298,20 +299,21 @@ AB-TEST-README.md           # Esta documentación
 4. **Segmentación**: Analiza por dispositivo, hora del día, fuente de tráfico
 5. **Métricas clave**: Define KPIs antes de empezar (ej: engagement, conversión, tiempo de sesión)
 
-## 🚦 Próximos Pasos
+## 🚦 Estado
 
 1. ✅ Implementar framework A/B básico
-2. ✅ Integrar analytics tracking
-3. ⏳ Configurar GTM en producción
-4. ⏳ Definir métricas de éxito
-5. ⏳ Ejecutar test durante 2 semanas
-6. ⏳ Analizar resultados
-7. ⏳ Declarar ganador y desplegar
+2. ✅ Integrar analytics tracking (GA4/GTM/dataLayer)
+3. ✅ ADR-0007 aprobado — framework documentado
+4. ⏳ Configurar GTM en producción con IDs reales
+5. ⏳ Definir métricas de éxito (engagement, conversión, tiempo de sesión)
+6. ⏳ Ejecutar test durante 2 semanas con tráfico real
+7. ⏳ Analizar resultados con significancia estadística
+8. ⏳ Declarar ganador y desplegar
 
 ## 📞 Soporte
 
-Para preguntas o issues, consulta la documentación principal del proyecto: `README.md`
+Documentación principal: [README.md](README.md) | ADR: [ADR-0007](adr/0007-ab-testing-framework.md)
 
 ---
 
-**Última actualización**: 2026-02-10
+**Última actualización**: 2026-02-20

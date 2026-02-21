@@ -6,6 +6,7 @@
     <title>DRAGA — Tenant Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/auth.js"></script>
     <script src="src/api-client.js"></script>
     <style>
 /* ═══ DESIGN TOKENS ═══ */
@@ -213,6 +214,7 @@ td{padding:10px 12px;border-bottom:1px solid rgba(36,48,73,0.5);}
         </div>
         <div style="display:flex;gap:8px;">
             <button class="btn btn-primary" onclick="TenantApp.nav('dragas')"><i class="di" style="width:14px;height:14px;vertical-align:middle"></i> Ver DRAGAs</button>
+            <button class="btn btn-sm" style="border-color:var(--success);color:var(--success)" onclick="TenantApp.openCreateDragaModal()">＋ Nueva DRAGA</button>
         </div>
     </div>
 
@@ -241,6 +243,9 @@ td{padding:10px 12px;border-bottom:1px solid rgba(36,48,73,0.5);}
         <div>
             <h1 class="page-title"><i class="di" style="width:24px;height:24px;vertical-align:-3px"></i> DRAGAs del Tenant</h1>
             <p class="page-desc" id="dragasDesc">Cada DRAGA tiene su propia Knowledge Base. Seleccioná una para gestionar sus documentos.</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="TenantApp.openCreateDragaModal()">＋ Nueva DRAGA</button>
         </div>
     </div>
     <div class="draga-grid" id="dragasGrid">
@@ -346,6 +351,31 @@ td{padding:10px 12px;border-bottom:1px solid rgba(36,48,73,0.5);}
 </div>
 
 </main>
+</div>
+
+<!-- ═══ CREATE DRAGA MODAL ═══ -->
+<div class="modal-overlay" id="createDragaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);">
+        <div style="font-size:18px;font-weight:900;margin-bottom:16px;"><i class="di" style="width:20px;height:20px;vertical-align:-2px"></i> Crear Nueva DRAGA</div>
+        <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">ID de la DRAGA <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="newDragaId" placeholder="mi-agente" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+            <small style="color:var(--text-muted);font-size:11px">Identificador único. Solo letras minúsculas, números y guiones.</small>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">Nombre</label>
+            <input type="text" id="newDragaName" placeholder="Mi Asistente" style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">Descripción <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
+            <input type="text" id="newDragaDesc" placeholder="Asistente de soporte para..." style="width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;">
+        </div>
+        <div id="createDragaResult" style="margin-bottom:12px;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+            <button class="btn" onclick="TenantApp.closeCreateDragaModal()">Cancelar</button>
+            <button class="btn btn-primary" id="createDragaBtn" onclick="TenantApp.createDraga()"><i class="di" style="width:12px;height:12px;vertical-align:-1px"></i> Crear DRAGA</button>
+        </div>
+    </div>
 </div>
 
 <div class="toast-container" id="toasts"></div>
@@ -477,17 +507,15 @@ const TenantApp = {
             ? '<span style="color:var(--success)">✅ Activo</span>'
             : '<span style="color:var(--danger)">⛔ Inactivo</span>';
 
-        // Aggregate docs/chunks from all DRAGAs
+        // Aggregate docs/chunks from per-agent documentStats (accurate per-DRAGA)
         let totalDocs = 0, totalChunks = 0;
         try {
-            const results = await Promise.all(
-                this.agents.map(a =>
-                    api.getStats(this.tenantId, a.agent_id).catch(() => ({}))
-                )
+            const perAgentStats = await Promise.all(
+                this.agents.map(a => api.documentStats(this.tenantId, a.agent_id).catch(() => ({})))
             );
-            results.forEach(s => {
-                totalDocs += s.total_documents || s.document_count || 0;
-                totalChunks += s.total_chunks || s.chunk_count || 0;
+            perAgentStats.forEach(s => {
+                totalDocs += s.total_documents || 0;
+                totalChunks += s.total_chunks || 0;
             });
         } catch {}
         document.getElementById('statDocs').textContent = totalDocs;
@@ -514,17 +542,15 @@ const TenantApp = {
 
         grid.innerHTML = '<div class="loading"><div class="spinner"></div> Cargando métricas...</div>';
 
-        // Fetch per-DRAGA stats in parallel
-        const statsResults = await Promise.all(
-            this.agents.map(a =>
-                api.getStats(this.tenantId, a.agent_id).catch(() => ({}))
-            )
+        // Fetch per-DRAGA stats — documentStats is agent-scoped (accurate)
+        const perAgentStats = await Promise.all(
+            this.agents.map(a => api.documentStats(this.tenantId, a.agent_id).catch(() => ({})))
         );
 
         grid.innerHTML = this.agents.map((a, i) => {
-            const s = statsResults[i] || {};
-            const docs = s.total_documents || s.document_count || 0;
-            const chunks = s.total_chunks || s.chunk_count || 0;
+            const s = perAgentStats[i] || {};
+            const docs = s.total_documents || 0;
+            const chunks = s.total_chunks || 0;
             const status = a.status || 'active';
             return `<div class="draga-card" onclick="window.location.href='draga.html?tenant=${this.tenantId}&agent=${a.agent_id}'">
                 <div class="dc-name">
@@ -566,7 +592,7 @@ const TenantApp = {
         // API Keys
         const keysDiv = document.getElementById('tenantApiKeys');
         try {
-            const data = await api.listApiKeys(this.tenantId);
+            const data = await api.listApiKeys();
             const keys = data.keys || [];
             if (keys.length === 0) {
                 keysDiv.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:12px;">Sin API Keys para este tenant. Crea una desde la <a href="admin.html#apikeys" style="color:var(--draga-accent-light)">Plataforma</a>.</div>';
@@ -595,6 +621,68 @@ const TenantApp = {
         } catch {
             pill.className = 'health-pill offline';
             text.textContent = 'offline';
+        }
+    },
+
+    openCreateDragaModal() {
+        document.getElementById('createDragaModal').style.display = 'flex';
+        document.getElementById('newDragaId').value = '';
+        document.getElementById('newDragaName').value = '';
+        document.getElementById('newDragaDesc').value = '';
+        document.getElementById('createDragaResult').innerHTML = '';
+        document.getElementById('newDragaId').focus();
+    },
+
+    closeCreateDragaModal() {
+        document.getElementById('createDragaModal').style.display = 'none';
+    },
+
+    async createDraga() {
+        const agentId = document.getElementById('newDragaId').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const name = document.getElementById('newDragaName').value.trim();
+        const description = document.getElementById('newDragaDesc').value.trim();
+        const resultDiv = document.getElementById('createDragaResult');
+
+        if (!agentId) { toast('Introduce un ID para la DRAGA', 'warning'); return; }
+        if (agentId.length < 2) { toast('El ID debe tener al menos 2 caracteres', 'warning'); return; }
+        if (this.agents.some(a => a.agent_id === agentId)) {
+            toast(`Ya existe una DRAGA con ID "${agentId}"`, 'error'); return;
+        }
+
+        const btn = document.getElementById('createDragaBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;display:inline-block"></div> Creando...';
+        resultDiv.innerHTML = '';
+
+        try {
+            const data = {
+                tenant_id: this.tenantId,
+                agent_id: agentId,
+                name: name || agentId,
+                description: description || ''
+            };
+            await api.createAgent(data);
+            toast(`✅ DRAGA "${name || agentId}" creada correctamente`, 'success');
+
+            // Reload agents list
+            const agentsData = await api.listAgents(this.tenantId);
+            this.agents = Array.isArray(agentsData) ? agentsData : (agentsData.agents || []);
+
+            this._renderDragaCards('overviewDragaGrid');
+            this._renderDragaCards('dragasGrid');
+            document.getElementById('statDragas').textContent = this.agents.length;
+
+            // Populate search DRAGA filter
+            const sel = document.getElementById('searchDragaFilter');
+            sel.innerHTML = '<option value="__all__">🔍 Todas las DRAGAs</option>' +
+                this.agents.map(a => `<option value="${a.agent_id}">${a.name || a.agent_id}</option>`).join('');
+
+            this.closeCreateDragaModal();
+        } catch (e) {
+            resultDiv.innerHTML = `<div style="border-left:3px solid var(--danger);padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);color:var(--danger);font-size:13px;">❌ ${e.message}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="di" style="width:12px;height:12px;vertical-align:-1px"></i> Crear DRAGA';
         }
     },
 
@@ -678,19 +766,19 @@ const TenantAnalytics = {
         const tid = TenantApp.tenantId;
 
         try {
-            // Parallel fetch: per-agent stats + grounding + coverage + feedback
-            const [statsRes, groundingRes, coverageRes, fbRes] = await Promise.all([
-                Promise.all(agents.map(a => api.getStats(tid, a.agent_id).catch(() => ({})))),
+            // Parallel fetch: per-agent documentStats + grounding + coverage + feedback
+            const [docStatsArr, groundingRes, coverageRes, fbRes] = await Promise.all([
+                Promise.all(agents.map(a => api.documentStats(tid, a.agent_id).catch(() => ({})))),
                 api.metricsGrounding(tid).catch(() => ({})),
                 Promise.all(agents.map(a => api.metricsCoverage(tid, a.agent_id).catch(() => ({})))),
                 api.feedbackStats(tid).catch(() => ({}))
             ]);
 
-            // Aggregate docs & chunks
+            // Aggregate docs & chunks from per-agent documentStats
             let totalDocs = 0, totalChunks = 0;
-            statsRes.forEach(s => {
-                totalDocs += s.total_documents || s.document_count || 0;
-                totalChunks += s.total_chunks || s.chunk_count || 0;
+            docStatsArr.forEach(s => {
+                totalDocs += s.total_documents || 0;
+                totalChunks += s.total_chunks || 0;
             });
             document.getElementById('tqDocs').textContent = totalDocs || '—';
             document.getElementById('tqChunks').textContent = totalChunks || '—';
@@ -749,10 +837,12 @@ const TenantAnalytics = {
         try {
             const agents = TenantApp.agents;
             let totalDocs = 0, totalChunks = 0;
-            const statsRes = await Promise.all(agents.map(a => api.getStats(TenantApp.tenantId, a.agent_id).catch(() => ({}))));
-            statsRes.forEach(s => {
-                totalDocs += s.total_documents || s.document_count || 0;
-                totalChunks += s.total_chunks || s.chunk_count || 0;
+            const docStatsArr = await Promise.all(
+                agents.map(a => api.documentStats(TenantApp.tenantId, a.agent_id).catch(() => ({})))
+            );
+            docStatsArr.forEach(s => {
+                totalDocs += s.total_documents || 0;
+                totalChunks += s.total_chunks || 0;
             });
             const items = [
                 ['DRAGAs', agents.length],
@@ -898,7 +988,13 @@ const TenantSearch = {
 // ══════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════
-TenantApp.init();
+{
+    const _p = new URLSearchParams(window.location.search);
+    const _tid = _p.get('tenant');
+    if (AuthGuard.require({ requiredRole: Roles.DRAGA_USER, tenantId: _tid })) {
+        TenantApp.init();
+    }
+}
 </script>
 </body>
 </html>

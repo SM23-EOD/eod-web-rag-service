@@ -46,6 +46,7 @@ Los ADRs marcados como **Arqueología** documentan decisiones ya implementadas e
 | [0005](./0005-docker-compose-orchestration.md) | Docker Compose para Orquestación de Servicios | Aceptado | 2026-02-09 |
 | [0006](./0006-nginx-production-serving.md) | Nginx para Servicio en Producción | Aceptado | 2026-02-09 |
 | [0007](./0007-ab-testing-framework.md) | A/B Testing Framework para Comparación de Interfaces | Aceptado | 2026-02-10 |
+| [0008](./0008-multi-draga-ui-alignment.md) | Multi-DRAGA UI Alignment | Aceptado | 2026-02-15 |
 
 ## Proceso de Gestión
 

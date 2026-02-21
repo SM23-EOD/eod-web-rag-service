@@ -6,6 +6,7 @@
     <title>DRAGA — Plataforma (Nivel 1)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="src/auth.js"></script>
     <script src="src/api-client.js"></script>
     <style>
 /* ═══════════════════════════════════════════════════════════════
@@ -266,6 +267,15 @@ tr:hover td{background:var(--bg-card);}
         </a>
         <a class="nav-item" onclick="nav('roadmap')" data-mod="roadmap">
             <span class="icon">🗺️</span> Roadmap
+        </a>
+    </div>
+    <div class="sidebar-section" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px;">
+        <div class="sidebar-label">Sesión</div>
+        <a class="nav-item" id="navUserInfo" style="font-size:11px;color:var(--text-muted);cursor:default;pointer-events:none;">
+            <span class="icon">👤</span> <span id="navUserEmail">—</span>
+        </a>
+        <a class="nav-item" onclick="handleLogout()" style="color:var(--warning);">
+            <span class="icon">🚪</span> Cerrar Sesión
         </a>
     </div>
 </nav>
@@ -838,6 +848,19 @@ tr:hover td{background:var(--bg-card);}
 // DRAGA PLATFORM ADMIN — JavaScript
 // ══════════════════════════════════════════════════════════════
 
+// ── AUTH: display user info + logout ──
+function _showUserInfo() {
+    const user = AuthSession.getUser();
+    const el = document.getElementById('navUserEmail');
+    if (el && user) el.textContent = user.email || user.role || '—';
+}
+async function handleLogout() {
+    try { await api.logout(); } catch (_) { /* best-effort */ }
+    AuthSession.clear();
+    window.location.href = '/login.html';
+}
+_showUserInfo();
+
 const modules = ['dashboard', 'tenants', 'agents', 'apikeys', 'analytics', 'system', 'roadmap'];
 
 // ── NAVIGATION ──
@@ -875,17 +898,32 @@ function toast(msg, type = 'info', duration = 4000) {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// ── HEALTH CHECK ──
+// ── HEALTH CHECK (F14: deep health with degraded state + service detail) ──
+let _adminServiceHealth = null;
 async function checkHealth() {
     const pill = document.getElementById('healthPill');
     const text = document.getElementById('healthText');
     try {
-        await api.health();
-        pill.className = 'health-pill online';
-        text.textContent = 'online';
+        const deep = await api.healthDeep();
+        const status = deep.status || 'unknown';
+        const checks = deep.checks || {};
+        _adminServiceHealth = checks;
+        const failed = Object.entries(checks).filter(([,v]) => !v.ok).map(([k]) => k);
+
+        if (failed.length === 0) {
+            pill.className = 'health-pill online';
+            text.textContent = 'online';
+        } else if (status === 'degraded') {
+            pill.className = 'health-pill degraded';
+            text.textContent = `degradado (${failed.join(', ')})`;
+        } else {
+            pill.className = 'health-pill offline';
+            text.textContent = `error (${failed.join(', ')})`;
+        }
     } catch {
         pill.className = 'health-pill offline';
         text.textContent = 'offline';
+        _adminServiceHealth = null;
     }
 }
 
@@ -1126,18 +1164,20 @@ async function loadDashboard() {
         } catch { allAgents = []; }
         const dragaCount = allAgents.length || tenants.length;
 
-        // ── Fetch per-agent stats FIRST so hero stats are accurate ──
+        // ── Fetch per-agent documentStats (accurate per-DRAGA docs/chunks) ──
         const agentStatsMap = {};
         try {
-            const statsResults = await Promise.all(
-                allAgents.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))
+            const docStatsResults = await Promise.all(
+                allAgents.map(a => api.documentStats(a.tenant_id, a.agent_id).catch(() => ({})))
             );
-            allAgents.forEach((a, i) => { agentStatsMap[`${a.tenant_id}/${a.agent_id}`] = statsResults[i] || {}; });
+            allAgents.forEach((a, i) => {
+                agentStatsMap[`${a.tenant_id}/${a.agent_id}`] = docStatsResults[i] || {};
+            });
         } catch {}
 
-        // ── Hero stats: prefer per-agent stats (always accurate), fallback to overview ──
-        const agentDocSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_documents || st.document_count || 0), 0);
-        const agentChunkSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_chunks || st.chunk_count || 0), 0);
+        // ── Hero stats: per-agent documentStats (accurate), fallback to overview ──
+        const agentDocSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_documents || 0), 0);
+        const agentChunkSum = Object.values(agentStatsMap).reduce((s, st) => s + (st.total_chunks || 0), 0);
         const overviewDocs = overview?.platform?.total_documents;
         const overviewChunks = overview?.platform?.total_chunks;
         const totalDocs = agentDocSum || overviewDocs || tenants.reduce((s, t) => s + (t.document_count || 0), 0);
@@ -1161,11 +1201,11 @@ async function loadDashboard() {
             document.getElementById('statAntiHalluc').textContent = '—';
         }
 
-        // Load API keys count across all tenants (parallelized)
+        // Load API keys count (auth-scoped, no tenant param needed)
         let totalKeys = 0;
         try {
-            const keyResults = await Promise.all(tenants.map(t => api.listApiKeys(t.tenant_id).catch(() => ({ keys: [] }))));
-            keyResults.forEach(kd => { totalKeys += (kd.keys || []).length; });
+            const kd = await api.listApiKeys().catch(() => ({ keys: [] }));
+            totalKeys = (kd.keys || []).length;
         } catch {}
         document.getElementById('apikeyCount').textContent = totalKeys;
         document.getElementById('statKeys').textContent = totalKeys;
@@ -1190,9 +1230,9 @@ async function loadDashboard() {
         grid.innerHTML = tenants.map(t => {
             const ov = overviewTenants[t.tenant_id] || {};
             const tAgents = agentsByTenant[t.tenant_id] || [];
-            // Sum docs/chunks from per-agent stats (most accurate), fallback to overview
-            const agentTotalDocs = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_documents || st.document_count || 0); }, 0);
-            const agentTotalChunks = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_chunks || st.chunk_count || 0); }, 0);
+            // Sum docs/chunks from per-agent documentStats (accurate)
+            const agentTotalDocs = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_documents || 0); }, 0);
+            const agentTotalChunks = tAgents.reduce((s, a) => { const st = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {}; return s + (st.total_chunks || 0); }, 0);
             const docCount = agentTotalDocs || ov.document_count || t.document_count || 0;
             const chunkCount = agentTotalChunks || ov.chunk_count || 0;
             const statusBadge = t.is_active !== false
@@ -1202,8 +1242,8 @@ async function loadDashboard() {
             const dragaCards = tAgents.length > 0
                 ? tAgents.map(a => {
                     const as = agentStatsMap[`${t.tenant_id}/${a.agent_id}`] || {};
-                    const aDocs = as.total_documents || as.document_count || 0;
-                    const aChunks = as.total_chunks || as.chunk_count || 0;
+                    const aDocs = as.total_documents || 0;
+                    const aChunks = as.total_chunks || 0;
                     return `<a href="draga.html?tenant=${t.tenant_id}&agent=${a.agent_id}" class="draga-subcard">
                         <div class="ds-icon"><i class="di" style="width:22px;height:22px"></i></div>
                         <div class="ds-info">
@@ -1468,7 +1508,7 @@ async function dashDeleteAgent(tenantId, agentId, name) {
 
 async function viewAgentStats(tenantId, agentId) {
     try {
-        const stats = await api.getStats(tenantId, agentId);
+        const stats = await api.documentStats(tenantId, agentId);
         alert(JSON.stringify(stats, null, 2));
     } catch (e) { toast('Error: ' + e.message, 'error'); }
 }
@@ -1480,18 +1520,9 @@ async function loadApiKeys() {
     const container = document.getElementById('apiKeysList');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-        // Load keys for all tenants
-        const tenantsData = await api.listTenants(true);
-        const tenants = tenantsData.tenants || [];
-        let allKeys = [];
-
-        const keyResults = await Promise.all(tenants.map(t =>
-            api.listApiKeys(t.tenant_id).then(d => {
-                (d.keys || []).forEach(k => k._tenant = t.tenant_id);
-                return d.keys || [];
-            }).catch(() => [])
-        ));
-        keyResults.forEach(keys => { allKeys = allKeys.concat(keys); });
+        // Load all API keys (auth-scoped)
+        const keysData = await api.listApiKeys().catch(() => ({ keys: [] }));
+        const allKeys = (keysData.keys || []);
 
         document.getElementById('apikeyCount').textContent = allKeys.length;
 
@@ -1655,9 +1686,9 @@ async function loadSystemStats() {
         const agentList = Array.isArray(agents) ? agents : [];
         if ((!sysDocs || !sysChunks) && agentList.length) {
             try {
-                const stats = await Promise.all(agentList.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({}))));
-                const sumD = stats.reduce((s, st) => s + (st.total_documents || st.document_count || 0), 0);
-                const sumC = stats.reduce((s, st) => s + (st.total_chunks || st.chunk_count || 0), 0);
+                const docStats = await Promise.all(agentList.map(a => api.documentStats(a.tenant_id, a.agent_id).catch(() => ({}))));
+                const sumD = docStats.reduce((s, st) => s + (st.total_documents || 0), 0);
+                const sumC = docStats.reduce((s, st) => s + (st.total_chunks || 0), 0);
                 if (!sysDocs) sysDocs = sumD;
                 if (!sysChunks) sysChunks = sumC;
             } catch {}
@@ -1685,19 +1716,19 @@ async function loadQualityGlobal() {
         const agentList = Array.isArray(agents) ? agents : [];
         if (!agentList.length) return;
 
-        // Fetch stats + grounding + coverage + feedback for all agents in parallel
-        const [statsRes, groundingRes, coverageRes, fbRes] = await Promise.all([
-            Promise.all(agentList.map(a => api.getStats(a.tenant_id, a.agent_id).catch(() => ({})))),
+        // Fetch documentStats + grounding + coverage + feedback for all agents in parallel
+        const [docStatsRes, groundingRes, coverageRes, fbRes] = await Promise.all([
+            Promise.all(agentList.map(a => api.documentStats(a.tenant_id, a.agent_id).catch(() => ({})))),
             api.metricsGrounding().catch(() => ({})),
             Promise.all(agentList.map(a => api.metricsCoverage(a.tenant_id, a.agent_id).catch(() => ({})))),
             api.feedbackStats().catch(() => ({}))
         ]);
 
-        // Aggregate docs & chunks from per-agent stats
+        // Aggregate docs & chunks from per-agent documentStats
         let totalDocs = 0, totalChunks = 0;
-        statsRes.forEach(s => {
-            totalDocs += s.total_documents || s.document_count || 0;
-            totalChunks += s.total_chunks || s.chunk_count || 0;
+        docStatsRes.forEach(s => {
+            totalDocs += s.total_documents || 0;
+            totalChunks += s.total_chunks || 0;
         });
         document.getElementById('gqDocs').textContent = totalDocs || '—';
         document.getElementById('gqChunks').textContent = totalChunks || '—';
@@ -1885,6 +1916,9 @@ function calcRoadmapProgress() {
 // INIT
 // ══════════════════════════════════════════════════════════════
 (function init() {
+    // Auth guard: admin requires platform_admin or tenant_admin
+    if (!AuthGuard.require({ requiredRole: Roles.TENANT_ADMIN })) return;
+
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     if (modules.includes(hash)) nav(hash);
     else nav('dashboard');

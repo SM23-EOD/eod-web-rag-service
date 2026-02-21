@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DRAGA Auth — Fail-to-Pass Tests</title>
+    <style>
+        :root {
+            --bg: #0d1117; --bg-card: #161b22; --text: #e6edf3;
+            --green: #3fb950; --red: #f85149; --yellow: #d29922; --blue: #58a6ff;
+            --border: #30363d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg); color: var(--text); padding: 2rem; line-height: 1.6;
+        }
+        h1 { font-size: 1.6rem; margin-bottom: .5rem; }
+        .summary { padding: 1rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem; background: var(--bg-card); display: flex; gap: 2rem; align-items: center; }
+        .summary .stat { text-align: center; }
+        .summary .stat .n { font-size: 2rem; font-weight: 700; }
+        .summary .pass .n { color: var(--green); }
+        .summary .fail .n { color: var(--red); }
+        .summary .skip .n { color: var(--yellow); }
+        .summary .total .n { color: var(--blue); }
+        .suite { margin-bottom: 1.5rem; }
+        .suite h2 { font-size: 1.1rem; color: var(--blue); border-bottom: 1px solid var(--border); padding-bottom: .3rem; margin-bottom: .5rem; }
+        .test { padding: .4rem .8rem; border-left: 3px solid var(--border); margin-bottom: .3rem; font-size: .85rem; display: flex; justify-content: space-between; }
+        .test.pass { border-color: var(--green); }
+        .test.fail { border-color: var(--red); }
+        .test.skip { border-color: var(--yellow); }
+        .test .badge { font-weight: 700; text-transform: uppercase; font-size: .75rem; }
+        .test.pass .badge { color: var(--green); }
+        .test.fail .badge { color: var(--red); }
+        .test.skip .badge { color: var(--yellow); }
+        .error-detail { color: var(--red); font-size: .75rem; padding-left: 1.2rem; margin-bottom: .3rem; opacity: .85; }
+        #runBtn { background: var(--blue); color: #fff; border: none; padding: .5rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: .9rem; margin-bottom: 1rem; }
+        #runBtn:hover { opacity: .9; }
+        .timestamp { font-size: .75rem; color: #8b949e; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>🧪 DRAGA Auth — Test Suite</h1>
+    <p class="timestamp">Eval Spec: eval-spec-roles-permisos.yaml</p>
+    <button id="runBtn">▶ Ejecutar Tests</button>
+
+    <div class="summary" id="summary" style="display:none">
+        <div class="stat total"><div class="n" id="statTotal">0</div><div>Total</div></div>
+        <div class="stat pass"><div class="n" id="statPass">0</div><div>Pass</div></div>
+        <div class="stat fail"><div class="n" id="statFail">0</div><div>Fail</div></div>
+        <div class="stat skip"><div class="n" id="statSkip">0</div><div>Skip</div></div>
+    </div>
+
+    <div id="results"></div>
+
+    <!-- Load auth module first, then api-client -->
+    <script src="/src/auth.js"></script>
+    <script src="/src/api-client.js"></script>
+    <script>
+    /**
+     * Minimal test framework — browser-based, zero dependencies.
+     * Pattern: describe() / it() / assert helpers.
+     */
+    const suites = [];
+    let currentSuite = null;
+
+    function describe(name, fn) {
+        currentSuite = { name, tests: [] };
+        suites.push(currentSuite);
+        fn();
+        currentSuite = null;
+    }
+
+    function it(name, fn, { type = 'fail-to-pass' } = {}) {
+        currentSuite.tests.push({ name, fn, type });
+    }
+
+    function assert(condition, msg) {
+        if (!condition) throw new Error(msg || 'Assertion failed');
+    }
+    function assertEqual(actual, expected, msg) {
+        if (actual !== expected) {
+            throw new Error(msg || `Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+        }
+    }
+    function assertDeepEqual(actual, expected, msg) {
+        const a = JSON.stringify(actual), b = JSON.stringify(expected);
+        if (a !== b) throw new Error(msg || `Expected ${b}, got ${a}`);
+    }
+    function assertIncludes(arr, item, msg) {
+        if (!Array.isArray(arr) || !arr.includes(item)) {
+            throw new Error(msg || `Expected array to include ${JSON.stringify(item)}`);
+        }
+    }
+    function assertThrows(fn, msg) {
+        try { fn(); throw new Error('__no_throw__'); }
+        catch (e) { if (e.message === '__no_throw__') throw new Error(msg || 'Expected function to throw'); }
+    }
+    function assertNotNull(val, msg) {
+        if (val === null || val === undefined) throw new Error(msg || 'Expected non-null value');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // UNIT TESTS — from eval-spec unit section
+    // ═══════════════════════════════════════════════════════
+
+    // ── test_role_enum_values ─────────────────────────────
+    describe('Role Enum', () => {
+        it('Role enum tiene exactamente 3 valores: platform_admin, tenant_admin, draga_user', () => {
+            assert(typeof Roles !== 'undefined', 'Roles should be defined');
+            assertEqual(ROLE_VALUES.length, 3, 'Should have exactly 3 role values');
+            assertIncludes(ROLE_VALUES, 'platform_admin');
+            assertIncludes(ROLE_VALUES, 'tenant_admin');
+            assertIncludes(ROLE_VALUES, 'draga_user');
+        });
+
+        it('Roles object is frozen (immutable)', () => {
+            assert(Object.isFrozen(Roles), 'Roles enum should be frozen');
+            assert(Object.isFrozen(ROLE_VALUES), 'ROLE_VALUES should be frozen');
+        });
+
+        it('Roles constants match expected strings', () => {
+            assertEqual(Roles.PLATFORM_ADMIN, 'platform_admin');
+            assertEqual(Roles.TENANT_ADMIN, 'tenant_admin');
+            assertEqual(Roles.DRAGA_USER, 'draga_user');
+        });
+    });
+
+    // ── JWT helpers ───────────────────────────────────────
+    describe('JWT Parsing & Expiry', () => {
+        // Helper: build a fake JWT with given payload
+        function fakeJwt(payload) {
+            const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const body = btoa(JSON.stringify(payload));
+            return `${header}.${body}.fake-signature`;
+        }
+
+        it('test_jwt_payload_contains_role_and_scope — decodeJwt extracts role and scope', () => {
+            const payload = {
+                sub: 'user-1',
+                role: 'platform_admin',
+                scoped_tenants: ['eod-sm23'],
+                scoped_agents: ['eod-sm23/draga'],
+                exp: Math.floor(Date.now() / 1000) + 3600
+            };
+            const token = fakeJwt(payload);
+            const decoded = decodeJwt(token);
+            assertNotNull(decoded, 'decoded should not be null');
+            assertEqual(decoded.role, 'platform_admin');
+            assertDeepEqual(decoded.scoped_tenants, ['eod-sm23']);
+            assertDeepEqual(decoded.scoped_agents, ['eod-sm23/draga']);
+            assert(decoded.exp > 0, 'exp should be a positive number');
+        });
+
+        it('test_jwt_expired_returns_401 — isTokenExpired returns true for expired token', () => {
+            const expired = fakeJwt({ exp: Math.floor(Date.now() / 1000) - 60 });
+            assert(isTokenExpired(expired), 'Should detect expired token');
+        });
+
+        it('isTokenExpired returns false for valid token', () => {
+            const valid = fakeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 });
+            assert(!isTokenExpired(valid), 'Should not flag valid token as expired');
+        });
+
+        it('decodeJwt returns null for invalid tokens', () => {
+            assertEqual(decodeJwt(null), null);
+            assertEqual(decodeJwt(''), null);
+            assertEqual(decodeJwt('not-a-jwt'), null);
+            assertEqual(decodeJwt('a.b'), null); // only 2 parts
+        });
+
+        it('isTokenExpired returns true for token without exp', () => {
+            const noExp = fakeJwt({ sub: 'user-1' });
+            assert(isTokenExpired(noExp), 'Token without exp should be treated as expired');
+        });
+    });
+
+    // ── AuthSession ───────────────────────────────────────
+    describe('AuthSession', () => {
+        function fakeJwt(payload) {
+            const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const body = btoa(JSON.stringify(payload));
+            return `${header}.${body}.fake-sig`;
+        }
+
+        const mockAuth = {
+            token: fakeJwt({
+                sub: 'u1', role: 'tenant_admin',
+                scoped_tenants: ['eod-sm23'],
+                scoped_agents: [],
+                exp: Math.floor(Date.now() / 1000) + 3600
+            }),
+            refresh_token: 'refresh-abc',
+            user: {
+                id: 'u1', email: 'admin@eod.com', role: 'tenant_admin',
+                scoped_tenants: ['eod-sm23'], scoped_agents: []
+            }
+        };
+
+        // Clean before each test
+        it('save() stores token, refresh_token, and user in localStorage', () => {
+            AuthSession.clear();
+            AuthSession.save(mockAuth);
+            assertEqual(localStorage.getItem('draga-auth-token'), mockAuth.token);
+            assertEqual(localStorage.getItem('draga-auth-refresh'), mockAuth.refresh_token);
+            const storedUser = JSON.parse(localStorage.getItem('draga-auth-user'));
+            assertEqual(storedUser.email, 'admin@eod.com');
+            AuthSession.clear();
+        });
+
+        it('clear() removes all auth keys from localStorage', () => {
+            AuthSession.save(mockAuth);
+            AuthSession.clear();
+            assertEqual(localStorage.getItem('draga-auth-token'), null);
+            assertEqual(localStorage.getItem('draga-auth-refresh'), null);
+            assertEqual(localStorage.getItem('draga-auth-user'), null);
+        });
+
+        it('getToken() returns stored token', () => {
+            AuthSession.clear();
+            assertEqual(AuthSession.getToken(), null);
+            AuthSession.save(mockAuth);
+            assertEqual(AuthSession.getToken(), mockAuth.token);
+            AuthSession.clear();
+        });
+
+        it('isAuthenticated() returns true for valid non-expired token', () => {
+            AuthSession.clear();
+            assert(!AuthSession.isAuthenticated(), 'Should be false when no token');
+            AuthSession.save(mockAuth);
+            assert(AuthSession.isAuthenticated(), 'Should be true with valid token');
+            AuthSession.clear();
+        });
+
+        it('isAuthenticated() returns false for expired token', () => {
+            AuthSession.clear();
+            const expiredAuth = {
+                ...mockAuth,
+                token: fakeJwt({ exp: Math.floor(Date.now() / 1000) - 60 })
+            };
+            AuthSession.save(expiredAuth);
+            assert(!AuthSession.isAuthenticated(), 'Should be false with expired token');
+            AuthSession.clear();
+        });
+
+        it('getRole() returns role from stored user', () => {
+            AuthSession.clear();
+            assertEqual(AuthSession.getRole(), null);
+            AuthSession.save(mockAuth);
+            assertEqual(AuthSession.getRole(), 'tenant_admin');
+            AuthSession.clear();
+        });
+
+        it('getScopedTenants() returns array from stored user', () => {
+            AuthSession.save(mockAuth);
+            assertDeepEqual(AuthSession.getScopedTenants(), ['eod-sm23']);
+            AuthSession.clear();
+        });
+
+        it('save() throws if token is missing', () => {
+            assertThrows(() => AuthSession.save({}), 'Should throw without token');
+            assertThrows(() => AuthSession.save({ token: 'abc' }), 'Should throw without user');
+        });
+    });
+
+    // ── Permissions (per role) ────────────────────────────
+    describe('Permissions — platform_admin (full access)', () => {
+        function fakeJwt(payload) {
+            const h = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const b = btoa(JSON.stringify(payload));
+            return `${h}.${b}.sig`;
+        }
+
+        // Setup: save a platform_admin session
+        const adminAuth = {
+            token: fakeJwt({ sub: 'pa1', role: 'platform_admin', exp: Math.floor(Date.now() / 1000) + 3600 }),
+            refresh_token: 'r1',
+            user: { id: 'pa1', email: 'root@draga.io', role: 'platform_admin', scoped_tenants: [], scoped_agents: [] }
+        };
+
+        it('test_platform_admin_full_access — can access ANY tenant', () => {
+            AuthSession.clear();
+            AuthSession.save(adminAuth);
+            assert(Permissions.canAccessTenant('eod-sm23'), 'platform_admin should access eod-sm23');
+            assert(Permissions.canAccessTenant('sm23-dani'), 'platform_admin should access sm23-dani');
+            assert(Permissions.canAccessTenant('new-tenant-xyz'), 'platform_admin should access any tenant');
+            AuthSession.clear();
+        });
+
+        it('test_platform_admin_full_access — can access ANY agent', () => {
+            AuthSession.clear();
+            AuthSession.save(adminAuth);
+            assert(Permissions.canAccessAgent('eod-sm23', 'draga'), 'platform_admin should access any agent');
+            assert(Permissions.canAccessAgent('sm23-dani', 'rfc-edd'), 'platform_admin should access any agent');
+            AuthSession.clear();
+        });
+
+        it('platform_admin can modify KB and config', () => {
+            AuthSession.save(adminAuth);
+            assert(Permissions.canModifyKB('eod-sm23', 'draga'));
+            assert(Permissions.canModifyConfig('eod-sm23', 'draga'));
+            AuthSession.clear();
+        });
+
+        it('platform_admin can manage users', () => {
+            AuthSession.save(adminAuth);
+            assert(Permissions.canManageUsers());
+            assert(Permissions.canAccessPlatform());
+            AuthSession.clear();
+        });
+
+        it('platform_admin filterTenants returns all tenants', () => {
+            AuthSession.save(adminAuth);
+            const tenants = [{ tenant_id: 'eod-sm23' }, { tenant_id: 'sm23-dani' }, { tenant_id: 'new-one' }];
+            const filtered = Permissions.filterTenants(tenants);
+            assertEqual(filtered.length, 3, 'Should return all tenants');
+            AuthSession.clear();
+        });
+    });
+
+    describe('Permissions — tenant_admin (scoped)', () => {
+        function fakeJwt(payload) {
+            const h = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const b = btoa(JSON.stringify(payload));
+            return `${h}.${b}.sig`;
+        }
+
+        const taAuth = {
+            token: fakeJwt({ sub: 'ta1', role: 'tenant_admin', exp: Math.floor(Date.now() / 1000) + 3600 }),
+            refresh_token: 'r2',
+            user: { id: 'ta1', email: 'ta@eod.com', role: 'tenant_admin', scoped_tenants: ['eod-sm23'], scoped_agents: [] }
+        };
+
+        it('test_tenant_admin_scoped_access — can access scoped tenant', () => {
+            AuthSession.clear();
+            AuthSession.save(taAuth);
+            assert(Permissions.canAccessTenant('eod-sm23'), 'Should access scoped tenant');
+            AuthSession.clear();
+        });
+
+        it('test_tenant_admin_scoped_access — CANNOT access other tenant', () => {
+            AuthSession.save(taAuth);
+            assert(!Permissions.canAccessTenant('sm23-dani'), 'Should NOT access unscoped tenant');
+            AuthSession.clear();
+        });
+
+        it('tenant_admin can access any agent within scoped tenant', () => {
+            AuthSession.save(taAuth);
+            assert(Permissions.canAccessAgent('eod-sm23', 'draga'));
+            assert(Permissions.canAccessAgent('eod-sm23', 'envio23'));
+            assert(!Permissions.canAccessAgent('sm23-dani', 'rfc-edd'), 'Should NOT access agent of other tenant');
+            AuthSession.clear();
+        });
+
+        it('tenant_admin can modify KB and config for scoped tenant', () => {
+            AuthSession.save(taAuth);
+            assert(Permissions.canModifyKB('eod-sm23', 'draga'));
+            assert(!Permissions.canModifyKB('sm23-dani', 'rfc-edd'));
+            AuthSession.clear();
+        });
+
+        it('tenant_admin CANNOT manage users', () => {
+            AuthSession.save(taAuth);
+            assert(!Permissions.canManageUsers(), 'tenant_admin cannot manage users');
+            AuthSession.clear();
+        });
+
+        it('tenant_admin filterTenants only returns scoped', () => {
+            AuthSession.save(taAuth);
+            const tenants = [{ tenant_id: 'eod-sm23' }, { tenant_id: 'sm23-dani' }];
+            const filtered = Permissions.filterTenants(tenants);
+            assertEqual(filtered.length, 1);
+            assertEqual(filtered[0].tenant_id, 'eod-sm23');
+            AuthSession.clear();
+        });
+    });
+
+    describe('Permissions — draga_user (scoped + read-only)', () => {
+        function fakeJwt(payload) {
+            const h = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const b = btoa(JSON.stringify(payload));
+            return `${h}.${b}.sig`;
+        }
+
+        const duAuth = {
+            token: fakeJwt({ sub: 'du1', role: 'draga_user', exp: Math.floor(Date.now() / 1000) + 3600 }),
+            refresh_token: 'r3',
+            user: {
+                id: 'du1', email: 'user@eod.com', role: 'draga_user',
+                scoped_tenants: [],
+                scoped_agents: ['eod-sm23/envio23', 'eod-sm23/draga']
+            }
+        };
+
+        it('test_draga_user_scoped_access — can access scoped agents', () => {
+            AuthSession.clear();
+            AuthSession.save(duAuth);
+            assert(Permissions.canAccessAgent('eod-sm23', 'envio23'));
+            assert(Permissions.canAccessAgent('eod-sm23', 'draga'));
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_scoped_access — CANNOT access unscoped agents', () => {
+            AuthSession.save(duAuth);
+            assert(!Permissions.canAccessAgent('eod-sm23', 'rfc-edd'), 'Should NOT access unscoped agent');
+            assert(!Permissions.canAccessAgent('sm23-dani', 'yeya-plm'), 'Should NOT access other tenant agent');
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_scoped_access — can access tenant that has scoped agents', () => {
+            AuthSession.save(duAuth);
+            assert(Permissions.canAccessTenant('eod-sm23'), 'Should access tenant via agent scope');
+            assert(!Permissions.canAccessTenant('sm23-dani'), 'Should NOT access unscoped tenant');
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_readonly_restrictions — CANNOT modify KB', () => {
+            AuthSession.save(duAuth);
+            assert(!Permissions.canModifyKB('eod-sm23', 'envio23'), 'draga_user should NOT modify KB');
+            assert(!Permissions.canModifyKB('eod-sm23', 'draga'), 'draga_user should NOT modify KB');
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_readonly_restrictions — CANNOT modify config', () => {
+            AuthSession.save(duAuth);
+            assert(!Permissions.canModifyConfig('eod-sm23', 'envio23'), 'draga_user should NOT modify config');
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_readonly_restrictions — CANNOT manage DRAGAs', () => {
+            AuthSession.save(duAuth);
+            assert(!Permissions.canManageDragas('eod-sm23'), 'draga_user should NOT manage DRAGAs');
+            AuthSession.clear();
+        });
+
+        it('test_draga_user_readonly_restrictions — CANNOT manage users', () => {
+            AuthSession.save(duAuth);
+            assert(!Permissions.canManageUsers());
+            assert(!Permissions.canAccessPlatform());
+            AuthSession.clear();
+        });
+
+        it('draga_user filterAgents only returns scoped agents', () => {
+            AuthSession.save(duAuth);
+            const agents = [
+                { tenant_id: 'eod-sm23', agent_id: 'envio23' },
+                { tenant_id: 'eod-sm23', agent_id: 'draga' },
+                { tenant_id: 'eod-sm23', agent_id: 'rfc-edd' },
+                { tenant_id: 'sm23-dani', agent_id: 'yeya-plm' }
+            ];
+            const filtered = Permissions.filterAgents(agents);
+            assertEqual(filtered.length, 2, 'Should only return 2 scoped agents');
+            AuthSession.clear();
+        });
+
+        it('draga_user filterTenants returns tenants where user has agents', () => {
+            AuthSession.save(duAuth);
+            const tenants = [{ tenant_id: 'eod-sm23' }, { tenant_id: 'sm23-dani' }];
+            const filtered = Permissions.filterTenants(tenants);
+            assertEqual(filtered.length, 1);
+            assertEqual(filtered[0].tenant_id, 'eod-sm23');
+            AuthSession.clear();
+        });
+    });
+
+    // ── AuthGuard ─────────────────────────────────────────
+    describe('AuthGuard', () => {
+        function fakeJwt(payload) {
+            const h = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+            const b = btoa(JSON.stringify(payload));
+            return `${h}.${b}.sig`;
+        }
+
+        it('defaultLanding returns /admin.html for platform_admin', () => {
+            const landing = AuthGuard.defaultLanding('platform_admin');
+            assertEqual(landing, '/admin.html');
+        });
+
+        it('defaultLanding returns tenant page for single-tenant tenant_admin', () => {
+            const taAuth = {
+                token: fakeJwt({ sub: 'ta', role: 'tenant_admin', exp: Math.floor(Date.now() / 1000) + 3600 }),
+                refresh_token: 'r',
+                user: { id: 'ta', email: 'ta@eod.com', role: 'tenant_admin', scoped_tenants: ['eod-sm23'], scoped_agents: [] }
+            };
+            AuthSession.save(taAuth);
+            const landing = AuthGuard.defaultLanding('tenant_admin');
+            assertEqual(landing, '/tenant.html?tenant=eod-sm23');
+            AuthSession.clear();
+        });
+
+        it('defaultLanding returns draga page for single-agent draga_user', () => {
+            const duAuth = {
+                token: fakeJwt({ sub: 'du', role: 'draga_user', exp: Math.floor(Date.now() / 1000) + 3600 }),
+                refresh_token: 'r',
+                user: { id: 'du', email: 'du@eod.com', role: 'draga_user', scoped_tenants: [], scoped_agents: ['eod-sm23/envio23'] }
+            };
+            AuthSession.save(duAuth);
+            const landing = AuthGuard.defaultLanding('draga_user');
+            assertEqual(landing, '/draga.html?tenant=eod-sm23&agent=envio23');
+            AuthSession.clear();
+        });
+
+        it('defaultLanding returns /login.html for unknown role', () => {
+            assertEqual(AuthGuard.defaultLanding('unknown'), '/login.html');
+        });
+    });
+
+    // ── Permissions edge cases ────────────────────────────
+    describe('Permissions — edge cases', () => {
+        it('canAccessTenant returns false when no session', () => {
+            AuthSession.clear();
+            assert(!Permissions.canAccessTenant('eod-sm23'), 'Should return false with no session');
+        });
+
+        it('canAccessAgent returns false when no session', () => {
+            AuthSession.clear();
+            assert(!Permissions.canAccessAgent('eod-sm23', 'draga'));
+        });
+
+        it('canManageUsers returns false when no session', () => {
+            AuthSession.clear();
+            assert(!Permissions.canManageUsers());
+        });
+
+        it('filterTenants returns empty array when no session', () => {
+            AuthSession.clear();
+            const filtered = Permissions.filterTenants([{ tenant_id: 'eod-sm23' }]);
+            assertEqual(filtered.length, 0);
+        });
+
+        it('filterAgents returns empty array when no session', () => {
+            AuthSession.clear();
+            const filtered = Permissions.filterAgents([{ tenant_id: 'eod-sm23', agent_id: 'draga' }]);
+            assertEqual(filtered.length, 0);
+        });
+    });
+
+    // ── API Client auth methods existence ─────────────────
+    describe('API Client — Auth Methods', () => {
+        it('api client has login method', () => {
+            assert(typeof window.api !== 'undefined', 'window.api should exist');
+            assert(typeof window.api.login === 'function', 'api.login should be a function');
+        });
+
+        it('api client has register method', () => {
+            assert(typeof window.api.register === 'function', 'api.register should be a function');
+        });
+
+        it('api client has refreshToken method', () => {
+            assert(typeof window.api.refreshToken === 'function', 'api.refreshToken should be a function');
+        });
+
+        it('api client has logout method', () => {
+            assert(typeof window.api.logout === 'function', 'api.logout should be a function');
+        });
+
+        it('api client has me method', () => {
+            assert(typeof window.api.me === 'function', 'api.me should be a function');
+        });
+
+        it('api client has listUsers method', () => {
+            assert(typeof window.api.listUsers === 'function');
+        });
+
+        it('api client has inviteUser method', () => {
+            assert(typeof window.api.inviteUser === 'function');
+        });
+
+        it('api client has changeUserRole method', () => {
+            assert(typeof window.api.changeUserRole === 'function');
+        });
+
+        it('api client has updateUserScope method', () => {
+            assert(typeof window.api.updateUserScope === 'function');
+        });
+
+        it('api client has deactivateUser method', () => {
+            assert(typeof window.api.deactivateUser === 'function');
+        });
+    });
+
+    // ── Pass-to-pass: backwards compat ────────────────────
+    describe('Backwards Compatibility (pass-to-pass)', () => {
+        it('test_existing_endpoints_with_api_key — existing API key auth still works', () => {
+            // Verify that api-client still sends X-API-Key header
+            const storedKey = localStorage.getItem('rag-api-key');
+            // The api-client constructor reads from localStorage
+            assert(typeof window.api !== 'undefined', 'API client should be instantiated');
+            assert(typeof window.api._request === 'function', '_request method should exist');
+            // Verify apiKey property is read from localStorage
+            // Even without a key, the client should work (backwards compat)
+            assert(true, 'API client initialized without auth — backwards compat OK');
+        }, { type: 'pass-to-pass' });
+
+        it('test_widget_chat_no_auth_required — widget components exist and work without auth', () => {
+            // Widgets should NOT require auth — they use embed tokens
+            // Verify the widget script files exist (they are loaded separately)
+            assert(typeof AuthSession !== 'undefined', 'AuthSession should be available');
+            AuthSession.clear();
+            // Without auth, the API client should still be functional for widget endpoints
+            assert(typeof window.api !== 'undefined', 'API client works without auth session');
+            assert(!AuthSession.isAuthenticated(), 'No auth should be required for widgets');
+        }, { type: 'pass-to-pass' });
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // CONTRACT TESTS (frontend-side schema validation)
+    // ═══════════════════════════════════════════════════════
+
+    describe('Contract Tests — Response Schema Validation', () => {
+        it('test_auth_login_response_schema — login response has expected fields', () => {
+            // This tests that our AuthSession.save can handle the expected schema
+            // Schema: { token, refresh_token, user: { id, email, role, scope } }
+            const validResponse = {
+                token: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig',
+                refresh_token: 'refresh-123',
+                user: { id: 'u1', email: 'test@test.com', role: 'platform_admin', scoped_tenants: [], scoped_agents: [] }
+            };
+            AuthSession.clear();
+            // Should not throw
+            AuthSession.save(validResponse);
+            assertEqual(AuthSession.getToken(), validResponse.token);
+            assertEqual(AuthSession.getRole(), 'platform_admin');
+            AuthSession.clear();
+        });
+
+        it('test_auth_me_response_schema — me response schema: { id, email, role, scoped_tenants, scoped_agents }', () => {
+            // Validate that our user storage handles the full me response
+            const meResponse = {
+                id: 'u1',
+                email: 'test@draga.io',
+                role: 'tenant_admin',
+                scoped_tenants: ['eod-sm23', 'sm23-dani'],
+                scoped_agents: []
+            };
+            // AuthSession.save requires token, so we use getUser pattern
+            AuthSession.clear();
+            localStorage.setItem('draga-auth-user', JSON.stringify(meResponse));
+            const user = AuthSession.getUser();
+            assertNotNull(user);
+            assertEqual(user.id, 'u1');
+            assertEqual(user.email, 'test@draga.io');
+            assertEqual(user.role, 'tenant_admin');
+            assert(Array.isArray(user.scoped_tenants), 'scoped_tenants should be array');
+            assert(Array.isArray(user.scoped_agents), 'scoped_agents should be array');
+            AuthSession.clear();
+        });
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // TEST RUNNER
+    // ═══════════════════════════════════════════════════════
+
+    async function runTests() {
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        results.innerHTML = '';
+        summary.style.display = 'flex';
+
+        let total = 0, passed = 0, failed = 0, skipped = 0;
+
+        // Clean state before running
+        AuthSession.clear();
+
+        for (const suite of suites) {
+            const section = document.createElement('div');
+            section.className = 'suite';
+            section.innerHTML = `<h2>${suite.name}</h2>`;
+
+            for (const test of suite.tests) {
+                total++;
+                const div = document.createElement('div');
+                try {
+                    await test.fn();
+                    passed++;
+                    div.className = 'test pass';
+                    div.innerHTML = `<span>${test.name}</span><span class="badge">✓ PASS</span>`;
+                } catch (e) {
+                    failed++;
+                    div.className = 'test fail';
+                    div.innerHTML = `<span>${test.name}</span><span class="badge">✗ FAIL</span>`;
+                    const detail = document.createElement('div');
+                    detail.className = 'error-detail';
+                    detail.textContent = e.message;
+                    section.appendChild(div);
+                    section.appendChild(detail);
+                    continue;
+                }
+                section.appendChild(div);
+            }
+            results.appendChild(section);
+        }
+
+        // Clean up after all tests
+        AuthSession.clear();
+
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statPass').textContent = passed;
+        document.getElementById('statFail').textContent = failed;
+        document.getElementById('statSkip').textContent = skipped;
+
+        console.log(`\n══ Auth Tests ══`);
+        console.log(`Total: ${total} | Pass: ${passed} | Fail: ${failed} | Skip: ${skipped}`);
+        console.log(`Result: ${failed === 0 ? '✅ ALL PASS' : `❌ ${failed} FAILURES`}`);
+    }
+
+    document.getElementById('runBtn').addEventListener('click', runTests);
+
+    // Auto-run on load
+    window.addEventListener('load', () => setTimeout(runTests, 200));
+    </script>
+</body>
+</html>

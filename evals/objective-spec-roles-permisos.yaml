@@ -1,0 +1,101 @@
+# objective-spec.yaml — Sistema de Roles y Permisos para DRAGA Platform
+# Proyecto: DRAGA Platform (eod-web-rag-service)
+# Fecha: 2026-02-21
+
+objetivo: "Sistema de autenticación, roles y permisos multi-tenant para la plataforma DRAGA"
+
+problema_de_negocio: |
+  La plataforma DRAGA es multi-tenant (2 tenants, 5 DRAGAs activas) pero no tiene
+  ningún control de acceso. Cualquier persona con la URL puede:
+  - Acceder a admin.html y ver/modificar todos los tenants y DRAGAs
+  - Acceder a tenant.html y operar cualquier tenant
+  - Acceder a draga.html y ver/modificar cualquier DRAGA (KB, config, widgets)
+  - Acceder al widget-generator y crear widgets que apunten a cualquier DRAGA
+
+  Sin baseline actual — no existe autenticación ni roles. Hoy el "control" es
+  oscuridad (URLs no publicadas) y API keys manuales en localStorage.
+
+  Impacto:
+  - Un usuario de un tenant podría ver/modificar datos de otro tenant
+  - No hay forma de dar acceso a un widget de chat sin dar acceso al dashboard de admin
+  - No se puede delegar gestión de un DRAGA a un usuario sin darle acceso a toda la plataforma
+
+resultado_esperado: |
+  Tres niveles de acceso diferenciados que reflejan la jerarquía de navegación existente:
+
+  1. Admin Plataforma — Acceso total: admin.html, todos los tenants, todas las DRAGAs,
+     gestión de usuarios y API keys. Puede crear/eliminar tenants y DRAGAs.
+
+  2. Admin Tenant — Acceso al tenant asignado: tenant.html con sus DRAGAs.
+     Puede gestionar DRAGAs dentro de su tenant, subir documentos, configurar,
+     y generar widgets. No ve otros tenants ni la vista de plataforma.
+
+  3. Usuario DRAGA — Acceso limitado a DRAGAs específicos: puede usar el chat,
+     ver widgets publicados, interactuar con el RAG. No puede modificar KB,
+     configuración, ni generar widgets nuevos.
+
+  El login es simple (email + token/password), la sesión se maneja client-side
+  (JWT en localStorage), y el backend valida permisos en cada request.
+
+owner: "Pedro"
+
+alcance:
+  incluye:
+    - "Frontend: pantalla de login/registro con flujo de autenticación"
+    - "Frontend: lógica de routing condicional según rol (qué páginas puede ver)"
+    - "Frontend: UI de gestión de usuarios e invitaciones (solo admin plataforma)"
+    - "Frontend: filtrado de tenants/DRAGAs visibles según permisos del usuario"
+    - "Frontend: manejo de sesión JWT (login, refresh, logout, expiración)"
+    - "Backend: modelo de datos de User, Role, Permission (requiere coordinación con hex-domain-rag)"
+    - "Backend: endpoints de auth (login, register, refresh-token, me)"
+    - "Backend: middleware de autorización que valida JWT + role + scope en cada endpoint"
+    - "Backend: endpoints de gestión de usuarios (CRUD, asignar rol, asignar scope)"
+  excluye:
+    - "OAuth2/SSO con proveedores externos (Google, GitHub) — fase posterior"
+    - "MFA (autenticación multi-factor) — fase posterior"
+    - "Auditoría detallada de acciones por usuario — se puede agregar después"
+    - "Pipeline RAG y búsqueda vectorial — no se modifican, solo se protegen los endpoints"
+    - "Widgets públicos de chat — siguen funcionando sin auth (acceso via embed token)"
+    - "CLI (cli/rag-chat.py) — sigue usando API key directa"
+
+restricciones_de_negocio:
+  - "Los widgets de chat embebidos deben seguir funcionando sin login — usan embed token del DRAGA"
+  - "El backend NO tiene auth hoy — requiere coordinación con el repo hex-domain-rag para implementar endpoints"
+  - "Las API keys existentes (X-API-Key header) deben seguir funcionando como método alternativo de auth"
+  - "La sesión debe ser stateless (JWT) — el backend no mantiene sesiones en memoria"
+  - "Latencia de auth < 50ms — no debe degradar la experiencia de navegación"
+  - "El sistema de roles debe ser extensible para agregar roles futuros sin cambios de schema"
+
+riesgos_identificados:
+  - "Backend dependency: toda la capa de auth requiere endpoints nuevos en hex-domain-rag — bloqueante"
+  - "Backwards compatibility: usuarios actuales sin login podrían perder acceso temporalmente durante migración"
+  - "Token security: JWTs en localStorage son vulnerables a XSS — httpOnly cookies serían más seguras pero más complejas"
+  - "Scope leakage: un error en el filtrado client-side podría mostrar datos de otros tenants"
+  - "Complejidad incremental: cada página (admin.html, tenant.html, draga.html) necesita lógica de auth guard"
+  - "UX friction: agregar login a una herramienta que hoy es open podría frenar la adopción inicial"
+
+adrs_referenciados:
+  - "ADR-0001: Web Components como Framework UI — los auth guards y login UI seguirán este patrón"
+  - "ADR-0002: Shadow DOM para Encapsulación — el login component puede usar Shadow DOM"
+  - "ADR-0006: Nginx para Producción — Nginx puede redirigir a login si no hay JWT válido"
+  - "ADR-0008: Multi-DRAGA UI Alignment — los permisos deben respetar la jerarquía Plataforma > Tenant > DRAGA"
+
+# ── Configuración agentic ───────────────────────────────────
+agentic:
+  patron_orquestacion: "multi-agent"
+  justificacion_patron: |
+    El scope cruza dos repos (frontend + backend) y dos dominios técnicos distintos
+    (UI/UX vanilla JS + API hexagonal Python). Un solo agente no tiene el contexto
+    suficiente para ambos. Se requiere un agente frontend (este repo) y un agente
+    backend (hex-domain-rag) coordinados por un human gate entre ambos.
+
+  nivel_autonomia: "A1"
+  justificacion_autonomia: |
+    A1 (Generación controlada) porque:
+    - No existe precedente de auth en este repo — dominio nuevo
+    - Tocar auth/permisos es alto riesgo (seguridad)
+    - Backend no tiene endpoints — requiere diseño coordinado
+    - El agente genera código y propone, pero el humano revisa cada PR antes de merge
+
+  usar_agente: true
+  justificacion_no_agente: ""

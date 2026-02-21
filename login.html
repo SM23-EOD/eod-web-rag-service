@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRAGA — Iniciar Sesión</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/><rect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/><rect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/><rect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/><path d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><path d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/><rect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/><circle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/><circle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/><path d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --draga-accent:#7c3aed;--draga-accent-light:#a78bfa;
+      --draga-gradient:linear-gradient(135deg,#7c3aed 0%,#4f46e5 50%,#2563eb 100%);
+      --draga-glow:0 0 40px rgba(124,58,237,0.25);
+      --success:#22c55e;--warning:#f59e0b;--error:#ef4444;--info:#3b82f6;
+      --bg-dark:#0c0f1a;--bg-main:#131a2b;--bg-card:#1a2236;--bg-card-hover:#212b42;
+      --text-primary:#f0f2f5;--text-secondary:#94a3b8;--text-muted:#64748b;
+      --border:#243049;--radius:12px;--radius-sm:8px;--radius-lg:16px;--transition:0.25s ease;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:'Lato',-apple-system,sans-serif;
+      background:var(--bg-dark);color:var(--text-primary);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      overflow:hidden;
+    }
+    /* Subtle animated background */
+    body::before{
+      content:'';position:fixed;inset:0;z-index:0;
+      background:radial-gradient(ellipse 80% 60% at 50% 30%,rgba(124,58,237,0.12) 0%,transparent 70%);
+    }
+
+    .login-container{
+      position:relative;z-index:1;width:100%;max-width:420px;padding:20px;
+    }
+
+    .login-card{
+      background:var(--bg-card);border:1px solid var(--border);
+      border-radius:var(--radius-lg);padding:40px 36px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .logo-section{text-align:center;margin-bottom:32px;}
+    .logo-icon{
+      width:64px;height:64px;background:var(--draga-gradient);
+      border-radius:16px;display:inline-flex;align-items:center;justify-content:center;
+      font-size:36px;box-shadow:var(--draga-glow);margin-bottom:16px;
+    }
+    .logo-icon .di{width:36px;height:36px;}
+    .logo-title{
+      font-size:32px;font-weight:900;
+      background:var(--draga-gradient);-webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;
+    }
+    .logo-subtitle{font-size:14px;color:var(--text-muted);margin-top:4px;}
+
+    .form-group{margin-bottom:20px;}
+    .form-group label{
+      display:block;font-size:13px;font-weight:700;
+      color:var(--text-secondary);margin-bottom:6px;letter-spacing:0.3px;
+    }
+    .form-group input{
+      width:100%;padding:12px 16px;
+      background:var(--bg-main);border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--text-primary);
+      font-size:15px;font-family:inherit;transition:var(--transition);
+      outline:none;
+    }
+    .form-group input:focus{
+      border-color:var(--draga-accent);
+      box-shadow:0 0 0 3px rgba(124,58,237,0.2);
+    }
+    .form-group input::placeholder{color:var(--text-muted);}
+
+    .btn-login{
+      width:100%;padding:14px;margin-top:8px;
+      background:var(--draga-gradient);color:#fff;
+      border:none;border-radius:var(--radius);
+      font-size:16px;font-weight:700;font-family:inherit;
+      cursor:pointer;transition:var(--transition);
+      position:relative;overflow:hidden;
+    }
+    .btn-login:hover:not(:disabled){
+      transform:translateY(-1px);
+      box-shadow:0 8px 24px rgba(124,58,237,0.35);
+    }
+    .btn-login:disabled{opacity:0.6;cursor:not-allowed;}
+
+    .btn-login .spinner{
+      display:none;width:20px;height:20px;
+      border:2px solid rgba(255,255,255,0.3);
+      border-top-color:#fff;border-radius:50%;
+      animation:spin 0.6s linear infinite;
+      margin:0 auto;
+    }
+    .btn-login.loading .btn-text{display:none;}
+    .btn-login.loading .spinner{display:block;}
+
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .error-banner{
+      display:none;padding:12px 16px;margin-bottom:20px;
+      background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);
+      border-radius:var(--radius-sm);
+      font-size:13px;color:var(--error);line-height:1.4;
+    }
+    .error-banner.visible{display:block;}
+
+    .footer-links{
+      text-align:center;margin-top:24px;
+      font-size:13px;color:var(--text-muted);
+    }
+    .footer-links a{
+      color:var(--draga-accent-light);text-decoration:none;
+      transition:var(--transition);
+    }
+    .footer-links a:hover{color:var(--text-primary);}
+
+    .di{
+      display:inline-block;width:1em;height:1em;
+      vertical-align:-0.15em;
+      background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M8 68 Q8 60 18 56 H74 Q84 56 86 68 Z' fill='%237c3aed'/%3E%3Crect x='20' y='42' width='24' height='14' rx='4' fill='%23a78bfa'/%3E%3Crect x='24' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Crect x='33' y='46' width='7' height='7' rx='2' fill='%23312e81'/%3E%3Cpath d='M54 54 L54 26 L80 48' stroke='%23c4b5fd' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Cpath d='M76 44 L86 44 L84 54 L78 54 Z' fill='%23fbbf24'/%3E%3Crect x='28' y='32' width='8' height='10' rx='2' fill='%236d28d9'/%3E%3Ccircle cx='32' cy='28' r='4' fill='%23c4b5fd' opacity='.5'/%3E%3Ccircle cx='37' cy='23' r='3' fill='%23c4b5fd' opacity='.3'/%3E%3Cpath d='M2 78 Q14 72 26 78 Q38 84 50 78 Q62 72 74 78 Q86 84 98 78' fill='none' stroke='%23818cf8' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+      font-style:normal;
+    }
+
+    @media(max-width:480px){
+      .login-card{padding:28px 20px;}
+      .logo-title{font-size:24px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo-section">
+        <div class="logo-icon"><i class="di"></i></div>
+        <div class="logo-title">DRAGA</div>
+        <div class="logo-subtitle">Document · Grounded · RAG · Agent</div>
+      </div>
+
+      <div id="errorBanner" class="error-banner"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" placeholder="tu@empresa.com" required autofocus autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="btnLogin" class="btn-login">
+          <span class="btn-text">Iniciar Sesión</span>
+          <div class="spinner"></div>
+        </button>
+      </form>
+
+      <div class="footer-links">
+        <a href="/">← Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/auth.js"></script>
+  <script src="src/api-client.js"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+    const btn = document.getElementById('btnLogin');
+    const errorBanner = document.getElementById('errorBanner');
+
+    // If already authenticated, redirect to appropriate landing
+    if (AuthSession.isAuthenticated()) {
+        const role = AuthSession.getRole();
+        window.location.href = AuthGuard.defaultLanding(role);
+    }
+
+    // Check for error params (e.g., ?error=forbidden)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'forbidden') {
+        showError('Acceso denegado. No tienes permisos para acceder a esa página.');
+    }
+
+    function showError(msg) {
+        errorBanner.textContent = msg;
+        errorBanner.classList.add('visible');
+    }
+
+    function hideError() {
+        errorBanner.classList.remove('visible');
+    }
+
+    function setLoading(loading) {
+        btn.disabled = loading;
+        btn.classList.toggle('loading', loading);
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError();
+
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            showError('Por favor completa todos los campos.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const res = await window.api.login(email, password);
+
+            if (!res || !res.token) {
+                showError('Respuesta inesperada del servidor. Intenta de nuevo.');
+                setLoading(false);
+                return;
+            }
+
+            // Determine redirect
+            const returnUrl = urlParams.get('return');
+            if (returnUrl && returnUrl.startsWith('/')) {
+                window.location.href = returnUrl;
+            } else {
+                const role = AuthSession.getRole();
+                window.location.href = AuthGuard.defaultLanding(role);
+            }
+        } catch (err) {
+            console.error('[login] Error:', err);
+
+            if (err.status === 401) {
+                showError('Credenciales inválidas. Verifica tu correo y contraseña.');
+            } else if (err.status === 429) {
+                showError('Demasiados intentos. Espera un momento antes de reintentar.');
+            } else if (err.status === 0 || !err.status) {
+                showError('No se puede conectar al servidor. Verifica tu conexión.');
+            } else {
+                showError(`Error del servidor (${err.status}). Intenta de nuevo más tarde.`);
+            }
+            setLoading(false);
+        }
+    });
+
+    // Allow Enter to submit
+    document.getElementById('password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') form.dispatchEvent(new Event('submit'));
+    });
+  </script>
+</body>
+</html>
